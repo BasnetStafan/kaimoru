@@ -1,0 +1,105 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}ダッシュボード{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">ダッシュボード</h1>
+<p class="admin-note">期間の売上・ランキングは<a href="/admin/analytics">売上分析</a>で確認できます。</p>
+<p class="admin-today">{{ today_label }}</p>
+
+<section class="admin-cards" aria-label="本日の状況">
+    <div class="admin-stat-card">
+        <p class="admin-stat-label">本日の注文</p>
+        <p class="admin-stat-value">{{ orders_today }}<span class="admin-stat-unit">件</span></p>
+    </div>
+    <div class="admin-stat-card">
+        <p class="admin-stat-label">本日の売上</p>
+        <p class="admin-stat-value">{{ sales_today }}</p>
+    </div>
+    <a class="admin-stat-card admin-stat-link" href="/admin/orders?status=unshipped">
+        <p class="admin-stat-label">未発送の注文</p>
+        <p class="admin-stat-value">{{ unshipped }}<span class="admin-stat-unit">件</span></p>
+    </a>
+    <a class="admin-stat-card admin-stat-link" href="/admin/inquiries?status=open">
+        <p class="admin-stat-label">お問い合わせ（未対応）</p>
+        <p class="admin-stat-value">{{ open_inquiries }}<span class="admin-stat-unit">件</span></p>
+    </a>
+    <a class="admin-stat-card admin-stat-link" href="/admin/products?sort=stock_asc">
+        <p class="admin-stat-label">在庫わずか</p>
+        <p class="admin-stat-value">{{ low_stock_count }}<span class="admin-stat-unit">件</span></p>
+    </a>
+</section>
+
+<section class="admin-section" aria-label="最近の注文">
+    <h2 class="admin-h2">最近の注文</h2>
+    {% if latest.is_empty() %}
+    <p class="admin-empty">まだ注文がありません</p>
+    {% else %}
+    <div class="admin-table-scroll"><table class="admin-table">
+        <thead>
+            <tr><th>注文番号</th><th>購入者</th><th>合計</th><th>ステータス</th><th>時刻</th></tr>
+        </thead>
+        <tbody>
+            {% for row in latest %}
+            <tr>
+                <td><a href="/admin/orders/{{ row.id }}">{{ row.number }}</a></td>
+                <td>{{ row.buyer }}</td>
+                <td class="num">{{ row.total }}</td>
+                <td><span class="admin-badge">{{ row.status_label }}</span></td>
+                <td>{{ row.time }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table></div>
+    {% endif %}
+    <p class="admin-more"><a href="/admin/orders">注文一覧を見る</a></p>
+</section>
+
+<section class="admin-section" aria-label="在庫わずか">
+    <h2 class="admin-h2">在庫わずか</h2>
+    <p class="admin-note">各商品の「在庫わずか」基準（未設定の商品は {{ low_stock_default }} 点）以下になった公開商品です。</p>
+    {% if low_stock.is_empty() %}
+    <p class="admin-empty">在庫わずかの商品はありません</p>
+    {% else %}
+    <div class="admin-table-scroll"><table class="admin-table">
+        <thead>
+            <tr><th>商品名</th><th>在庫数</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for product in low_stock %}
+            <tr>
+                <td>{{ product.name }}</td>
+                <td class="num">{{ product.stock }}</td>
+                <td><a href="/admin/products/{{ product.id }}/edit">編集</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table></div>
+    {% endif %}
+</section>
+
+<section class="admin-section" aria-label="直近7日の売上">
+    <h2 class="admin-h2">直近7日の売上</h2>
+    <div class="admin-chart" role="img" aria-label="直近7日の売上グラフ">
+        {% for bar in bars %}
+        <div class="admin-bar-col">
+            <span class="admin-bar-amount">{{ bar.amount }}</span>
+            <div class="admin-bar{% if bar.is_today %} today{% endif %}" style="height: {{ bar.height_pct }}%"></div>
+            <span class="admin-bar-label">{{ bar.label }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="admin-section" aria-label="運用ステータス">
+    <h2 class="admin-h2">運用ステータス</h2>
+    <div class="admin-table-scroll"><table class="admin-table">
+        <tbody>
+            <tr><th>データベースバックアップ</th><td>{{ ops_backup_label }}</td></tr>
+            <tr><th>メールキュー</th><td>{{ ops_mail_label }}</td></tr>
+            <tr><th>決済照合スイープ</th><td>{{ ops_sweep_label }}</td></tr>
+            <tr><th>AIエージェント（LLM）</th><td>{{ ops_llm_label }}</td></tr>
+        </tbody>
+    </table></div>
+</section>
+{% endblock %}

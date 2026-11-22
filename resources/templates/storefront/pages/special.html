@@ -1,0 +1,21 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | 特集{% endblock %}
+
+{% block homepart %}
+    <section class="special-page">
+        {% include "storefront/parts/breadcrumb.html" %}
+        <h1>{{ heading }}</h1>
+        <p class="section-note">{{ description }}</p>
+        {% if !products.is_empty() %}
+        <div class="product-grid">
+            {% for card in products %}
+{% include "storefront/parts/product_card.html" %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state empty-state-plain"><p>特集商品は準備中です。</p></div>
+        <p class="section-more"><a href="/">トップページへ戻る</a></p>
+        {% endif %}
+    </section>
+{% endblock %}

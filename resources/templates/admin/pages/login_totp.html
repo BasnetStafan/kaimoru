@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2段階認証 | AGENTIC STORE 管理</title>
+<link rel="icon" href="/static/images/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/css/style.css?v={{ asset_fingerprint }}">
+<link rel="stylesheet" href="/static/css/admin.css?v={{ asset_fingerprint }}">
+<script src="/static/js/admin.js?v={{ asset_fingerprint }}" defer></script>
+</head>
+<body class="admin-body">
+<main class="admin-bare">
+    <div class="admin-card admin-login-card">
+        <p class="admin-login-brand">AGENTIC STORE<span>管理画面</span></p>
+        <h1 class="admin-login-title">2段階認証</h1>
+        <p>認証アプリに表示される6桁のコードを入力してください。<br>
+        アプリを使えない場合は、リカバリーコードでもログインできます。</p>
+        {% if let Some(message) = error %}
+        <p class="form-error" role="alert">{{ message }}</p>
+        {% endif %}
+        <form method="post" action="/admin/login/totp" class="auth-form admin-login-form">
+            <label>認証コード <span class="badge-required">必須</span>
+                <input type="text" name="code" autocomplete="one-time-code" aria-required="true" class="code-input">
+            </label>
+            <button type="submit" class="primary-button">ログイン</button>
+        </form>
+    </div>
+</main>
+</body>
+</html>

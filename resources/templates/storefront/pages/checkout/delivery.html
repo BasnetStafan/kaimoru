@@ -1,0 +1,230 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | お客様情報の入力{% endblock %}
+
+{% block homepart %}
+    <section class="checkout-page">
+        <ol class="steps">
+            <li class="done"><span class="step-num">1</span>カート</li>
+            <li class="active" aria-current="step"><span class="step-num">2</span>お客様情報</li>
+            <li><span class="step-num">3</span>お支払い方法</li>
+            <li><span class="step-num">4</span>注文確認</li>
+            <li><span class="step-num">5</span>完了</li>
+        </ol>
+        <h1>ご注文手続き</h1>
+
+        {% if let Some(message) = error_message %}
+            <p class="form-error">{{ message }}</p>
+        {% endif %}
+
+        <form method="post" action="/checkout" class="checkout-form checkout-layout">
+
+            <div class="checkout-main">
+                <section class="checkout-card">
+                    <h2>注文内容</h2>
+                    <ul class="checkout-lines">
+                        {% for line in lines %}
+                            <li>
+                                <a href="/products/{{ line.product_id }}">{% if line.image_path.is_empty() %}<span class="order-line-thumb order-line-thumb-empty" aria-hidden="true"></span>{% else %}<img src="{{ line.image_path }}" alt="" class="order-line-thumb">{% endif %}</a>
+                                <span class="order-line-main"><a href="/products/{{ line.product_id }}">{{ line.name }}</a>{% if !line.variant_label.is_empty() %}（{{ line.variant_label }}）{% endif %} <span class="line-qty">×{{ line.quantity }}</span></span>
+                                <span>{{ line.formatted_line_total() }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </section>
+
+                <section class="checkout-card">
+                    <h2><span class="section-num">01</span>お届け先</h2>
+                    {% if !saved_addresses.is_empty() %}
+                    <div data-address-picker>
+                        {% for address in saved_addresses %}
+                        <label class="picker-card">
+                            <input type="radio" name="delivery_choice" value="{{ address.id }}" {% if address.is_default %}checked{% endif %}>
+                            {% include "storefront/parts/address_lines.html" %}
+                        </label>
+                        {% endfor %}
+                        <label class="picker-card">
+                            <input type="radio" name="delivery_choice" value="new">
+                            <span class="address-name">新しいお届け先に送る</span>
+                        </label>
+                    </div>
+                    <p class="form-note">住所の追加・編集は<a href="/mypage/addresses">マイページのアドレス帳</a>からできます。</p>
+                    {% else if is_member %}
+                    <p class="form-note"><a href="/mypage/addresses">マイページのアドレス帳</a>に住所を登録すると、ここでお届け先を選べるようになります。</p>
+                    {% endif %}
+                    <div id="typed-address">
+                    {% if !is_member %}
+                        <div class="field-row">
+                            <label for="email">メールアドレス <span class="badge-required">必須</span></label>
+                            <input type="email" id="email" name="email" autocomplete="email" aria-required="true" value="{{ values.email }}">
+                            {% if let Some(error) = errors.email %}<p class="field-error">{{ error }}</p>{% endif %}
+                        </div>
+                    {% endif %}
+                    <div class="field-row">
+                        <span class="field-label" id="customer-name-label">お名前 <span class="badge-required">必須</span></span>
+                        <div class="field-pair" role="group" aria-labelledby="customer-name-label">
+                            <input type="text" name="family_name" placeholder="姓" autocomplete="family-name" aria-label="姓" aria-required="true" value="{{ values.family_name }}">
+                            <input type="text" name="given_name" placeholder="名" autocomplete="given-name" aria-label="名" aria-required="true" value="{{ values.given_name }}">
+                        </div>
+                        {% if let Some(error) = errors.family_name %}<p class="field-error">{{ error }}</p>{% endif %}
+                        {% if let Some(error) = errors.given_name %}<p class="field-error">{{ error }}</p>{% endif %}
+                    </div>
+                    <div class="field-row">
+                        <label for="postal_code">郵便番号 <span class="badge-required">必須</span></label>
+                        <input type="text" id="postal_code" name="postal_code" inputmode="numeric" autocomplete="postal-code" placeholder="1500001" aria-required="true" value="{{ values.postal_code }}">
+                        {% if let Some(error) = errors.postal_code %}<p class="field-error">{{ error }}</p>{% endif %}
+                    </div>
+                    <div class="field-row">
+                        <label for="prefecture">都道府県 <span class="badge-required">必須</span></label>
+                        <select id="prefecture" name="prefecture" autocomplete="address-level1" aria-required="true">
+                            <option value="">選択してください</option>
+                            {% for p in prefectures %}
+                                <option value="{{ p }}" {% if values.prefecture == *p %}selected{% endif %}>{{ p }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if let Some(error) = errors.prefecture %}<p class="field-error">{{ error }}</p>{% endif %}
+                    </div>
+                    <div class="field-row">
+                        <label for="city">市区町村 <span class="badge-required">必須</span></label>
+                        <input type="text" id="city" name="city" autocomplete="address-level2" aria-required="true" value="{{ values.city }}">
+                        {% if let Some(error) = errors.city %}<p class="field-error">{{ error }}</p>{% endif %}
+                    </div>
+                    <div class="field-row">
+                        <label for="address_line">番地 <span class="badge-required">必須</span></label>
+                        <input type="text" id="address_line" name="address_line" autocomplete="street-address" aria-required="true" value="{{ values.address_line }}">
+                        {% if let Some(error) = errors.address_line %}<p class="field-error">{{ error }}</p>{% endif %}
+                    </div>
+                    <div class="field-row">
+                        <label for="building">建物名・部屋番号 <span class="badge-optional">任意</span></label>
+                        <input type="text" id="building" name="building" value="{{ values.building }}">
+                    </div>
+                    <div class="field-row">
+                        <label for="phone">電話番号 <span class="badge-required">必須</span></label>
+                        <input type="tel" id="phone" name="phone" inputmode="tel" autocomplete="tel" aria-required="true" value="{{ values.phone }}">
+                        {% if let Some(error) = errors.phone %}<p class="field-error">{{ error }}</p>{% endif %}
+                    </div>
+                    {% if is_member %}
+                    <div class="field-row">
+                        <label class="checkbox-row">
+                            <input type="checkbox" name="save_address" value="1">
+                            この住所をアドレス帳に保存する
+                        </label>
+                    </div>
+                    {% endif %}
+                    </div>
+                </section>
+
+                <section class="checkout-card">
+                    <h2><span class="section-num">02</span>クーポン</h2>
+                    {% if !applied_coupons.is_empty() %}
+                        {% for applied in applied_coupons %}
+                        <p class="coupon-applied">{% if applied.automatic %}自動適用：{% endif %}{{ applied.code }} を適用中［{{ applied.class_label() }}］（−{{ applied.amount_display() }}）{% if !applied.description.is_empty() %} {{ applied.description }}{% endif %}
+                            {% if !applied.automatic %}<button type="submit" name="intent" value="remove_coupon:{{ applied.code }}" class="text-button">取り消す</button>{% endif %}
+                        </p>
+                        {% endfor %}
+                    {% endif %}
+                    {% if !held_coupons.is_empty() %}
+                        <div class="field-row">
+                            <label for="coupon_select">お持ちのクーポン</label>
+                            <select id="coupon_select" name="coupon_select">
+                                <option value="">クーポンを選択してください</option>
+                                {% for coupon in held_coupons %}
+                                    <option value="{{ coupon.code }}">{{ coupon.option_label() }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    {% endif %}
+                    <div class="field-row">
+                        <div class="field-pair">
+                            <input type="text" name="coupon_code" placeholder="クーポンコード" aria-label="クーポンコード">
+                            <button type="submit" name="intent" value="apply_coupon" class="secondary-button">適用</button>
+                        </div>
+                        {% if let Some(error) = coupon_error %}<p class="field-error">{{ error }}</p>{% endif %}
+                    </div>
+                </section>
+
+                <section class="checkout-card">
+                    <h2><span class="section-num">03</span>配送希望日時</h2>
+                    <div class="field-row">
+                        <label for="delivery_date">お届け希望日 <span class="badge-optional">任意</span></label>
+                        <select id="delivery_date" name="delivery_date">
+                            <option value="" {% if values.delivery_date.is_empty() %}selected{% endif %}>指定なし（最短でお届け）</option>
+                            {% for d in delivery_dates %}
+                                <option value="{{ d.value }}" {% if d.selected %}selected{% endif %}>{{ d.label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if let Some(error) = errors.delivery_date %}<p class="field-error">{{ error }}</p>{% endif %}
+                    </div>
+                    <div class="field-row">
+                        <label for="delivery_slot">お届け時間帯 <span class="badge-optional">任意</span></label>
+                        <select id="delivery_slot" name="delivery_slot">
+                            {% for s in delivery_slots %}
+                                <option value="{{ s.code }}" {% if s.selected %}selected{% endif %}>{{ s.label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if let Some(error) = errors.delivery_slot %}<p class="field-error">{{ error }}</p>{% endif %}
+                    </div>
+                    <p class="form-note">※ 配送希望日時は目安です。交通事情や天候などにより、ご希望に添えない場合があります。</p>
+                </section>
+
+                <section class="checkout-card">
+                    <h2><span class="section-num">04</span>ギフト</h2>
+                    <div class="field-row">
+                        <label for="noshi">のし <span class="badge-optional">任意</span></label>
+                        <select id="noshi" name="noshi">
+                            {% for k in noshi_kinds() %}
+                                <option value="{{ k.code }}" {% if values.noshi == k.code || (values.noshi.is_empty() && k.code == "none") %}selected{% endif %}>{{ k.label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if let Some(error) = errors.noshi %}<p class="field-error">{{ error }}</p>{% endif %}
+                    </div>
+                    <div class="field-row">
+                        <label for="noshi_name">名入れ <span class="badge-optional">任意</span></label>
+                        <input type="text" id="noshi_name" name="noshi_name" value="{{ values.noshi_name }}" placeholder="例：山田 太郎">
+                        {% if let Some(error) = errors.noshi_name %}<p class="field-error">{{ error }}</p>{% endif %}
+                    </div>
+                    <div class="field-row">
+                        <label for="gift_message">メッセージカード <span class="badge-optional">任意</span></label>
+                        <textarea id="gift_message" name="gift_message" rows="3">{{ values.gift_message }}</textarea>
+                        {% if let Some(error) = errors.gift_message %}<p class="field-error">{{ error }}</p>{% endif %}
+                    </div>
+                    <p class="form-note">※ ギフトの料金は無料です。</p>
+                </section>
+            </div>
+
+            <aside class="checkout-side">
+                <section class="checkout-card summary-card">
+                    <h2>お支払い金額（税込）</h2>
+                    <dl class="totals-list">
+                        <div><dt>商品合計</dt><dd>{{ formatted_subtotal() }}</dd></div>
+                        {% if totals.discount_yen > 0 %}
+                            <div><dt>割引</dt><dd>−{{ formatted_discount() }}</dd></div>
+                        {% endif %}
+                        <div><dt>送料</dt><dd>{{ formatted_shipping() }}{% if totals.shipping_yen == 0 %}（無料）{% endif %}</dd></div>
+                        {% if totals.shipping_discount_yen > 0 %}
+                            <div><dt>送料割引</dt><dd>−{{ formatted_shipping_discount() }}</dd></div>
+                        {% endif %}
+                        {% if totals.cod_fee_yen > 0 %}<div><dt>代引き手数料</dt><dd>{{ formatted_cod_fee() }}</dd></div>{% endif %}
+                        <div class="totals-grand"><dt>合計</dt><dd>{{ formatted_total() }}<span class="tax-note">（内消費税 {{ formatted_tax_total() }}）</span></dd></div>
+                    </dl>
+                    {% if !totals.tax_breakdown.is_empty() %}
+                    <div class="tax-breakdown">
+                        <p class="tax-breakdown-title">税率ごとの内訳</p>
+                        <dl class="totals-list">
+                            {% for row in totals.tax_breakdown %}
+                            <div><dt>{{ row.tax_class_name }}（{{ row.rate_percent }}%）対象</dt><dd>{{ row.formatted_base() }}</dd></div>
+                            <div><dt>うち消費税</dt><dd>{{ row.formatted_tax() }}</dd></div>
+                            {% endfor %}
+                            <div><dt>内消費税合計</dt><dd>{{ formatted_tax_total() }}</dd></div>
+                        </dl>
+                    </div>
+                    {% endif %}
+                    <div class="form-actions vertical">
+                        <button type="submit" name="intent" value="confirm" class="primary-button">お支払い方法へ進む</button>
+                        <a href="/cart" class="secondary-button">カートに戻る</a>
+                    </div>
+                </section>
+            </aside>
+        </form>
+    </section>
+{% endblock %}

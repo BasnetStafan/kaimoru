@@ -1,0 +1,31 @@
+# Dependency-audit policy for `cargo audit` (V1 perfection pass ST-3).
+#
+# RUSTSEC-2023-0071 (rsa 0.9.10 — Marvin Attack: potential key
+# recovery through timing sidechannels) is ignored because the
+# flagged crate is never compiled into this app:
+#
+# - app/Cargo.toml pins sqlx with default-features = false and
+#   Postgres-only features, so the MySQL backend — the dependency
+#   path that pulls in rsa — is not part of the build.
+# - `cargo tree -i rsa` and `cargo tree -i sqlx-mysql` both print
+#   nothing: neither crate is in the resolved dependency tree.
+#   They survive only as Cargo.lock records, which is all the
+#   advisory scan reads (verified 2026-11-02).
+#
+# Practical exposure is therefore zero. This file is the whole
+# change: delete it and the advisory surfaces in `cargo audit`
+# again. The warning-level RUSTSEC-2026-0374 (basic-toml
+# unmaintained, transitive) is NOT ignored — warnings do not fail
+# the audit, and it stays visible on purpose.
+#
+# RUSTSEC-2026-0459 (libsqlite3-sys 0.30.1 via C SQLite
+# CVE-2026-119375, medium) is ignored on the same proven
+# basis as 2023-0071 above: `cargo tree -i libsqlite3-sys`
+# prints nothing — the crate is not in the resolved
+# dependency tree and is never compiled into this app
+# (sqlx is pinned Postgres-only; the SQLite backend that
+# would pull it in is not part of the build). It survives
+# only as a Cargo.lock record. Verified 2026-11-09; delete
+# the entry and the advisory surfaces again.
+[advisories]
+ignore = ["RUSTSEC-2023-0071", "RUSTSEC-2026-0459"]

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
+  <rect width="600" height="600" fill="#F6E3EE"/>
+  <g transform="rotate(-18 210 320)">
+    <rect x="188" y="250" width="44" height="170" rx="20" fill="#E5E7EB"/>
+    <rect x="182" y="120" width="56" height="140" rx="26" fill="#D6336C"/>
+  </g>
+  <g transform="rotate(14 400 330)">
+    <path d="M400 130 C480 130 505 230 470 300 L330 300 C295 230 320 130 400 130 Z" fill="#F2B33D"/>
+    <rect x="382" y="295" width="36" height="150" rx="10" fill="#8A5A2B"/>
+    <text x="400" y="240" font-family="sans-serif" font-size="44" font-weight="bold" fill="#7A4A12" text-anchor="middle">LIVE</text>
+  </g>
+</svg>

@@ -1,0 +1,102 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | お支払い方法の選択{% endblock %}
+
+{% block homepart %}
+    <section class="checkout-page">
+        <ol class="steps">
+            <li class="done"><span class="step-num">1</span>カート</li>
+            <li class="done"><span class="step-num">2</span>お客様情報</li>
+            <li class="active" aria-current="step"><span class="step-num">3</span>お支払い方法</li>
+            <li><span class="step-num">4</span>注文確認</li>
+            <li><span class="step-num">5</span>完了</li>
+        </ol>
+        <h1>ご注文手続き</h1>
+
+        <form method="post" action="/checkout/payment" class="checkout-form checkout-layout">
+
+            <div class="checkout-main">
+                <section class="checkout-card">
+                    <h2>注文内容</h2>
+                    <ul class="checkout-lines">
+                        {% for line in lines %}
+                            <li>
+                                <a href="/products/{{ line.product_id }}">{% if line.image_path.is_empty() %}<span class="order-line-thumb order-line-thumb-empty" aria-hidden="true"></span>{% else %}<img src="{{ line.image_path }}" alt="" class="order-line-thumb">{% endif %}</a>
+                                <span class="order-line-main"><a href="/products/{{ line.product_id }}">{{ line.name }}</a>{% if !line.variant_label.is_empty() %}（{{ line.variant_label }}）{% endif %} <span class="line-qty">×{{ line.quantity }}</span></span>
+                                <span>{{ line.formatted_line_total() }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </section>
+
+                <section class="checkout-card">
+                    <h2><span class="section-num">01</span>お支払い方法</h2>
+                    {% if payment_options.len() > 1 %}
+                        <div class="payment-options" data-payment-options>
+                            {% for option in payment_options %}
+                                <label class="payment-option">
+                                    <input type="radio" name="payment_method" value="{{ option.slug }}"{% if option.checked %} checked{% endif %}>
+                                    <span class="payment-option-body">
+                                        <span class="payment-name">{{ option.label }}</span>
+                                        <span class="form-note">{{ option.note }}</span>
+                                    </span>
+                                </label>
+                            {% endfor %}
+                        </div>
+                        {% if let Some(error) = payment_error %}<p class="field-error">{{ error }}</p>{% endif %}
+                    {% else %}
+                        <div class="payment-box">
+                            <p class="payment-name">代金引換</p>
+                            <p class="form-note">代引き手数料 ¥330 が加算されます。お届け時に現金でお支払いください。</p>
+                        </div>
+                    {% endif %}
+                </section>
+
+                <section class="checkout-card">
+                    <h2><span class="section-num">02</span>お届け先</h2>
+                    <dl class="confirm-list">
+                        <div><dt>お名前</dt><dd>{{ flow.family_name }} {{ flow.given_name }} 様</dd></div>
+                        <div><dt>住所</dt><dd>〒{{ flow.postal_code }} {{ flow.prefecture }}{{ flow.city }}{{ flow.address_line }}{% if !flow.building.is_empty() %} {{ flow.building }}{% endif %}</dd></div>
+                        <div><dt>電話番号</dt><dd>{{ flow.phone }}</dd></div>
+                        <div><dt>メールアドレス</dt><dd>{{ flow.email }}</dd></div>
+                    </dl>
+                    <p class="form-note"><a href="/checkout">お届け先を変更する</a></p>
+                </section>
+
+                {% if let Some(balance) = points_balance %}
+                <section class="checkout-card">
+                    <h2><span class="section-num">03</span>ポイント利用</h2>
+                    <p class="form-note">現在の残高：{{ balance }} ポイント（1ポイント＝1円としてお支払いに使えます）</p>
+                    <label>利用するポイント
+                        <input type="text" name="points_to_use" value="{{ flow.points_to_use }}" inputmode="numeric">
+                    </label>
+                    {% if let Some(error) = points_error %}<p class="field-error">{{ error }}</p>{% endif %}
+                    <p class="form-note">使わない場合は0のままにしてください。利用分はお支払い金額から差し引かれます。</p>
+                </section>
+                {% endif %}
+            </div>
+
+            <aside class="checkout-side">
+                <section class="checkout-card summary-card">
+                    <h2>お支払い金額（税込）</h2>
+                    <dl class="totals-list">
+                        <div><dt>商品合計</dt><dd>{{ formatted_subtotal() }}</dd></div>
+                        {% if totals.discount_yen > 0 %}
+                            <div><dt>割引</dt><dd>−{{ formatted_discount() }}</dd></div>
+                        {% endif %}
+                        <div><dt>送料</dt><dd>{{ formatted_shipping() }}{% if totals.shipping_yen == 0 %}（無料）{% endif %}</dd></div>
+                        {% if totals.shipping_discount_yen > 0 %}
+                            <div><dt>送料割引</dt><dd>−{{ formatted_shipping_discount() }}</dd></div>
+                        {% endif %}
+                        <div data-cod-fee-row{% if flow.payment_method.is_hosted() %} style="display:none"{% endif %}><dt>代引き手数料</dt><dd>{{ cod_fee_amount }}</dd></div>
+                        <div class="totals-grand"><dt>合計</dt><dd data-grand-total data-total-cod="{{ grand_total_cod }}" data-total-online="{{ grand_total_online }}">{{ formatted_total() }}</dd></div>
+                    </dl>
+                    <div class="form-actions vertical">
+                        <button type="submit" class="primary-button">注文内容を確認する</button>
+                        <a href="/checkout" class="secondary-button">お客様情報に戻る</a>
+                    </div>
+                </section>
+            </aside>
+        </form>
+    </section>
+{% endblock %}

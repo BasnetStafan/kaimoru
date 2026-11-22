@@ -1,0 +1,537 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}{{ heading }}{% endblock %}
+
+{% block adminpart %}
+<p class="admin-back"><a href="/admin/products">← 商品一覧に戻る</a></p>
+<h1 class="admin-h1">{{ heading }}</h1>
+
+{% if let Some(url) = storefront_url %}
+<p class="admin-storefront-link">
+    {% if let Some(note) = storefront_note %}
+    <span aria-disabled="true">ストアで見る</span>
+    <span class="admin-muted">{{ note }}</span>
+    {% else %}
+    <a href="{{ url }}" target="_blank" rel="noopener">ストアで見る</a>
+    {% endif %}
+</p>
+{% endif %}
+
+{% if readonly %}
+<div class="admin-readonly-note">
+    <p>{{ status_note }}</p>
+    <form method="post" action="{{ unarchive_action }}" class="admin-unarchive-form">
+        <button type="submit" class="secondary-button">アーカイブを解除する</button>
+    </form>
+</div>
+{% endif %}
+
+<form method="post" action="{{ action }}" class="admin-form" id="admin-product-form" data-unsaved-guard>
+    {% if !expected.is_empty() %}<input type="hidden" name="expected" value="{{ expected }}">{% endif %}
+    <details class="admin-form-section" open>
+        <summary class="admin-form-section-title">基本情報</summary>
+
+        <label>商品名 <span class="badge-required">必須</span>
+            <input type="text" name="name" value="{{ name }}" placeholder="商品名を入力してください" aria-required="true"{% if readonly %} disabled{% endif %}>
+            <span class="admin-field-help">商品一覧や商品詳細ページに表示される名称です。</span>
+            {% if let Some(message) = name_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+
+        <div class="admin-form-row">
+            <label>商品コード <span class="badge-optional">任意</span>
+                <input type="text" name="product_code" value="{{ product_code }}" placeholder="例：TSHIRT-001"{% if readonly %} disabled{% endif %}>
+                <span class="admin-field-help">店舗側の管理番号です。設定すると詳細ページの「商品番号」に表示されます。他の商品と重複できません。</span>
+                {% if let Some(message) = error_for("product_code") %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+            <label>ブランド <span class="badge-optional">任意</span>
+                <input type="text" name="brand" value="{{ brand }}"{% if readonly %} disabled{% endif %}>
+                {% if let Some(message) = error_for("brand") %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+        </div>
+
+        <div class="admin-form-row">
+            <label>メーカー <span class="badge-optional">任意</span>
+                <input type="text" name="manufacturer" value="{{ manufacturer }}"{% if readonly %} disabled{% endif %}>
+                {% if let Some(message) = error_for("manufacturer") %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+            <label>原産国 <span class="badge-optional">任意</span>
+                <input type="text" name="country_of_origin" value="{{ country_of_origin }}" placeholder="例：日本"{% if readonly %} disabled{% endif %}>
+                {% if let Some(message) = error_for("country_of_origin") %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+        </div>
+
+        <label>検索キーワード <span class="badge-optional">任意</span>
+            <input type="text" name="search_keywords" value="{{ search_keywords }}" placeholder="例：半袖 夏物 コットン"{% if readonly %} disabled{% endif %}>
+            <span class="admin-field-help">商品名に含まれない言葉でも検索でヒットさせたい場合に入力します（スペース区切り）。</span>
+            {% if let Some(message) = error_for("search_keywords") %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+    </details>
+
+    <details class="admin-form-section" open>
+        <summary class="admin-form-section-title">商品画像</summary>
+        <fieldset class="admin-fieldset">
+            <legend>画像 <span class="badge-optional">任意</span></legend>
+            <div class="admin-image-layout">
+                <div class="admin-image-main">
+                    <div class="admin-image-list" id="product-image-list"{% if readonly %} data-readonly="1"{% endif %}>
+                        {% for img in images %}
+                        <div class="admin-image-item"{% if !readonly %} draggable="true"{% endif %}>
+                            <img src="{{ img.path }}" alt="" draggable="false">
+                            <input type="hidden" name="images" value="{{ img.path }}">
+                            <input type="text" name="image_alt" value="{{ img.alt }}" placeholder="代替テキスト（任意）" class="admin-image-alt" aria-label="画像の代替テキスト"{% if readonly %} disabled{% endif %}>
+                            <span class="admin-image-main-badge">メイン</span>
+                            {% if !readonly %}
+                            <div class="admin-image-item-actions">
+                                <button type="button" class="text-button" data-move-image="-1" aria-label="左へ移動">◀</button>
+                                <button type="button" class="text-button" data-move-image="1" aria-label="右へ移動">▶</button>
+                                <button type="button" class="text-button" data-remove-image aria-label="画像を外す">×</button>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <p class="admin-image-empty" id="product-image-empty"{% if !images.is_empty() %} hidden{% endif %}>画像はまだ登録されていません</p>
+                    <p class="admin-field-help">最初の画像がメイン画像として商品カードや一覧に表示されます。サムネイルのドラッグ、または◀▶ボタンで並び替えできます。代替テキストは読み上げソフトや画像が表示できない場合に使われます（未入力の場合は商品名が使われます）。</p>
+                    {% if !readonly %}
+                    <div class="admin-image-upload" id="product-image-upload">
+                        <label class="admin-image-dropzone" id="product-image-dropzone">
+                            <input type="file" id="product-image-file" class="admin-image-upload-input" accept="image/png,image/jpeg,image/webp,image/gif" multiple>
+                            <span class="admin-image-dropzone-title">新しい画像をアップロード</span>
+                            <span class="admin-image-dropzone-text">クリックして選択、または画像をドラッグ＆ドロップ（複数可）</span>
+                            <span class="admin-image-dropzone-note">PNG・JPEG・WebP・GIF / 1枚20MBまで / 正方形の画像がおすすめです</span>
+                        </label>
+                        <p class="admin-image-upload-status" id="product-image-upload-status" hidden></p>
+                        <p class="field-error" id="product-image-upload-error" hidden></p>
+                    </div>
+                    {% endif %}
+                    <p class="admin-field-help">公開するには画像が1枚以上必要です。下書きの間は画像なしでも保存できます。</p>
+                </div>
+                <div class="admin-image-preview">
+                    <p>メイン画像プレビュー</p>
+                    <img id="admin-image-preview-img" src="" alt="メイン画像プレビュー">
+                </div>
+            </div>
+            {% if let Some(message) = image_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </fieldset>
+    </details>
+
+    <details class="admin-form-section" open>
+        <summary class="admin-form-section-title">価格・消費税</summary>
+
+        <label>消費税区分 <span class="badge-required">必須</span>
+            <select name="tax_class_id" data-rounding="{{ tax_rounding }}" aria-required="true"{% if readonly %} disabled{% endif %}>
+                {% for option in tax_class_options %}
+                <option value="{{ option.id }}" data-rate="{{ option.rate_percent }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+            <span class="admin-field-help">食品などは軽減税率、医療品などは非課税を選んでください。税額は注文ごとに、注文日の税率で区分ごとに計算されます。</span>
+            {% if let Some(message) = error_for("tax_class_id") %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+
+        <div class="admin-form-row">
+            <label>価格の入力方法 <span class="badge-required">必須</span>
+                <select name="price_mode"{% if readonly %} disabled{% endif %}>
+                    <option value="incl"{% if !price_mode_is_excl() %} selected{% endif %}>税込で入力</option>
+                    <option value="excl"{% if price_mode_is_excl() %} selected{% endif %}>税抜で入力（税込に換算して保存）</option>
+                </select>
+                <span class="admin-field-help">保存される価格は常に税込です。税抜で入力すると、消費税区分の税率で税込価格に換算します。</span>
+            </label>
+            <label>原価（税込・円） <span class="badge-optional">任意</span>
+                <input type="text" name="cost_yen" value="{{ cost_yen }}" inputmode="numeric"{% if readonly %} disabled{% endif %}>
+                <span class="admin-field-help">管理用です。店舗には表示されません。</span>
+                {% if let Some(message) = error_for("cost_yen") %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+        </div>
+
+        <div class="admin-form-row">
+            <label>価格（税込・円） <span class="badge-required">必須</span>
+                <input type="text" name="price_yen" value="{{ price_yen }}" inputmode="numeric" aria-required="true"{% if readonly %} disabled{% endif %}>
+                {% if let Some(message) = price_error %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+            <label>価格（税抜・円） <span class="badge-optional">任意</span>
+                <input type="text" name="price_excl_yen" value="{{ price_excl_yen }}" inputmode="numeric"{% if readonly %} disabled{% endif %}>
+                <span class="admin-field-help">「税抜で入力」のときはこの欄が入力元になります。「税込で入力」のときは、税込価格から換算して連動表示します。現在の価格の税抜換算：{{ price_excl_display }}円</span>
+                {% if let Some(message) = error_for("price_excl_yen") %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+        </div>
+
+        <div class="admin-form-row">
+            <label>セール価格（税込・円） <span class="badge-optional">任意</span>
+                <input type="text" name="sale_price_yen" id="sale_price_yen" value="{{ sale_price_yen }}" inputmode="numeric"{% if readonly %} disabled{% endif %}>
+                <span class="admin-field-help">期間中はこの価格で販売され、割引率が自動でバッジ表示されます。通常価格より低く設定してください。</span>
+            </label>
+            <label>セール価格（税抜・円） <span class="badge-optional">任意</span>
+                <input type="text" id="sale_price_excl_yen" inputmode="numeric"{% if readonly %} disabled{% endif %}>
+                <span class="admin-field-help">税込のセール価格と連動します。入力すると税率で税込に換算します。保存されるのは税込価格です。</span>
+                {% if let Some(message) = error_for("sale_price_yen") %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+            <label>プロモーション表示（%） <span class="badge-optional">任意</span>
+                <input type="text" name="discount_percent" value="{{ discount_percent }}" inputmode="numeric"{% if readonly %} disabled{% endif %}>
+                <span class="admin-field-help">バッジ表示専用の割引率です。価格は下がりません。セール価格が有効な間はセールの実割引率が優先されます。</span>
+                {% if let Some(message) = error_for("discount_percent") %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+        </div>
+
+        <div class="admin-form-row">
+            <label>セール開始日時 <span class="badge-optional">任意</span>
+                <input type="datetime-local" name="sale_starts_at" value="{{ sale_starts_at }}"{% if readonly %} disabled{% endif %}>
+                {% if let Some(message) = error_for("sale_starts_at") %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+            <label>セール終了日時 <span class="badge-optional">任意</span>
+                <input type="datetime-local" name="sale_ends_at" value="{{ sale_ends_at }}"{% if readonly %} disabled{% endif %}>
+                {% if let Some(message) = error_for("sale_ends_at") %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+        </div>
+    </details>
+
+    <details class="admin-form-section" open>
+        <summary class="admin-form-section-title">カテゴリー・タグ</summary>
+
+        <label>カテゴリー <span class="badge-required">必須</span>
+<div class="admin-combobox" data-combobox>
+            <div class="admin-combobox-control">
+                <input type="text" data-combobox-input placeholder="検索するか、一覧から選んでください" autocomplete="off">
+                <button type="button" class="admin-combobox-toggle" data-combobox-toggle aria-label="カテゴリーの一覧を開く"><span aria-hidden="true">▾</span></button>
+            </div>
+            <select name="category_id" data-combobox-select aria-required="true"{% if readonly %} disabled{% endif %}>
+                <option value="">カテゴリーを選択</option>
+                {% for option in category_options %}
+                <option value="{{ option.id }}"{% if option.selected %} selected{% endif %}>{{ option.name }}{% if option.inactive %}（無効）{% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+            <span class="admin-field-help">店舗のナビゲーションとカテゴリー検索に使われます。カテゴリー管理で登録したものから選びます。</span>
+            {% if let Some(message) = category_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+
+        <fieldset class="admin-fieldset">
+            <legend>タグ <span class="badge-optional">任意</span></legend>
+            <div class="tag-chips" id="tag-chips">
+                {% for t in tags %}
+                {% if t.checked %}
+                <span class="admin-badge tag-chip-selected">{{ t.label }}<button type="button" class="tag-chip-remove" data-remove-tag="{{ t.id }}" aria-label="{{ t.label }}を外す"{% if readonly %} disabled{% endif %}>×</button></span>
+                {% endif %}
+                {% endfor %}
+            </div>
+            <button type="button" class="secondary-button tag-add-button" id="tag-add-button"{% if readonly %} disabled{% endif %}>+ タグを追加</button>
+            <div class="admin-tag-grid" id="tag-panel" hidden>
+                <input type="search" class="admin-tag-search" data-tag-search placeholder="タグを検索" aria-label="タグを検索"{% if readonly %} disabled{% endif %}>
+                <p class="admin-tag-empty" data-tag-empty hidden>該当するタグがありません</p>
+                {% for t in tags %}
+                <label class="admin-check">
+                    <input type="checkbox" name="tag_ids" value="{{ t.id }}"{% if t.checked %} checked{% endif %}{% if readonly %} disabled{% endif %}>
+                    {{ t.label }}
+                </label>
+                {% endfor %}
+            </div>
+            <span class="admin-field-help">商品詳細ページにタグとして表示され、タグでの絞り込み検索に使われます。タグ管理で登録したものから選びます。</span>
+        </fieldset>
+    </details>
+
+    <details class="admin-form-section" open>
+        <summary class="admin-form-section-title">バリエーション</summary>
+        <fieldset class="admin-fieldset" id="variant-editor"{% if readonly %} data-readonly="1"{% endif %}>
+            <legend>バリエーション <span class="badge-optional">任意</span></legend>
+            <p class="form-note">サイズやカラーなど、商品の違いを分ける項目（見出し）と選択肢を自由に登録できます。見出しは5つまで、選択肢は1つの見出しにつき5つまでです。バリエーションがない商品は、このまま保存してください。</p>
+            <div id="variant-axes">
+                {% for axis in variant_axes %}
+                <div class="variant-axis" data-axis-block>
+                    <div class="variant-axis-head">
+                        <input type="hidden" name="axes[{{ axis.index }}][id]" value="{{ axis.id }}">
+                        <label>見出し
+                            <input type="text" name="axes[{{ axis.index }}][name]" value="{{ axis.name }}" placeholder="例：サイズ"{% if readonly %} disabled{% endif %}>
+                        </label>
+                        <button type="button" class="text-button" data-remove-axis{% if readonly %} disabled{% endif %}>この見出しを削除</button>
+                    </div>
+                    <div class="variant-options">
+                        {% for opt in axis.options %}
+                        <span class="variant-option">
+                            <input type="hidden" name="axes[{{ axis.index }}][options][{{ opt.index }}][id]" value="{{ opt.id }}">
+                            <input type="text" name="axes[{{ axis.index }}][options][{{ opt.index }}][value]" value="{{ opt.value }}" placeholder="選択肢"{% if readonly %} disabled{% endif %}>
+                            <button type="button" class="text-button" data-remove-option{% if readonly %} disabled{% endif %}>×</button>
+                        </span>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="secondary-button" data-add-option{% if readonly %} disabled{% endif %}>選択肢を追加</button>
+                </div>
+                {% endfor %}
+            </div>
+            {% if !readonly %}
+            <div class="variant-add-row">
+                <button type="button" class="secondary-button" id="variant-add-axis">見出しを追加</button>
+                <label>テンプレートから追加
+                    <select id="variant-preset">
+                        <option value="">選択してください</option>
+                        <option value="size">サイズ</option>
+                        <option value="color">カラー</option>
+                        <option value="shoe">靴サイズ</option>
+                        <option value="volume">容量</option>
+                    </select>
+                </label>
+            </div>
+            {% endif %}
+            <h3 class="variant-grid-title">組み合わせごとの設定</h3>
+            <p class="form-note">在庫・価格（空欄＝商品価格）・SKU・JAN・画像・販売可否・入荷予定を組み合わせごとに設定できます。販売可否を外した組み合わせは店舗で選べなくなります。</p>
+            <div id="variant-grid"></div>
+            {% if let Some(message) = variants_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+            <script type="application/json" id="variant-existing-combos">{{ existing_combos_json|safe }}</script>
+            <script type="application/json" id="variant-grid-combos">{{ grid_combos_json|safe }}</script>
+        </fieldset>
+    </details>
+
+    <details class="admin-form-section" open>
+        <summary class="admin-form-section-title">在庫管理</summary>
+
+        <label class="admin-check">
+            <input type="checkbox" name="track_stock" value="track_stock"{% if track_stock %} checked{% endif %}{% if readonly %} disabled{% endif %}>
+            在庫を管理する（オフにすると在庫無制限になります）
+        </label>
+        <label class="admin-check">
+            <input type="checkbox" name="allow_backorder" value="allow_backorder"{% if allow_backorder %} checked{% endif %}{% if readonly %} disabled{% endif %}>
+            在庫切れ時も販売する（入荷次第発送）
+        </label>
+
+        <label>在庫わずか表示の閾値 <span class="badge-optional">任意</span>
+            <input type="text" name="low_stock_threshold" value="{{ low_stock_threshold }}" inputmode="numeric"{% if readonly %} disabled{% endif %}>
+            <span class="admin-field-help">残りこの個数以下で「残りわずか」と表示します。空欄の場合は店舗全体の既定値を使います。</span>
+            {% if let Some(message) = error_for("low_stock_threshold") %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+
+        <label>ポイント付与率（%） <span class="badge-optional">任意</span>
+            <input type="text" name="points_earn_percent" value="{{ points_earn_percent }}" inputmode="numeric"{% if readonly %} disabled{% endif %}>
+            <span class="admin-field-help">この商品だけのポイント付与率です。空欄の場合は店舗全体の付与率を使い、0にするとポイント対象外になります。</span>
+            {% if let Some(message) = error_for("points_earn_percent") %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+
+        {% if !stock_history_url.is_empty() %}
+        <p class="form-note"><a href="{{ stock_history_url }}">在庫履歴を見る</a>（注文・キャンセル・返金・手動調整の記録）</p>
+        {% endif %}
+        {% if let Some(summary) = restock_summary %}
+        <p class="form-note">{{ summary }}</p>
+        {% endif %}
+    </details>
+
+    <details class="admin-form-section" open>
+        <summary class="admin-form-section-title">配送設定</summary>
+
+        <div class="admin-form-row">
+            <label>重量（g） <span class="badge-optional">任意</span>
+                <input type="text" name="weight_grams" value="{{ weight_grams }}" inputmode="numeric"{% if readonly %} disabled{% endif %}>
+                {% if let Some(message) = error_for("weight_grams") %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+            <label>発送予定日数 <span class="badge-optional">任意</span>
+                <input type="text" name="lead_time_days" value="{{ lead_time_days }}" inputmode="numeric" placeholder="例：3"{% if readonly %} disabled{% endif %}>
+                <span class="admin-field-help">詳細ページの配送欄に「ご注文から約N日で発送」と表示されます。</span>
+                {% if let Some(message) = error_for("lead_time_days") %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+        </div>
+
+        <div class="admin-form-row">
+            <label>サイズ 長さ（mm） <span class="badge-optional">任意</span>
+                <input type="text" name="size_length_mm" value="{{ size_length_mm }}" inputmode="numeric"{% if readonly %} disabled{% endif %}>
+            </label>
+            <label>幅（mm） <span class="badge-optional">任意</span>
+                <input type="text" name="size_width_mm" value="{{ size_width_mm }}" inputmode="numeric"{% if readonly %} disabled{% endif %}>
+            </label>
+            <label>高さ（mm） <span class="badge-optional">任意</span>
+                <input type="text" name="size_height_mm" value="{{ size_height_mm }}" inputmode="numeric"{% if readonly %} disabled{% endif %}>
+            </label>
+        </div>
+
+        <label class="admin-check">
+            <input type="checkbox" name="cool_delivery" value="cool_delivery"{% if cool_delivery %} checked{% endif %}{% if readonly %} disabled{% endif %}>
+            クール便対応
+        </label>
+        <label class="admin-check">
+            <input type="checkbox" name="mail_delivery" value="mail_delivery"{% if mail_delivery %} checked{% endif %}{% if readonly %} disabled{% endif %}>
+            メール便対応
+        </label>
+        <label class="admin-check">
+            <input type="checkbox" name="free_shipping" value="free_shipping"{% if free_shipping %} checked{% endif %}{% if readonly %} disabled{% endif %}>
+            この商品は送料無料（カート内の全商品が送料無料の場合、送料はかかりません）
+        </label>
+
+        <label>配送不可の都道府県 <span class="badge-optional">任意</span>
+            <input type="text" name="undeliverable_regions" value="{{ undeliverable_regions }}" placeholder="例：沖縄県,北海道"{% if readonly %} disabled{% endif %}>
+            <span class="admin-field-help">都道府県名をカンマ区切りで入力します。対象地域への注文は受け付けません。</span>
+            {% if let Some(message) = error_for("undeliverable_regions") %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+    </details>
+
+    <details class="admin-form-section" open>
+        <summary class="admin-form-section-title">商品説明</summary>
+
+        <label>商品説明（標準） <span class="badge-optional">任意</span>
+            <textarea name="description" rows="6" maxlength="2000" placeholder="商品の説明を入力してください"{% if readonly %} disabled{% endif %}>{{ description }}</textarea>
+            <span class="admin-field-help">商品詳細ページの「商品説明」に表示されます（PC表示）。</span>
+            {% if let Some(message) = description_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+
+        <label>商品説明（スマートフォン向け） <span class="badge-optional">任意</span>
+            <textarea name="description_sp" rows="6" maxlength="2000" placeholder="スマートフォン向けの説明を入力してください"{% if readonly %} disabled{% endif %}>{{ description_sp }}</textarea>
+            <span class="admin-field-help">スマートフォンではこちらが表示されます。空欄の場合は標準の説明が表示されます。</span>
+            {% if let Some(message) = error_for("description_sp") %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+
+        <label>商品の特徴 <span class="badge-optional">任意</span>
+            <textarea name="features_text" rows="4" placeholder="商品の特徴・アピールポイントを入力してください"{% if readonly %} disabled{% endif %}>{{ features_text }}</textarea>
+            {% if let Some(message) = error_for("features_text") %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+
+        <label>仕様 <span class="badge-optional">任意</span>
+            <textarea name="spec_text" rows="4" placeholder="素材・サイズ・内容量などの仕様を入力してください"{% if readonly %} disabled{% endif %}>{{ spec_text }}</textarea>
+            {% if let Some(message) = error_for("spec_text") %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+    </details>
+
+    <details class="admin-form-section" open>
+        <summary class="admin-form-section-title">SEO設定</summary>
+
+        <label>URLスラッグ <span class="badge-optional">任意</span>
+            <input type="text" name="slug" value="{{ slug }}" placeholder="例：rust-tshirt"{% if readonly %} disabled{% endif %}>
+            <span class="admin-field-help">半角小文字・数字・ハイフンで入力します。設定すると /products/スラッグ でもアクセスできます（商品IDのURLも引き続き使えます）。</span>
+            {% if let Some(message) = error_for("slug") %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+
+        <label>SEOタイトル <span class="badge-optional">任意</span>
+            <input type="text" name="seo_title" value="{{ seo_title }}"{% if readonly %} disabled{% endif %}>
+            <span class="admin-field-help">詳細ページのタイトル（検索結果の見出し）です。空欄の場合は「店舗名 | 商品名」になります。</span>
+            {% if let Some(message) = error_for("seo_title") %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+
+        <label>メタディスクリプション <span class="badge-optional">任意</span>
+            <textarea name="meta_description" rows="3" placeholder="検索結果に表示される説明文を入力してください"{% if readonly %} disabled{% endif %}>{{ meta_description }}</textarea>
+            <span class="admin-field-help">空欄の場合は店舗全体の説明文が使われます。</span>
+            {% if let Some(message) = error_for("meta_description") %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+    </details>
+
+    <details class="admin-form-section" open>
+        <summary class="admin-form-section-title">公開設定</summary>
+
+        <div class="admin-form-row">
+            <label>ステータス <span class="badge-required">必須</span>
+                <select name="status" aria-required="true"{% if readonly %} disabled{% endif %}>
+                    <option value="public"{% if status_is_public() %} selected{% endif %}>公開</option>
+                    <option value="draft"{% if !status_is_public() %} selected{% endif %}>下書き</option>
+                </select>
+            </label>
+            <label>表示順 <span class="badge-optional">任意</span>
+                <input type="text" name="display_order" value="{{ display_order }}" inputmode="numeric"{% if readonly %} disabled{% endif %}>
+                <span class="admin-field-help">一覧・検索の初期表示はこの値の小さい順です。</span>
+                {% if let Some(message) = error_for("display_order") %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+        </div>
+
+        <div class="admin-form-row">
+            <label>公開開始日時 <span class="badge-optional">任意</span>
+                <input type="datetime-local" name="publish_starts_at" value="{{ publish_starts_at }}"{% if readonly %} disabled{% endif %}>
+                <span class="admin-field-help">この日時になるまで店舗に表示されません。空欄＝すぐに公開。</span>
+                {% if let Some(message) = error_for("publish_starts_at") %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+            <label>公開終了日時 <span class="badge-optional">任意</span>
+                <input type="datetime-local" name="publish_ends_at" value="{{ publish_ends_at }}"{% if readonly %} disabled{% endif %}>
+                <span class="admin-field-help">この日時を過ぎると店舗に表示されなくなります。空欄＝無期限。</span>
+                {% if let Some(message) = error_for("publish_ends_at") %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+        </div>
+
+        <label class="admin-check">
+            <input type="checkbox" name="is_new" value="is_new"{% if is_new %} checked{% endif %}{% if readonly %} disabled{% endif %}>
+            新着（NEW）バッジを表示
+        </label>
+        <label class="admin-check">
+            <input type="checkbox" name="is_preorder" value="is_preorder"{% if is_preorder %} checked{% endif %}{% if readonly %} disabled{% endif %}>
+            予約商品
+        </label>
+        <label class="admin-check">
+            <input type="checkbox" name="is_staff_pick" value="is_staff_pick"{% if is_staff_pick %} checked{% endif %}{% if readonly %} disabled{% endif %}>
+            おすすめバッジを表示
+        </label>
+        <label class="admin-check">
+            <input type="checkbox" name="event" value="event"{% if is_event %} checked{% endif %}{% if readonly %} disabled{% endif %}>
+            イベント商品（会場受取・先行予約の対象）
+        </label>
+    </details>
+
+    {% if !readonly %}
+    <div class="admin-form-actions">
+        <p class="admin-unsaved-note" data-unsaved-note hidden>未保存の変更があります</p>
+        <button type="submit" class="primary-button">保存する</button>
+        <button type="submit" class="secondary-button" name="save_as" value="draft">下書きで保存</button>
+        <a class="secondary-button" href="/admin/products">キャンセル</a>
+    </div>
+    {% endif %}
+</form>
+
+{% if !archive_action.is_empty() %}
+<form method="post" action="{{ archive_action }}" class="admin-archive-form">
+    <button type="submit" class="secondary-button danger">この商品をアーカイブする</button>
+    <span class="admin-archive-note">アーカイブすると店舗には表示されなくなります（削除はされません）</span>
+</form>
+{% endif %}
+{% endblock %}

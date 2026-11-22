@@ -1,0 +1,36 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | 入力内容の確認{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        <h1>入力内容の確認</h1>
+        <ol class="steps">
+            <li class="done"><span class="step-num">1</span>メールアドレス</li>
+            <li class="done"><span class="step-num">2</span>認証コード</li>
+            <li class="done"><span class="step-num">3</span>会員情報</li>
+            <li class="active"><span class="step-num">4</span>確認</li>
+        </ol>
+
+        {% if let Some(message) = error %}
+            <p class="form-error">{{ message }}</p>
+        {% endif %}
+
+        <table class="confirm-table">
+            <tr><th>メールアドレス</th><td>{{ email }}</td></tr>
+            {% if !sns_mode %}<tr><th>パスワード</th><td>••••••••(表示されません)</td></tr>{% endif %}
+            <tr><th>氏名</th><td>{{ family_name }} {{ given_name }}</td></tr>
+            <tr><th>フリガナ</th><td>{{ family_name_kana }} {{ given_name_kana }}</td></tr>
+            <tr><th>生年月日</th><td>{{ birth_date }}</td></tr>
+            <tr><th>性別</th><td>{{ gender }}</td></tr>
+            <tr><th>住所</th><td>〒{{ postal_code }} {{ prefecture }}{{ city }}{{ address_line }} {{ building }}</td></tr>
+            <tr><th>電話番号</th><td>{{ phone }}</td></tr>
+            <tr><th>メールマガジン</th><td>{{ mail_magazine_text }}</td></tr>
+        </table>
+
+        <form method="post" action="{% if sns_mode %}/signup/sns/confirm{% else %}/signup/confirm{% endif %}" class="auth-form">
+            <button type="submit" class="primary-button">この内容で登録する</button>
+        </form>
+        <p class="form-note"><a href="{% if sns_mode %}/signup/sns/details{% else %}/signup/details{% endif %}">入力内容を修正する</a></p>
+    </section>
+{% endblock %}

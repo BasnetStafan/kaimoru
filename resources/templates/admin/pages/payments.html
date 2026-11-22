@@ -1,0 +1,66 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}決済照合{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">決済照合</h1>
+<p class="admin-note">KOMOJU決済の照合状況です（読み取り専用）。金額の移動は注文・決済の通常フローでのみ行われます。</p>
+
+<h2 class="admin-h2">未完了の決済（古い順）</h2>
+{% if open.is_empty() %}
+<p class="admin-note">未完了の決済はありません。</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead><tr><th>注文番号</th><th>支払方法</th><th>状態</th><th>金額</th><th>作成日時</th><th>支払期限</th></tr></thead>
+    <tbody>
+        {% for p in open %}
+        <tr>
+            <td><a href="{{ p.order_url }}">{{ p.order_number }}</a></td>
+            <td>{{ p.method_label }}</td>
+            <td>{{ p.status_label }}</td>
+            <td>{{ p.amount }}</td>
+            <td>{{ p.created_label }}</td>
+            <td>{{ p.deadline_label }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+
+<h2 class="admin-h2">確定済み合計（支払方法別・返金差し引き後）</h2>
+{% if captured.is_empty() %}
+<p class="admin-note">確定済みの決済はありません。</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead><tr><th>支払方法</th><th>件数</th><th>合計</th></tr></thead>
+    <tbody>
+        {% for c in captured %}
+        <tr>
+            <td>{{ c.method_label }}</td>
+            <td>{{ c.count }}件</td>
+            <td>{{ c.net }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+
+<h2 class="admin-h2">要確認の決済</h2>
+{% if flagged.is_empty() %}
+<p class="admin-note">要確認の決済はありません。</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead><tr><th>注文番号</th><th>状態</th><th>内容</th><th>更新日時</th></tr></thead>
+    <tbody>
+        {% for p in flagged %}
+        <tr>
+            <td><a href="{{ p.order_url }}">{{ p.order_number }}</a></td>
+            <td>{{ p.status_label }}</td>
+            <td>{{ p.flag_note }}</td>
+            <td>{{ p.updated_label }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+{% endblock %}

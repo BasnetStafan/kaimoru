@@ -1,0 +1,99 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}{{ heading }}{% endblock %}
+
+{% block adminpart %}
+<p class="admin-back"><a href="/admin/content/pages">← ページ一覧に戻る</a></p>
+<h1 class="admin-h1">{{ heading }}</h1>
+
+<p class="admin-note">本文の形式は Markdown と HTML から選べます。Markdown では HTMLタグは使えません（入力しても文字として表示されます）。HTML では、スクリプトなどの危険なタグや属性は保存時に自動で取り除かれます。リンクは https:、http:、mailto:、または「/」で始まるパスが使えます。保存するたびに、置き換わる内容は「版」として残り、あとから戻せます。</p>
+{% if is_system %}
+<p class="admin-note">固定ページは削除できません。URL（スラッグ）も変更できません。</p>
+{% endif %}
+
+<form method="post" action="{{ action }}" class="admin-form" data-unsaved-guard>
+<input type="hidden" name="form_ticket" value="{{ form_ticket }}">
+    <section class="admin-form-section">
+        <h2 class="admin-form-section-title">基本情報</h2>
+        {% if slug_editable %}
+        <label>スラッグ <span class="badge-required">必須</span>
+            <input type="text" name="slug" value="{{ values.slug }}" maxlength="60" placeholder="例：size-guide" aria-required="true">
+            <span class="admin-field-help">URL「/pages/スラッグ」の一部になります。半角英小文字・数字・ハイフン、3〜60文字。登録後は変更できません。</span>
+            {% if let Some(message) = slug_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        {% else %}
+        <label>スラッグ
+            <input type="text" value="{{ values.slug }}" disabled>
+            <span class="admin-field-help">登録後は変更できません（リンク切れを防ぐため）。</span>
+        </label>
+        {% endif %}
+        <label>タイトル <span class="badge-required">必須</span>
+            <input type="text" name="title" value="{{ values.title }}" maxlength="80" placeholder="ページのタイトルを入力してください" aria-required="true">
+            <span class="admin-field-help">ページの見出しと、ブラウザのタブに表示される名前です。</span>
+            {% if let Some(message) = title_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>ステータス <span class="badge-required">必須</span>
+            <select name="status" aria-required="true">
+                <option value="draft"{% if values.status != "published" %} selected{% endif %}>下書き</option>
+                <option value="published"{% if values.status == "published" %} selected{% endif %}>公開</option>
+            </select>
+            <span class="admin-field-help">下書きのページは店舗に表示されません。</span>
+            {% if let Some(message) = status_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+    </section>
+
+    <section class="admin-form-section">
+        <h2 class="admin-form-section-title">本文</h2>
+        <fieldset class="admin-fieldset">
+            <legend>本文の形式 <span class="badge-required">必須</span></legend>
+            <label class="admin-check"><input type="radio" name="format" value="markdown"{% if values.format != "html" %} checked{% endif %}> Markdown</label>
+            <label class="admin-check"><input type="radio" name="format" value="html"{% if values.format == "html" %} checked{% endif %}> HTML</label>
+            <span class="admin-field-help">形式を切り替えても本文の内容は変換されません。そのまま、選んだ形式として解釈されます。</span>
+            {% if let Some(message) = format_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </fieldset>
+        <label>本文 <span class="badge-optional">任意</span>
+            <textarea name="body_md" rows="18" placeholder="本文を入力してください" data-body-source{% if values.format == "html" %} class="body-source-html"{% endif %}>{{ values.body_md }}</textarea>
+            {% if values.format == "html" %}
+            <span class="admin-field-help">HTMLで書けます。インラインスタイル（style属性）と class / id が使えます。スクリプトは実行されません。画像は先にアップロードしたものを使ってください（外部サイトの画像は表示されません）。外部サービスの埋め込み（YouTubeなど）は表示されません。危険なタグや属性は保存時に自動で取り除かれます。</span>
+            {% else %}
+            <span class="admin-field-help">見出しは「## 」、箇条書きは「- 」、リンクは「[文字](URL)」と書きます。</span>
+            {% endif %}
+            {% if let Some(message) = body_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>メタディスクリプション <span class="badge-optional">任意</span>
+            <textarea name="meta_description" rows="2" maxlength="160" data-meta-counter placeholder="ページの説明を入力してください">{{ values.meta_description }}</textarea>
+            <span class="admin-field-help">検索結果などに使う説明文です。<span data-meta-count></span></span>
+            {% if let Some(message) = meta_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+    </section>
+
+    <div class="admin-form-actions">
+        <p class="admin-unsaved-note" data-unsaved-note hidden>未保存の変更があります</p>
+        <button type="submit" class="primary-button">保存する</button>
+        <button type="button" class="secondary-button" data-preview="/admin/content/pages/preview">プレビュー</button>
+        <a class="secondary-button" href="/admin/content/pages">キャンセル</a>
+    </div>
+</form>
+
+{% if let Some(url) = revisions_url %}
+<p class="admin-note"><a href="{{ url }}">版の履歴を見る</a>（保存前の内容が最大50件残っています）</p>
+{% endif %}
+
+{% if let Some(url) = delete_url %}
+<form method="post" action="{{ url }}" class="content-page-delete-form">
+    <button type="submit" class="secondary-button danger">このページを削除する</button>
+</form>
+{% endif %}
+{% endblock %}

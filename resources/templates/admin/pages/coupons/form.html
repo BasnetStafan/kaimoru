@@ -1,0 +1,133 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}{{ heading }} | クーポン定義{% endblock %}
+
+{% block adminpart %}
+<p><a href="/admin/coupons">← クーポン定義一覧へ戻る</a></p>
+<h1 class="admin-h1">{{ heading }}</h1>
+
+<form method="post" action="{{ form_action }}" class="admin-form" data-unsaved-guard data-coupon-form>
+<input type="hidden" name="form_ticket" value="{{ form_ticket }}">
+    <label>コード <span class="badge-required">必須</span>
+        <input type="text" name="code" value="{{ values.code }}" aria-required="true"{% if code_locked %} readonly{% endif %}>
+        {% if code_locked %}<p class="form-note">利用済みのためコードは変更できません。</p>{% endif %}
+        {% if let Some(e) = errors.code %}<p class="field-error">{{ e }}</p>{% endif %}
+    </label>
+    <label>割引タイプ <span class="badge-required">必須</span>
+        <select name="discount_type" aria-required="true">
+            <option value="fixed"{% if values.discount_type == "fixed" %} selected{% endif %}>定額（円）</option>
+            <option value="percent"{% if values.discount_type == "percent" %} selected{% endif %}>定率（％）</option>
+            <option value="free_shipping"{% if values.discount_type == "free_shipping" %} selected{% endif %}>送料無料</option>
+        </select>
+        {% if let Some(e) = errors.discount_type %}<p class="field-error">{{ e }}</p>{% endif %}
+        <p class="form-note" data-coupon-value="free_shipping" hidden>送料無料では割引額・割引率は使いません。対象は注文全体です。</p>
+    </label>
+    <label data-coupon-value="fixed">割引額（円） <span class="badge-required">必須</span>
+        <input type="text" name="discount_yen" value="{{ values.discount_yen }}" inputmode="numeric" aria-required="true"{% if money_locked %} readonly{% endif %}>
+        {% if money_locked %}<p class="form-note">利用済みのため金額は変更できません。</p>{% endif %}
+        {% if let Some(e) = errors.discount_yen %}<p class="field-error">{{ e }}</p>{% endif %}
+    </label>
+    <label data-coupon-value="percent">割引率（％） <span class="badge-required">必須</span>
+        <input type="text" name="percent" value="{{ values.percent }}" inputmode="numeric" aria-required="true">
+        <p class="form-note">1〜100の整数で入力してください。</p>
+        {% if let Some(e) = errors.percent %}<p class="field-error">{{ e }}</p>{% endif %}
+    </label>
+    <label>対象 <span class="badge-required">必須</span>
+        <select name="scope" aria-required="true">
+            <option value="order"{% if values.scope == "order" %} selected{% endif %}>注文全体</option>
+            <option value="product"{% if values.scope == "product" %} selected{% endif %}>商品を指定</option>
+            <option value="variant"{% if values.scope == "variant" %} selected{% endif %}>バリエーションを指定</option>
+        </select>
+        {% if let Some(e) = errors.scope %}<p class="field-error">{{ e }}</p>{% endif %}
+    </label>
+    <label data-coupon-scope="product variant">対象商品 <span class="badge-optional" data-scope-badge="product">任意</span>
+        <div class="admin-combobox" data-combobox>
+            <div class="admin-combobox-control">
+                <input type="text" data-combobox-input placeholder="検索するか、一覧から選んでください" autocomplete="off">
+                <button type="button" class="admin-combobox-toggle" data-combobox-toggle aria-label="対象商品の一覧を開く"><span aria-hidden="true">▾</span></button>
+            </div>
+            <select name="product_id" data-combobox-select>
+                <option value="">選択してください</option>
+                {% for option in products %}
+                <option value="{{ option.id }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <p class="form-note">対象が「商品を指定」の場合はその商品が対象です。「バリエーションを指定」の場合は絞り込みに使います。</p>
+        {% if let Some(e) = errors.product_id %}<p class="field-error">{{ e }}</p>{% endif %}
+    </label>
+    <label data-coupon-scope="variant">対象バリエーション <span class="badge-optional" data-scope-badge="variant">任意</span>
+        <div class="admin-combobox" data-combobox>
+            <div class="admin-combobox-control">
+                <input type="text" data-combobox-input placeholder="検索するか、一覧から選んでください" autocomplete="off">
+                <button type="button" class="admin-combobox-toggle" data-combobox-toggle aria-label="対象バリエーションの一覧を開く"><span aria-hidden="true">▾</span></button>
+            </div>
+            <select name="variant_id" data-combobox-select data-parent-select="product_id">
+                <option value="">選択してください</option>
+                {% for option in variants %}
+                <option value="{{ option.id }}" data-parent-id="{{ option.parent_id }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <p class="form-note">上の対象商品を選ぶと、その商品のバリエーションだけに絞り込めます。</p>
+        {% if let Some(e) = errors.variant_id %}<p class="field-error">{{ e }}</p>{% endif %}
+    </label>
+    <label>利用回数の上限（全体） <span class="badge-optional">任意</span>
+        <input type="text" name="max_uses_total" value="{{ values.max_uses_total }}" inputmode="numeric">
+        <p class="form-note">空欄で無制限です。</p>
+        {% if let Some(e) = errors.max_uses_total %}<p class="field-error">{{ e }}</p>{% endif %}
+    </label>
+    <label>利用回数の上限（1人あたり） <span class="badge-optional">任意</span>
+        <input type="text" name="max_uses_per_customer" value="{{ values.max_uses_per_customer }}" inputmode="numeric">
+        <p class="form-note">空欄で無制限です。</p>
+        {% if let Some(e) = errors.max_uses_per_customer %}<p class="field-error">{{ e }}</p>{% endif %}
+    </label>
+    <label class="admin-check">
+        <input type="checkbox" name="is_automatic" value="1"{% if values.is_automatic %} checked{% endif %}>
+        自動適用する（コード入力なしで適用）
+    </label>
+    <label>最低注文金額（円） <span class="badge-required">必須</span>
+        <input type="text" name="min_subtotal_yen" value="{{ values.min_subtotal_yen }}" inputmode="numeric" aria-required="true"{% if money_locked %} readonly{% endif %}>
+        {% if let Some(e) = errors.min_subtotal_yen %}<p class="field-error">{{ e }}</p>{% endif %}
+    </label>
+    <label>表示メッセージ <span class="badge-required">必須</span>
+        <input type="text" name="description" value="{{ values.description }}" aria-required="true">
+        {% if let Some(e) = errors.description %}<p class="field-error">{{ e }}</p>{% endif %}
+    </label>
+    <label>利用開始 <span class="badge-optional">任意</span>
+        <input type="datetime-local" name="starts_at" value="{{ values.starts_at }}">
+        {% if let Some(e) = errors.starts_at %}<p class="field-error">{{ e }}</p>{% endif %}
+    </label>
+    <label>利用終了 <span class="badge-optional">任意</span>
+        <input type="datetime-local" name="ends_at" value="{{ values.ends_at }}">
+        {% if let Some(e) = errors.ends_at %}<p class="field-error">{{ e }}</p>{% endif %}
+    </label>
+    <label class="admin-check">
+        <input type="checkbox" name="band_featured" value="1"{% if values.band_featured %} checked{% endif %}>
+        トップページのクーポン表示に使う
+    </label>
+    {% if show_active %}
+    <label class="admin-check">
+        <input type="checkbox" name="active" value="1"{% if values.active %} checked{% endif %}>
+        有効にする
+    </label>
+    {% endif %}
+    <p class="admin-unsaved-note" data-unsaved-note hidden>未保存の変更があります</p>
+    <button type="submit" class="primary-button">保存する</button>
+</form>
+
+{% if let Some(id) = definition_id %}
+<section class="admin-section" aria-label="状態の変更">
+    <h2 class="admin-h2">状態の変更</h2>
+    {% if current_active == Some(true) %}
+    <p>このクーポンは現在「有効」です。</p>
+    <p><a href="/admin/coupons/{{ id }}/deactivate" class="secondary-button">無効化する</a></p>
+    {% else %}
+    <p>このクーポンは現在「無効」です。</p>
+    <form method="post" action="/admin/coupons/{{ id }}/activate" class="coupon-activate-form">
+        <button type="submit" class="primary-button">有効化する</button>
+    </form>
+    {% endif %}
+</section>
+{% endif %}
+{% endblock %}

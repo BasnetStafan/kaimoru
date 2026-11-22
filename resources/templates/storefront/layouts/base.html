@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{% block meta_description %}{{ header.shop.meta_description() }}{% endblock %}">
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
+    <link rel="stylesheet" href="/static/css/style.css?v={{ header.asset_fingerprint }}">
+    <link rel="stylesheet" href="/static/css/design.css?v={{ header.asset_fingerprint }}">
+    <title>{% block title %}{{ header.shop.top_page_title() }}{% endblock %}</title>
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="site-header-inner">
+            <a href="/" class="site-logo" aria-label="トップページ"><svg class="logo-home-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 9.8V20h13V9.8"/><path d="M9.5 20v-5.5h5V20"/></svg><span class="logo-text">{{ header.shop.logo_text() }}</span></a>
+            <form method="get" action="/search" class="search-form" role="search">
+                <input type="search" name="q" class="search-input" placeholder="商品名・キーワードで探す" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="search-suggest-list" aria-label="商品検索"
+                       hx-get="/search/suggest" hx-trigger="keyup changed delay:300ms" hx-target="next .search-suggestions" hx-swap="innerHTML">
+                <div class="search-suggestions"></div>
+                <button type="submit" class="search-button">検索</button>
+            </form>
+            <nav class="site-nav">
+                <a href="/cart" class="nav-link nav-link-icon" aria-label="カート"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>カート<span class="cart-badge" id="cart-count"{% if header.cart_count == 0 %} hidden{% endif %}>{{ header.cart_count }}</span></a>
+                <a href="/agent" class="nav-link nav-link-icon" aria-label="お買い物エージェント"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8V5"/><circle cx="12" cy="4" r="1"/><rect x="4" y="8" width="16" height="11" rx="2"/><circle cx="9" cy="13" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1" fill="currentColor" stroke="none"/><path d="M9.5 16.5h5"/></svg>お買い物エージェント</a>
+                {% if let Some(name) = header.user_family_name %}
+                    <span class="header-greeting">ようこそ、{{ name }}さん</span>
+                {% endif %}
+                <div class="account-menu">
+                    <button type="button" class="account-toggle" aria-expanded="false" aria-controls="account-panel" aria-label="アカウントメニュー"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3.2"/><path d="M6.4 17.6c1.1-2.4 3.2-3.6 5.6-3.6s4.5 1.2 5.6 3.6"/></svg></button>
+                    <div class="account-panel" id="account-panel">
+                {% if header.user_family_name.is_some() %}
+                    <a href="/mypage" class="nav-link nav-link-icon" aria-label="マイページ"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>マイページ</a>
+                    <form method="post" action="/logout" class="logout-form">
+                        <button type="submit" class="nav-link nav-link-icon link-button" aria-label="ログアウト"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>ログアウト</button>
+                    </form>
+                {% else %}
+                    <a href="/login" class="nav-link nav-link-icon" aria-label="ログイン"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>ログイン</a>
+                    <a href="/signup" class="nav-button">新規会員登録</a>
+                {% endif %}
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    {# Toast target: filled only by the add endpoint's out-of-band
+       answer; a page load never renders a toast here. #}
+    <div id="toast-region" class="toast-region" aria-live="polite"></div>
+    {% if !header.band_text.is_empty() %}
+    <div class="coupon-band">
+        <span class="coupon-band-message">{{ header.band_text }}</span>
+        <span class="coupon-band-amount">{{ header.band_amount }}</span>
+    </div>
+    {% endif %}
+{% if !header.header_menu.is_empty() %}        <nav class="header-menu" aria-label="ヘッダーメニュー">
+{% for item in header.header_menu %}            <a href="{{ item.url }}"{% if item.is_external %} rel="noopener"{% endif %}>{{ item.label }}</a>
+{% endfor %}        </nav>
+{% endif %}
+
+    {% if let Some(message) = header.welcome_message %}
+        <div class="flash-message">{{ message }}</div>
+    {% endif %}
+
+    <main>
+        {% block homepart %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        {% if !header.shop.footer_note.is_empty() %}
+        <p class="footer-note-line">{{ header.shop.footer_note }}</p>
+        {% endif %}
+        {% if header.shop.has_contact() %}
+        <p class="footer-note-line">お問い合わせ:{% if !header.shop.contact_email.is_empty() %} <a href="mailto:{{ header.shop.contact_email }}">{{ header.shop.contact_email }}</a>{% endif %}{% if !header.shop.contact_url.is_empty() %} <a href="{{ header.shop.contact_url }}">お問い合わせページ</a>{% endif %}{% if !header.shop.support_note.is_empty() %} <span>{{ header.shop.support_note }}</span>{% endif %}</p>
+        {% endif %}
+        <div class="footer-inner">
+            <nav class="footer-nav" aria-label="フッター">
+                <ul class="footer-nav-list">
+{% for item in header.footer_menu %}                    <li><a href="{{ item.url }}"{% if item.is_external %} rel="noopener"{% endif %}>{{ item.label }}</a></li>
+{% endfor %}                </ul>
+            </nav>
+            <p class="footer-copyright">{{ header.copyright_text }}</p>
+        </div>
+    </footer>
+
+    {# Quick-add modal shell (spec section 6, D6): the listing
+       cards' 選択する button loads the picker fragment into
+       this body; the script opens and closes the shell. #}
+    <div class="quick-add-modal" data-quick-add-modal hidden>
+        <div class="quick-add-backdrop" data-quick-add-close></div>
+        <div class="quick-add-dialog" role="dialog" aria-modal="true" aria-label="バリエーションを選択してカートに入れる">
+            <button type="button" class="quick-add-close" data-quick-add-close aria-label="閉じる">×</button>
+            <div data-quick-add-body></div>
+        </div>
+    </div>
+
+    <script src="/static/js/htmx.min.js?v={{ header.asset_fingerprint }}"></script>
+    <script src="/static/js/app.js?v={{ header.asset_fingerprint }}"></script>
+    <script src="/static/js/breadcrumbs.js?v={{ header.asset_fingerprint }}"></script>
+    <script src="/static/js/recently-viewed.js?v={{ header.asset_fingerprint }}"></script>
+    <script src="/static/js/postal-autofill.js?v={{ header.asset_fingerprint }}"></script>
+</body>
+</html>

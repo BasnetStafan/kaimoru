@@ -1,0 +1,53 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}休業日{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">休業日</h1>
+<p class="admin-note">登録した日は、お届け希望日の候補に出ません。最短お届け日は、休業日を除いて数えます（週末は休業日ではありません。土日も通常どおり数えます）。</p>
+
+<form method="post" action="/admin/settings/holidays" class="admin-form">
+    <h2 class="admin-h2">休業日を追加</h2>
+    <label>日付 <span class="badge-required">必須</span>
+        <input type="date" name="holiday_date" value="{{ date_value }}">
+        {% if let Some(message) = date_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>名称 <span class="badge-optional">任意</span>
+        <input type="text" name="label" value="{{ label_value }}" maxlength="50" placeholder="例：棚卸し、年末年始">
+        {% if let Some(message) = label_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <div class="admin-form-actions">
+        <button type="submit" class="primary-button">追加する</button>
+    </div>
+</form>
+
+<h2 class="admin-h2">登録済みの休業日</h2>
+{% if holidays.is_empty() %}
+<p class="admin-note">休業日は登録されていません。</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>日付</th><th>名称</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for h in holidays %}
+        <tr>
+            <td>{{ h.date_label }}{% if h.past %} <span class="admin-note">（過去）</span>{% endif %}</td>
+            <td>{{ h.label }}</td>
+            <td>
+                <form method="post" action="/admin/settings/holidays/delete" class="holiday-delete-form">
+                    <input type="hidden" name="holiday_date" value="{{ h.date_value }}">
+                    <button type="submit" class="secondary-button danger">削除</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+<p><a href="/admin/settings/shop">店舗設定へ戻る</a></p>
+{% endblock %}

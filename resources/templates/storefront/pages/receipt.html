@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>領収書 {{ order.order_number() }} | {{ shop_name }}</title>
+<link rel="stylesheet" href="/static/css/design.css?v={{ asset_fingerprint }}">
+</head>
+<body class="receipt-body">
+<main class="receipt">
+    <header class="receipt-head">
+        <h1>領収書</h1>
+        <p class="receipt-issued">発行日：{{ issued_label }}</p>
+    </header>
+
+    <p class="receipt-recipient">{{ recipient_label() }}</p>
+
+    <p class="receipt-amount">金額：{{ order.formatted_total() }}（税込）</p>
+    <p class="receipt-proviso">但し お品代として</p>
+    <p class="receipt-order">注文番号：{{ order.order_number() }}（注文日：{{ order.placed_display() }}）</p>
+
+    <table class="receipt-lines">
+        <thead>
+            <tr><th>品目</th><th>単価（税込）</th><th>数量</th><th>金額</th></tr>
+        </thead>
+        <tbody>
+            {% for line in lines %}
+            <tr>
+                <td>{{ line.product_name }}{% if !line.variant_label.is_empty() %}（{{ line.variant_label }}）{% endif %}</td>
+                <td>{{ line.formatted_unit_price() }}</td>
+                <td>{{ line.quantity }}</td>
+                <td>{{ line.formatted_line_total() }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <dl class="receipt-totals">
+        <div><dt>商品合計</dt><dd>{{ order.formatted_subtotal() }}</dd></div>
+        {% if order.discount_yen > 0 %}
+        <div><dt>クーポン割引</dt><dd>−{{ order.formatted_discount() }}</dd></div>
+        {% endif %}
+        <div><dt>送料</dt><dd>{{ order.formatted_shipping() }}</dd></div>
+        {% if order.cod_fee_yen > 0 %}
+        <div><dt>代引き手数料</dt><dd>{{ order.formatted_cod_fee() }}</dd></div>
+        {% endif %}
+        <div class="receipt-grand"><dt>合計</dt><dd>{{ order.formatted_total() }}</dd></div>
+    </dl>
+
+    {% if !tax_breakdown.is_empty() %}
+    <div class="receipt-tax">
+        <p class="receipt-tax-title">税率ごとの内訳</p>
+        <dl class="receipt-totals">
+            {% for row in tax_breakdown %}
+            <div><dt>{{ row.tax_class_name }}（{{ row.rate_percent }}%）対象</dt><dd>{{ row.formatted_base() }}</dd></div>
+            <div><dt>うち消費税</dt><dd>{{ row.formatted_tax() }}</dd></div>
+            {% endfor %}
+            <div><dt>内消費税合計</dt><dd>{{ formatted_tax_total() }}</dd></div>
+        </dl>
+        {% if has_reduced_rate() %}
+        <p class="receipt-note">※ 軽減税率対象品目が含まれます。</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <footer class="receipt-foot">
+        <p class="receipt-shop">{{ shop_name }}</p>
+        {% if !registration_number.is_empty() %}
+        <p class="receipt-contact">登録番号：{{ registration_number }}</p>
+        {% endif %}
+        {% if let Some(email) = contact_email %}
+        <p class="receipt-contact">{{ email }}</p>
+        {% endif %}
+    </footer>
+
+    <div class="receipt-actions">
+        <button type="button" class="primary-button" data-print>印刷する</button>
+        <p class="form-note">印刷画面ではこのボタンは表示されません。ブラウザの印刷機能（Ctrl+P / ⌘P）でも印刷できます。</p>
+    </div>
+</main>
+<script src="/static/js/receipt.js?v={{ asset_fingerprint }}"></script>
+</body>
+</html>

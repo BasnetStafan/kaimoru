@@ -1,0 +1,203 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ page_title() }}{% endblock %}
+
+{% block meta_description %}{{ page_meta_description() }}{% endblock %}
+
+{% block homepart %}
+    <section class="product-detail">
+        {% include "storefront/parts/breadcrumb.html" %}
+
+        <div class="detail-main">
+            <div class="detail-image">
+                <img src="{{ product.medium_image_path() }}" data-fallback-src="{{ product.image_path }}" data-lightbox-src="{{ product.image_path }}" alt="{{ main_image_alt() }}" data-gallery-main{% if images.len() > 1 %} id="detail-main-image"{% endif %}>{% if images.len() > 1 %}
+                <div class="detail-thumbs">
+                    {% for img in images %}<button type="button" class="detail-thumb{% if loop.first %} is-active{% endif %}" data-full="{{ img.medium() }}" data-full-fallback="{{ img.original }}"><img src="{{ img.thumb() }}" data-fallback-src="{{ img.original }}" alt="{{ img.alt }}"></button>{% endfor %}
+                </div>{% endif %}
+            </div>
+            <div class="detail-buy">
+                <h1>{{ product.name }}</h1>
+                <div data-recently-viewed-record data-id="{{ product.id }}" data-name="{{ product.name }}" data-price="{{ product.formatted_price() }}(税込)" data-image="{{ product.image_path }}" hidden></div>
+                {% if rating.rating_count > 0 %}
+                    <p class="rating"><span class="stars">★</span>{{ rating.average_text() }} <span class="rating-note">評価（{{ rating.rating_count }}件）</span></p>
+                {% else %}
+                    <p class="rating rating-none">レビューなし</p>
+                {% endif %}
+
+                <div class="buy-card" data-buy-area>
+                    <p class="price detail-price">{% if product.sale_active() %}<span class="regular-price">{{ product.formatted_regular_price() }}</span> {% endif %}<span data-price-display>{{ product.formatted_price() }}</span><span class="tax-note">(税込)</span></p>
+                    <p class="price-tax-detail" data-tax-rate="{{ tax_rate_percent }}" data-tax-rounding="{{ tax_rounding_name() }}">本体価格 <span data-price-excl>{{ price_excl_label() }}</span>（税抜）・内消費税 <span data-price-tax>{{ price_tax_label() }}</span></p>
+                    {% if let Some(points) = points_for_one %}<p class="points-earn-note">購入で <strong>{{ points }} ポイント</strong> 獲得できます</p>{% endif %}
+                    <p class="stock-label {% if product.track_stock && !product.allow_backorder && label_stock() == 0 %}out{% else if product.track_stock && !product.is_preorder && label_stock() > 0 && label_stock() <= product.low_stock_threshold() %}low{% endif %}" data-variant-stock-label>
+                        <span class="stock-dot"></span><span data-variant-stock-text>{{ stock_label() }}</span>
+                    </p>
+                    <div class="card-cart">
+                        {% include "storefront/parts/product_buybox.html" %}
+                    </div>
+                    {% if let Some(restock) = restock %}{% include "storefront/parts/restock_form.html" %}{% endif %}
+                    <ul class="buy-notes">
+                        {% if product.free_shipping %}<li>この商品は送料無料です</li>{% else %}<li>送料 {{ shipping_fee_label }}（税込）・{{ free_shipping_threshold_label }}以上のご注文で送料無料</li>{% endif %}
+                        {% if let Some(line) = delivery_line() %}<li>{{ line }}</li>{% endif %}
+                        {% if let Some(note) = delivery_window_note() %}<li>{{ note }}</li>{% endif %}
+                        <li>お支払い方法：{% for label in payment_method_labels %}{% if !loop.first %}・{% endif %}{{ label }}{% endfor %}</li>
+                        <li>代金引換の場合は手数料 {{ cod_fee_label }}（税込）がかかります</li>
+                        <li>注文確認メールをお送りします</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        {% if !product.description.is_empty() %}
+            <div class="detail-section">
+                <h2>商品説明</h2>
+                <p class="product-description only-pc">{{ product.description }}</p>
+                <p class="product-description only-sp">{% if !product.description_sp.is_empty() %}{{ product.description_sp }}{% else %}{{ product.description }}{% endif %}</p>
+            </div>
+        {% endif %}
+
+        {% if !product.features_text.is_empty() %}
+            <div class="detail-section">
+                <h2>商品の特徴</h2>
+                <p class="product-description pre-line">{{ product.features_text }}</p>
+            </div>
+        {% endif %}
+
+        {% if !product.spec_text.is_empty() %}
+            <div class="detail-section">
+                <h2>仕様</h2>
+                <p class="product-description pre-line">{{ product.spec_text }}</p>
+            </div>
+        {% endif %}
+
+        <div class="detail-section">
+            <h2>商品情報</h2>
+            <table class="confirm-table">
+                <tr><th>カテゴリー</th><td>{% if category_active %}<a href="/search?category={{ product.category|urlencode }}">{{ product.category }}</a>{% else %}{{ product.category }}{% endif %}</td></tr>
+                {% if !tags.is_empty() %}
+                <tr><th>タグ</th><td>{% for tag in tags %}<a class="tag-chip" href="/search?tag={{ tag.slug }}">{{ tag.label }}</a> {% endfor %}</td></tr>
+                {% endif %}
+                {% if !product.brand.is_empty() %}
+                <tr><th>ブランド</th><td>{{ product.brand }}</td></tr>
+                {% endif %}
+                {% if !product.manufacturer.is_empty() %}
+                <tr><th>メーカー</th><td>{{ product.manufacturer }}</td></tr>
+                {% endif %}
+                {% if !product.country_of_origin.is_empty() %}
+                <tr><th>原産国</th><td>{{ product.country_of_origin }}</td></tr>
+                {% endif %}
+                <tr><th>商品番号</th><td>{{ product.display_code() }}</td></tr>
+                <tr><th>消費税区分</th><td>{{ tax_class_display() }}</td></tr>
+                <tr><th>配送</th><td>{% if product.free_shipping %}送料無料・{% endif %}{% if product.cool_delivery %}クール便対応・{% endif %}{% if product.mail_delivery %}メール便対応・{% endif %}{% if product.lead_time_days.is_some() %}ご注文から約{{ product.lead_time_days.unwrap() }}日で発送{% else %}通常配送{% endif %}</td></tr>
+            </table>
+        </div>
+
+        <div class="detail-section" id="reviews">
+            <h2>レビュー</h2>
+            {% if review_total > 0 %}
+                <div class="review-summary">
+                    <div class="review-summary-main">
+                        <span class="review-average-num">{{ rating.average_text() }}</span>
+                        <span class="stars-display"><span class="stars-bg">★★★★★</span><span class="stars-fg" style="width: {{ rating.stars_fill_percent() }}%">★★★★★</span></span>
+                        <span class="review-count">（{{ review_total }}件）</span>
+                    </div>
+                    <div class="review-dist">
+                        {% for row in distribution %}
+                            <div class="dist-row">
+                                <span class="dist-label">★{{ row.label }}</span>
+                                <span class="dist-bar"><span class="dist-fill" style="width: {{ row.percent }}%"></span></span>
+                                <span class="dist-count">{{ row.count }}件</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <nav class="review-sort">
+                    <a href="/products/{{ product.id }}?sort=new#reviews" {% if review_sort == "new" %}class="active"{% endif %}>新着順</a>
+                    <a href="/products/{{ product.id }}?sort=high#reviews" {% if review_sort == "high" %}class="active"{% endif %}>評価の高い順</a>
+                    <a href="/products/{{ product.id }}?sort=low#reviews" {% if review_sort == "low" %}class="active"{% endif %}>評価の低い順</a>
+                </nav>
+
+                <div class="review-list">
+                    {% for card in reviews %}
+                        <article class="review-card">
+                            <div class="review-card-head">
+                                <span class="stars-display stars-sm"><span class="stars-bg">★★★★★</span><span class="stars-fg" style="width: {{ card.review.stars_fill_percent() }}%">★★★★★</span></span>
+                                <span class="verified-badge">購入済み</span>
+                                <span class="review-date">{{ card.review.posted_date() }}</span>
+                            </div>
+                            {% if !card.review.comment.is_empty() %}
+                                <p class="review-body">{{ card.review.comment }}</p>
+                            {% endif %}
+                            {% if !card.review.shop_reply.is_empty() %}
+                                <div class="review-shop-reply">
+                                    <p class="review-shop-reply-label">店舗からの返信</p>
+                                    <p class="review-body">{{ card.review.shop_reply }}</p>
+                                </div>
+                            {% endif %}
+                            {% let helpful_url = card.helpful_url() %}
+                            {% let helpful_count = card.helpful_count %}
+                            {% let voted = card.voted %}
+                            {% include "storefront/parts/review_helpful.html" %}
+                            {% if is_own(card) %}
+                                <div class="review-own-actions">
+                                    <a href="/reviews/{{ card.review.id }}/edit">編集する</a>
+                                    <form method="post" action="/reviews/{{ card.review.id }}/delete" class="review-delete-form">
+                                        <button type="submit" class="review-delete-button">削除する</button>
+                                    </form>
+                                </div>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                </div>
+
+                {% if review_total_pages > 1 %}
+                    <nav class="pagination">
+                        {% if review_page > 1 %}
+                            <a href="/products/{{ product.id }}?sort={{ review_sort }}&page={{ review_page - 1 }}#reviews">← 前へ</a>
+                        {% endif %}
+                        <span>{{ review_page }} / {{ review_total_pages }}</span>
+                        {% if review_page < review_total_pages %}
+                            <a href="/products/{{ product.id }}?sort={{ review_sort }}&page={{ review_page + 1 }}#reviews">次へ →</a>
+                        {% endif %}
+                    </nav>
+                {% endif %}
+            {% else %}
+                <div class="review-empty-panel">
+                    <p class="review-empty">まだレビューはありません</p>
+                    <p class="review-empty-note">購入した商品の感想を、ぜひお聞かせください。</p>
+                </div>
+            {% endif %}
+
+            {% if can_write %}
+                <p class="review-write"><a class="primary-button" href="/products/{{ product.id }}/reviews/new">レビューを書く</a></p>
+            {% else if let Some(rid) = own_review_id %}
+                <p class="review-write"><a class="secondary-button" href="/reviews/{{ rid }}/edit">レビューを編集する</a></p>
+            {% endif %}
+        </div>
+
+        {% if !related.is_empty() %}
+            <div class="detail-section">
+                <h2>同じカテゴリーの商品</h2>
+                <div class="product-grid">
+                    {% for card in related %}
+                        {% include "storefront/parts/product_card.html" %}
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+    <section class="recently-viewed" data-recently-viewed hidden>
+        <h2>最近見た商品</h2>
+        <div class="recently-viewed-row" data-recently-viewed-row></div>
+    </section>
+        <div class="buy-bar">
+            <span class="buy-bar-name">{{ product.name }}</span>
+            <p class="buy-bar-price"><span data-buy-bar-price>{{ product.formatted_price() }}</span><span class="tax-note">(税込)</span></p>
+            {% if product.track_stock && !product.allow_backorder && product.stock == 0 %}
+                <button type="button" class="add-cart-button buy-bar-button" disabled>売り切れ</button>
+            {% else %}
+                <button type="button" class="add-cart-button buy-bar-button" data-buy-bar-button>カートに入れる</button>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}

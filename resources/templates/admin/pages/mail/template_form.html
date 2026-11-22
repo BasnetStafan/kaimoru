@@ -1,0 +1,49 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}{{ heading }}{% endblock %}
+
+{% block adminpart %}
+<p class="admin-back"><a href="/admin/mail/templates">← メールテンプレート一覧に戻る</a></p>
+<h1 class="admin-h1">{{ heading }}</h1>
+
+<p class="admin-note">本文では <code>{name}</code>（会員の氏名）と <code>{unsubscribe_url}</code>（配信停止リンク）、商品ブロック <code>{{ "{{product:商品ID}}" }}</code> が使えます。商品ブロックは送信時に商品名・価格・画像へ置き換わります。HTMLは保存時にサニタイズされます。</p>
+
+<form method="post" action="{{ action }}" class="admin-form" data-unsaved-guard>
+<input type="hidden" name="form_ticket" value="{{ form_ticket }}">
+    <label>テンプレート名 <span class="badge-required">必須</span>
+        <input type="text" name="name" value="{{ name }}" maxlength="100" aria-required="true">
+        {% if let Some(message) = name_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>件名 <span class="badge-required">必須</span>
+        <input type="text" name="subject" value="{{ subject }}" maxlength="200" aria-required="true">
+        {% if let Some(message) = subject_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>HTML本文 <span class="badge-required">必須</span>
+        <textarea name="body_html" rows="6" aria-required="true">{{ body_html }}</textarea>
+        {% if let Some(message) = body_html_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>テキスト本文 <span class="badge-required">必須</span>
+        <textarea name="body_text" rows="6" aria-required="true">{{ body_text }}</textarea>
+        {% if let Some(message) = body_text_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <div class="admin-form-actions">
+        <p class="admin-unsaved-note" data-unsaved-note hidden>未保存の変更があります</p>
+        <button type="submit" class="primary-button">保存する</button>
+        <a class="secondary-button" href="/admin/mail/templates">キャンセル</a>
+    </div>
+</form>
+
+{% if let Some(delete_url) = delete_action %}
+<form method="post" action="{{ delete_url }}" class="mail-template-delete-form">
+    <button type="submit" class="secondary-button danger">このテンプレートを削除する</button>
+</form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}会員管理{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">会員管理</h1>
+
+<form method="get" action="/admin/customers" class="admin-filters">
+    <label class="admin-filter-search">会員名・メールアドレスで検索
+        <input type="search" name="q" value="{{ q }}" placeholder="氏名・フリガナ・メールアドレス">
+    </label>
+    <button type="submit" class="secondary-button">検索</button>
+    {% if !q.is_empty() %}
+    <a href="/admin/customers" class="secondary-button">クリア</a>
+    {% endif %}
+</form>
+
+{% if customers.is_empty() %}
+{% if q.is_empty() %}
+<p class="admin-empty">会員がいません</p>
+{% else %}
+<p class="admin-empty">条件に一致する会員はいません</p>
+{% endif %}
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>会員ID</th><th>氏名</th><th>メールアドレス</th><th>登録日</th><th>注文件数</th><th>累計購入金額</th><th>最終注文日</th></tr>
+    </thead>
+    <tbody>
+        {% for c in customers %}
+        <tr>
+            <td>{{ c.id }}</td>
+            <td><a href="/admin/customers/{{ c.id }}">{{ c.family_name }} {{ c.given_name }}</a>{% if c.withdrawn_at.is_some() %} <span class="admin-badge">退会済み</span>{% endif %}</td>
+            <td>{{ c.email }}</td>
+            <td>{{ c.registered_display() }}</td>
+            <td class="num">{{ c.order_count }}</td>
+            <td class="num">{{ c.total_spent_display() }}</td>
+            <td>{{ c.last_order_display() }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+
+{% include "admin/parts/pagination.html" %}
+{% endblock %}

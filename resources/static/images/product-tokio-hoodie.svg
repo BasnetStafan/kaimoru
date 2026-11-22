@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
+  <rect width="600" height="600" fill="#E7E4EE"/>
+  <path d="M240 130 C240 105 360 105 360 130 L430 165 L470 300 L415 315 L415 480 L185 480 L185 315 L130 300 L170 165 Z" fill="#4A4E69"/>
+  <path d="M255 130 C255 165 345 165 345 130 C345 205 255 205 255 130 Z" fill="#373B52"/>
+  <rect x="235" y="380" width="130" height="80" rx="12" fill="#373B52"/>
+  <path d="M265 150 L250 185 M335 150 L350 185" stroke="#9A93AD" stroke-width="8" stroke-linecap="round"/>
+  <text x="300" y="310" font-family="sans-serif" font-size="40" font-weight="bold" fill="#E7E4EE" text-anchor="middle">tokio</text>
+</svg>

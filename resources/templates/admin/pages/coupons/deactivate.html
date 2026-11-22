@@ -1,0 +1,18 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}クーポンの無効化 | クーポン定義{% endblock %}
+
+{% block adminpart %}
+<p><a href="/admin/coupons/{{ id }}">← クーポン編集へ戻る</a></p>
+<h1 class="admin-h1">クーポンの無効化</h1>
+
+<section class="admin-section">
+    <p>クーポン「{{ code }}」を無効化しますか？無効化すると、チェックアウトで利用できなくなり、トップページの表示からも外れます（再び有効化できます）。</p>
+    {% if holders > 0 %}
+    <p>未使用の所持者が {{ holders }} 名います。無効化すると利用できなくなります。</p>
+    {% endif %}
+    <form method="post" action="/admin/coupons/{{ id }}/deactivate">
+        <button type="submit" class="primary-button">無効化する</button>
+    </form>
+</section>
+{% endblock %}

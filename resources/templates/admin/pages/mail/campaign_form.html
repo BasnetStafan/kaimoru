@@ -1,0 +1,108 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}{{ heading}}{% endblock %}
+
+{% block adminpart %}
+<p class="admin-back"><a href="/admin/mail/campaigns">← メールキャンペーン一覧に戻る</a></p>
+<h1 class="admin-h1">{{ heading}}</h1>
+
+{% if let Some(label) = status_label %}
+<p class="admin-note">状態：{{ label}}{% if!editable %}（配信済み・配信予約済みのキャンペーンは編集できません）{% endif %}</p>
+{% endif %}
+
+<section class="admin-section" aria-label="宛先">
+<h2 class="admin-h2">1. 宛先</h2>
+<label>宛先
+    <select name="segment_id">
+        {% for o in segment_options %}
+        <option value="{{ o.value }}"{% if o.selected %} selected{% endif %}>{{ o.name }}</option>
+        {% endfor %}
+    </select>
+    {% if let Some(message) = segment_error %}<span class="field-error">{{ message }}</span>{% endif %}
+</label>
+<p class="admin-note">現在の宛先は <strong>{{ recipient_count }} 名</strong>です（セグメント選択時は、その条件に合う購読者だけが対象）。配信停止した会員は、予約時と送信時の二重チェックで除外されます。</p>
+</section>
+
+<section class="admin-section" aria-label="内容">
+<h2 class="admin-h2">2. 内容</h2>
+<p class="admin-note">本文では <code>{name}</code>（会員の氏名）と <code>{unsubscribe_url}</code>（配信停止リンク）、商品ブロック <code>{{ "{{product:商品ID}}"}}</code> が使えます。商品ブロックは送信時に商品名・価格・画像へ置き換わります。HTMLは保存時にサニタイズされます。送信時には店舗名と配信停止リンクのフッターが自動で付きます。</p>
+
+<form method="post" action="{{ action}}" class="admin-form" data-unsaved-guard>
+<input type="hidden" name="form_ticket" value="{{ form_ticket }}">
+<label>テンプレート
+<div class="admin-combobox" data-combobox>
+            <div class="admin-combobox-control">
+                <input type="text" data-combobox-input placeholder="検索するか、一覧から選んでください" autocomplete="off">
+                <button type="button" class="admin-combobox-toggle" data-combobox-toggle aria-label="テンプレートの一覧を開く"><span aria-hidden="true">▾</span></button>
+            </div>
+            <select name="template_id" data-combobox-select>
+{% for option in template_options %}
+<option value="{{ option.value}}"{% if option.selected %} selected{% endif %}>{{ option.label}}</option>
+{% endfor %}
+</select>
+        </div>
+</label>
+<p>
+<button type="submit" name="apply_template" value="1" class="secondary-button"{% if!editable %} disabled{% endif %}>テンプレートを反映</button>
+</p>
+<p class="admin-note">選んだテンプレートの件名と本文をフォームへ読み込みます（まだ保存されません）。</p>
+<label>キャンペーン名 <span class="badge-required">必須</span>
+<input type="text" name="name" value="{{ name}}" maxlength="100" aria-required="true"{% if!editable %} disabled{% endif %}>
+{% if let Some(message) = name_error %}
+<span class="field-error">{{ message}}</span>
+{% endif %}
+</label>
+<label>件名 <span class="badge-required">必須</span>
+<input type="text" name="subject" value="{{ subject}}" maxlength="200" aria-required="true"{% if!editable %} disabled{% endif %}>
+{% if let Some(message) = subject_error %}
+<span class="field-error">{{ message}}</span>
+{% endif %}
+</label>
+<label>HTML本文 <span class="badge-required">必須</span>
+<textarea name="body_html" rows="6" aria-required="true"{% if!editable %} disabled{% endif %}>{{ body_html}}</textarea>
+{% if let Some(message) = body_html_error %}
+<span class="field-error">{{ message}}</span>
+{% endif %}
+</label>
+<label>テキスト本文 <span class="badge-required">必須</span>
+<textarea name="body_text" rows="6" aria-required="true"{% if!editable %} disabled{% endif %}>{{ body_text}}</textarea>
+{% if let Some(message) = body_text_error %}
+<span class="field-error">{{ message}}</span>
+{% endif %}
+</label>
+<label>配信日時 <span class="badge-optional">任意</span>
+<input type="datetime-local" name="scheduled_at" value="{{ scheduled_at}}"{% if!editable %} disabled{% endif %}>
+{% if let Some(message) = scheduled_at_error %}
+<span class="field-error">{{ message}}</span>
+{% endif %}
+</label>
+<p class="admin-note">配信日時を設定すると、確認画面で「予約した日時で配信する」を選べます。空欄の場合は今すぐ配信のみ選べます。</p>
+{% if let Some(message) = error %}
+<p class="form-error" role="alert">{{ message}}</p>
+{% endif %}
+{% if editable %}
+<div class="admin-form-actions">
+    <p class="admin-unsaved-note" data-unsaved-note hidden>未保存の変更があります</p>
+<button type="submit" class="primary-button">保存する</button>
+<a class="secondary-button" href="/admin/mail/campaigns">キャンセル</a>
+</div>
+{% endif %}
+</form>
+</section>
+
+{% if let Some(id) = campaign_id %}
+<section class="admin-section" aria-label="テスト送信">
+<h2 class="admin-h2">3. テスト送信</h2>
+<p class="admin-note">保存されている内容を、管理者のメールアドレス宛てにテスト送信します（件名に【テスト】が付きます）。内容を変更したら、先に保存してください。</p>
+<form method="post" action="/admin/mail/campaigns/{{ id}}/test-send" class="campaign-test-form">
+<button type="submit" class="secondary-button">テスト送信する</button>
+</form>
+</section>
+
+<section class="admin-section" aria-label="配信の確認">
+<h2 class="admin-h2">4. 配信の確認</h2>
+<p class="admin-note">宛先の人数を最終確認してから配信を予約します。</p>
+<p><a class="primary-button" href="/admin/mail/campaigns/{{ id}}/confirm">確認画面へ進む</a></p>
+</section>
+{% endif %}
+{% endblock %}

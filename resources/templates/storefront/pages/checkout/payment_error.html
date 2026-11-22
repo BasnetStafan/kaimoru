@@ -1,0 +1,26 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | お支払いを開始できませんでした{% endblock %}
+
+{% block homepart %}
+    <section class="checkout-page">
+        <div class="complete-hero">
+            <h1>お支払いを開始できませんでした</h1>
+            <p>ご注文は受け付けましたが、決済画面への移動に失敗しました。<br>お支払いは完了していません。お手数ですが、しばらくしてから状況をご確認ください。</p>
+        </div>
+
+        <div class="complete-card">
+            <dl class="confirm-list">
+                <div><dt>注文番号</dt><dd><strong class="order-number-big">{{ order_number }}</strong></dd></div>
+            </dl>
+            <p class="form-note">このままでは商品は発送されません。二重にご注文いただく必要はありません。</p>
+        </div>
+
+        <div class="form-actions center">
+            <a href="/" class="secondary-button">トップページへ戻る</a>
+            {% if is_member %}
+                <a href="/mypage" class="primary-button">注文履歴を見る</a>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}

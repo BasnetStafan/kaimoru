@@ -1,0 +1,15 @@
+[package]
+name = "server"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+description = "Kaimoru - a Japan-complete, full-stack server-rendered e-commerce store in Rust (Axum/PostgreSQL), with KOMOJU and Stripe payments."
+edition = "2024"
+
+[dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = { version = "0.3", features = ["fmt", "local-time", "env-filter"] }
+chrono = "0.4"
+app = { path = "../app" }

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
+  <rect width="600" height="600" fill="#FDECEC"/>
+  <circle cx="245" cy="225" r="85" fill="none" stroke="#8A8F98" stroke-width="20"/>
+  <g transform="rotate(24 400 400)">
+    <rect x="320" y="300" width="170" height="210" rx="24" fill="#B3402A"/>
+    <circle cx="405" cy="345" r="17" fill="#FDECEC"/>
+    <text x="405" y="445" font-family="sans-serif" font-size="42" font-weight="bold" fill="#FDECEC" text-anchor="middle">sqlx</text>
+  </g>
+</svg>

@@ -1,0 +1,49 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}{{ heading }}{% endblock %}
+
+{% block adminpart %}
+<p class="admin-back"><a href="/admin/tags">← タグ一覧に戻る</a></p>
+<h1 class="admin-h1">{{ heading }}</h1>
+
+<p class="admin-note">タグは商品の特徴を表す共通の語彙です。スラッグは商品の条件マッチングに使うため、登録後に変更するとマッチング結果が変わります。タグを削除すると全ての商品から外れます（商品自体は削除されません）。</p>
+
+<form method="post" action="{{ action }}" class="admin-form" data-unsaved-guard>
+<input type="hidden" name="form_ticket" value="{{ form_ticket }}">
+    <section class="admin-form-section">
+        <h2 class="admin-form-section-title">基本情報</h2>
+        <label>タグ名 <span class="badge-required">必須</span>
+            <input type="text" name="label" value="{{ label }}" maxlength="50" placeholder="タグ名を入力してください" aria-required="true">
+            <span class="admin-field-help">商品詳細ページにタグとして表示される名前です。</span>
+            {% if let Some(message) = label_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>スラッグ <span class="badge-required">必須</span>
+            <input type="text" name="slug" value="{{ slug }}" maxlength="50" placeholder="スラッグを入力してください" aria-required="true">
+            <span class="admin-field-help">商品の条件マッチングに使う半角英小文字・数字・ハイフンの識別子です。</span>
+            {% if let Some(message) = slug_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>説明 <span class="badge-optional">任意</span>
+            <textarea name="description" rows="3" maxlength="500" placeholder="説明を入力してください">{{ description }}</textarea>
+            <span class="admin-field-help">管理画面でのみ表示される説明です。</span>
+            {% if let Some(message) = description_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+    </section>
+    <div class="admin-form-actions">
+        <p class="admin-unsaved-note" data-unsaved-note hidden>未保存の変更があります</p>
+        <button type="submit" class="primary-button">保存する</button>
+        <a class="secondary-button" href="/admin/tags">キャンセル</a>
+    </div>
+</form>
+
+{% if let Some(delete_url) = delete_action %}
+<form method="post" action="{{ delete_url }}" class="tag-delete-form">
+    <button type="submit" class="secondary-button danger">このタグを削除する</button>
+</form>
+{% endif %}
+{% endblock %}

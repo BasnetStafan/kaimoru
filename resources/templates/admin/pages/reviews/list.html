@@ -1,0 +1,82 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}レビュー管理{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">レビュー管理</h1>
+
+<form method="get" action="/admin/reviews" class="admin-filters">
+    <label>商品で絞り込む
+<div class="admin-combobox" data-combobox>
+            <div class="admin-combobox-control">
+                <input type="text" data-combobox-input placeholder="検索して選ぶ" autocomplete="off">
+                <button type="button" class="admin-combobox-toggle" data-combobox-toggle aria-label="商品の一覧を開く"><span aria-hidden="true">▾</span></button>
+            </div>
+            <select name="product_id" data-combobox-select>
+            <option value="">すべて</option>
+            {% for o in product_options %}
+            <option value="{{ o.value }}"{% if o.selected %} selected{% endif %}>{{ o.name }}</option>
+            {% endfor %}
+        </select>
+        </div>
+    </label>
+    <button type="submit" class="secondary-button">絞り込む</button>
+</form>
+
+{% if reviews.is_empty() %}
+<p class="admin-empty">レビューがありません</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>商品</th><th>評価</th><th>コメント</th><th>投稿日時</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for row in reviews %}
+        <tr>
+            <td><a href="/products/{{ row.product_id }}" target="_blank" rel="noopener">{{ row.product_name }}</a></td>
+            <td>
+                <span class="stars-display stars-sm"><span class="stars-bg">★★★★★</span><span class="stars-fg" style="width: {{ row.star_pct }}%">★★★★★</span></span>
+                <span class="admin-rating-num">{{ row.rating_text }}</span>
+            </td>
+            <td class="admin-review-comment">
+                {% if row.hidden %}<span class="admin-badge">非表示</span> {% endif %}{% if row.has_comment %}<span class="admin-review-text">{{ row.comment }}</span>{% else %}<span class="admin-muted">（コメントなし）</span>{% endif %}
+                {% if !row.shop_reply.is_empty() %}
+                <div class="admin-reply-current"><span class="admin-muted">店舗からの返信：</span><span class="admin-review-text">{{ row.shop_reply }}</span></div>
+                {% endif %}
+                <details class="admin-reply-details">
+                    <summary class="admin-reply-summary">{% if row.shop_reply.is_empty() %}返信する{% else %}返信を編集{% endif %}</summary>
+                    <form method="post" action="/admin/reviews/{{ row.id }}/reply" class="admin-reply-form">
+                        <input type="hidden" name="return_url" value="{{ return_url }}">
+                        <label>店舗からの返信（公開されます。空で保存すると返信を取り消します）
+                            <textarea name="shop_reply" rows="2" maxlength="1000" placeholder="返信を入力">{{ row.shop_reply }}</textarea>
+                        </label>
+                        <button type="submit" class="secondary-button">返信を保存</button>
+                    </form>
+                </details>
+            </td>
+            <td>{{ row.posted }}</td>
+            <td class="admin-review-actions">
+                {% if row.hidden %}
+                <form method="post" action="/admin/reviews/{{ row.id }}/unhide">
+                    <input type="hidden" name="return_url" value="{{ return_url }}">
+                    <button type="submit" class="secondary-button">表示に戻す</button>
+                </form>
+                {% else %}
+                <form method="post" action="/admin/reviews/{{ row.id }}/hide" class="review-hide-form">
+                    <input type="hidden" name="return_url" value="{{ return_url }}">
+                    <button type="submit" class="secondary-button">非表示</button>
+                </form>
+                {% endif %}
+                <form method="post" action="/admin/reviews/{{ row.id }}/delete" class="review-delete-form">
+                    <input type="hidden" name="return_url" value="{{ return_url }}">
+                    <button type="submit" class="secondary-button danger">削除</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+
+{% include "admin/parts/pagination.html" %}
+{% endblock %}

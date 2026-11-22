@@ -1,0 +1,111 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | 検索結果{% endblock %}
+
+{% block homepart %}
+    <section class="search-page">
+        {% include "storefront/parts/breadcrumb.html" %}
+        {% if !query.is_empty() %}
+            <h1>「{{ query }}」の検索結果</h1>
+        {% else if let Some(label) = tag_label %}
+            <h1>タグ「{{ label }}」の商品</h1>
+        {% else if !category.is_empty() %}
+            <h1>「{{ category }}」の商品</h1>
+        {% else %}
+            <h1>商品検索</h1>
+        {% endif %}
+        <p class="result-count">全{{ total }}件{% if total_pages > 1 %}(ページ {{ page }} / {{ total_pages }}){% endif %}</p>
+
+        {% if let Some(message) = error_message %}
+            <p class="form-error">{{ message }}</p>
+        {% endif %}
+
+        <details class="search-filters" open>
+            <summary class="search-filters-summary">絞り込み</summary>
+        <form method="get" action="/search" class="search-tools">
+            <input type="hidden" name="q" value="{{ query }}">
+            {% if !tag_slug.is_empty() %}<input type="hidden" name="tag" value="{{ tag_slug }}">{% endif %}
+            <fieldset class="search-filter-group">
+                <legend>カテゴリー</legend>
+                <select name="category" aria-label="カテゴリー">
+                    <option value="">すべて</option>
+                    {% for c in categories %}
+                        <option value="{{ c }}" {% if category == *c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </fieldset>
+            <fieldset class="search-filter-group">
+                <legend>並び順</legend>
+                <select name="sort" aria-label="並び順">
+                    <option value="recommended" {% if sort == "recommended" %}selected{% endif %}>おすすめ順</option>
+                    <option value="new" {% if sort == "new" %}selected{% endif %}>新着順</option>
+                    <option value="price_asc" {% if sort == "price_asc" %}selected{% endif %}>価格が安い順</option>
+                    <option value="price_desc" {% if sort == "price_desc" %}selected{% endif %}>価格が高い順</option>
+                    <option value="rating" {% if sort == "rating" %}selected{% endif %}>評価が高い順</option>
+                </select>
+            </fieldset>
+            <fieldset class="search-filter-group">
+                <legend>在庫</legend>
+                <label class="checkbox-label">
+                    <input type="checkbox" name="in_stock" value="1" {% if in_stock %}checked{% endif %}>
+                    在庫ありのみ
+                </label>
+            </fieldset>
+            <fieldset class="search-filter-group">
+                <legend>価格（税込）</legend>
+                <div class="price-range-inputs">
+                    <input type="text" inputmode="numeric" name="min_price" value="{{ min_price }}" placeholder="下限" aria-label="価格の下限（円）">
+                    <span>円 〜</span>
+                    <input type="text" inputmode="numeric" name="max_price" value="{{ max_price }}" placeholder="上限" aria-label="価格の上限（円）">
+                    <span>円</span>
+                </div>
+                {% if let Some(message) = min_price_error %}
+                    <p class="field-error">{{ message }}</p>
+                {% endif %}
+                {% if let Some(message) = max_price_error %}
+                    <p class="field-error">{{ message }}</p>
+                {% endif %}
+            </fieldset>
+            <button type="submit" class="secondary-button">絞り込む</button>
+        </form>
+        </details>
+
+        {% if products.is_empty() && error_message.is_none() %}
+            <div class="no-results empty-state">
+                <p class="empty-state-title">条件に合う商品が見つかりませんでした</p>
+                <p class="form-note">キーワードを変えてお試しください。</p>
+                <p class="form-note">人気のキーワード:
+                    <a href="/search?q={{ "パーカー"|urlencode }}">パーカー</a>
+                    <a href="/search?q={{ "Tシャツ"|urlencode }}">Tシャツ</a>
+                    <a href="/search?q={{ "マグカップ"|urlencode }}">マグカップ</a>
+                    <a href="/search?q={{ "ステッカー"|urlencode }}">ステッカー</a>
+                </p>
+            </div>
+        {% else %}
+            <h2 class="visually-hidden">商品一覧</h2>
+            <div class="product-grid">
+                {% for card in products %}
+{% include "storefront/parts/product_card.html" %}
+                {% endfor %}
+            </div>
+
+            {% if total_pages > 1 %}
+                <nav class="pagination">
+                    {% if page > 1 %}
+                        <a href="/search?q={{ query|urlencode }}&category={{ category|urlencode }}&sort={{ sort }}{% if in_stock %}&in_stock=1{% endif %}{% if !tag_slug.is_empty() %}&tag={{ tag_slug }}{% endif %}{% if !min_price.is_empty() %}&min_price={{ min_price|urlencode }}{% endif %}{% if !max_price.is_empty() %}&max_price={{ max_price|urlencode }}{% endif %}&page={{ page - 1 }}">← 前へ</a>
+                    {% endif %}
+                    {% for p in 1..=total_pages %}
+                        {% if p == page %}
+                            <span class="page-current" aria-current="page">{{ p }}</span>
+                        {% else %}
+                            <a href="/search?q={{ query|urlencode }}&category={{ category|urlencode }}&sort={{ sort }}{% if in_stock %}&in_stock=1{% endif %}{% if !tag_slug.is_empty() %}&tag={{ tag_slug }}{% endif %}{% if !min_price.is_empty() %}&min_price={{ min_price|urlencode }}{% endif %}{% if !max_price.is_empty() %}&max_price={{ max_price|urlencode }}{% endif %}&page={{ p }}">{{ p }}</a>
+                        {% endif %}
+                    {% endfor %}
+                    {% if page < total_pages %}
+                        <a href="/search?q={{ query|urlencode }}&category={{ category|urlencode }}&sort={{ sort }}{% if in_stock %}&in_stock=1{% endif %}{% if !tag_slug.is_empty() %}&tag={{ tag_slug }}{% endif %}{% if !min_price.is_empty() %}&min_price={{ min_price|urlencode }}{% endif %}{% if !max_price.is_empty() %}&max_price={{ max_price|urlencode }}{% endif %}&page={{ page + 1 }}">次へ →</a>
+                    {% endif %}
+                </nav>
+            {% endif %}
+        {% endif %}
+    </section>
+{% endblock %}

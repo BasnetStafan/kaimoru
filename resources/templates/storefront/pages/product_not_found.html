@@ -1,0 +1,14 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | 商品が見つかりません{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        <h1>商品が見つかりませんでした</h1>
+        <div class="empty-state">
+            <p class="empty-state-title">お探しの商品は存在しないか、販売を終了しました</p>
+            <p><a href="/" class="primary-button">トップページへ戻る</a></p>
+            <p class="form-note"><a href="/search">商品を探す</a>　・　<a href="/agent">お買い物エージェントに相談する</a></p>
+        </div>
+    </section>
+{% endblock %}

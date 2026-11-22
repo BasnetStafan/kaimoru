@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ログイン | AGENTIC STORE 管理</title>
+<link rel="icon" href="/static/images/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/css/style.css?v={{ asset_fingerprint }}">
+<link rel="stylesheet" href="/static/css/admin.css?v={{ asset_fingerprint }}">
+<script src="/static/js/admin.js?v={{ asset_fingerprint }}" defer></script>
+</head>
+<body class="admin-body">
+<main class="admin-bare">
+    <div class="admin-card admin-login-card">
+        <p class="admin-login-brand">AGENTIC STORE<span>管理画面</span></p>
+        <h1 class="admin-login-title">ログイン</h1>
+        {% if let Some(message) = error %}
+        <p class="form-error" role="alert">{{ message }}</p>
+        {% endif %}
+        {% if let Some(message) = throttled %}
+        <p class="form-error" role="alert">{{ message }}</p>
+        {% endif %}
+        <form method="post" action="/admin/login" class="auth-form admin-login-form">
+            <label>メールアドレス（ログインID） <span class="badge-required">必須</span>
+                <input type="email" name="email" value="{{ email }}" autocomplete="username" aria-required="true">
+                {% if let Some(message) = email_error %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+            <label>パスワード <span class="badge-required">必須</span>
+                <input type="password" name="password" value="" autocomplete="current-password" aria-required="true">
+                {% if let Some(message) = password_error %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+            <button type="submit" class="primary-button">ログイン</button>
+        </form>
+    </div>
+</main>
+</body>
+</html>

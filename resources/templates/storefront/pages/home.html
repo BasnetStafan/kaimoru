@@ -1,0 +1,142 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block homepart %}{% if let Some(announcement) = header.announcement %}
+    <div class="announcement-bar">
+        <span class="announcement-text">{{ announcement.text }}</span>{% if announcement.has_link() %}
+        <a class="announcement-link" href="{{ announcement.link_url }}">{{ announcement.link_label }}</a>{% endif %}
+    </div>
+{% endif %}
+{% for block in blocks %}{% if block.key == "categories" %}
+    <nav class="category-nav" aria-label="カテゴリー">
+        <h2>{{ block.heading }}</h2>
+        <ul>
+            {% for category in categories %}
+                <li><a href="/search?category={{ category|urlencode }}">{{ category }}</a></li>
+            {% endfor %}
+            {% if categories_more %}
+                <li><a href="/categories">全てのカテゴリー</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+{% else if block.key == "hero" %}{% if let Some(hero) = hero %}
+    <section class="hero{% if !hero.images.is_empty() %} hero-with-image{% endif %}">
+        {% if !hero.images.is_empty() %}
+        <div class="hero-slider" data-hero-slider>
+            {% for image in hero.images %}
+            {% if !image.link_url.is_empty() %}
+            <a class="hero-slide{% if loop.first %} is-active{% endif %}" href="{{ image.link_url }}"><img src="{{ image.image_path }}" alt=""></a>
+            {% else %}
+            <img class="hero-slide{% if loop.first %} is-active{% endif %}" src="{{ image.image_path }}" alt="">
+            {% endif %}
+            {% endfor %}
+            {% if !hero.headline.is_empty() || !hero.text.is_empty() %}
+            <div class="hero-overlay">
+                {% if !hero.headline.is_empty() %}<h1>{{ hero.headline }}</h1>{% endif %}
+                {% if !hero.text.is_empty() %}<p>{{ hero.text }}</p>{% endif %}
+            </div>
+            {% endif %}
+            {% if hero.images.len() > 1 %}
+            <div class="hero-dots">
+                {% for image in hero.images %}
+                <button type="button" class="hero-dot{% if loop.first %} is-active{% endif %}" data-hero-dot aria-label="スライド{{ loop.index }}"></button>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        {% if !hero.headline.is_empty() %}<h1>{{ hero.headline }}</h1>{% endif %}
+        {% if !hero.text.is_empty() %}<p>{{ hero.text }}</p>{% endif %}
+        {% endif %}
+    </section>
+{% endif %}{% else if block.key == "new_arrivals" %}
+    <section class="homepart" id="new">
+        <h2>{{ block.heading }}</h2>
+        <div class="product-grid">
+            {% for card in new_products %}
+{% include "storefront/parts/product_card.html" %}
+            {% else %}
+                <div class="empty-state empty-state-plain"><p>現在、販売中の商品はありません。</p></div>
+            {% endfor %}
+        </div>
+        {% if !block.more_url.is_empty() %}
+        <p class="section-more"><a href="{{ block.more_url }}">もっと見る</a></p>
+        {% endif %}
+    </section>
+{% else if block.key == "free_space" %}
+    <section class="free-space-strip">
+        <h2>{{ block.heading }}</h2>
+        <p>{{ block.description }}</p>
+        <a class="agent-button" href="/agent">エージェントに頼む</a>
+    </section>
+{% else if block.key == "ranking" %}
+    <section class="homepart">
+        <h2>{{ block.heading }}</h2>
+        <div class="product-grid">
+            {% for card in ranking_products %}
+{% include "storefront/parts/product_card.html" %}
+            {% else %}
+                <div class="empty-state empty-state-plain"><p>現在、販売中の商品はありません。</p></div>
+            {% endfor %}
+        </div>
+        {% if !block.more_url.is_empty() %}
+        <p class="section-more"><a href="{{ block.more_url }}">もっと見る</a></p>
+        {% endif %}
+    </section>
+{% else if block.key == "event" %}
+    <section class="homepart">
+        <h2>イベント受取商品</h2>
+        <p class="section-note">オンラインで事前に購入して、イベント会場で受け取れます。</p>
+        <div class="product-grid">
+            {% for card in event_products %}
+{% include "storefront/parts/product_card.html" %}
+            {% else %}
+                <div class="empty-state empty-state-plain"><p>現在、販売中の商品はありません。</p></div>
+            {% endfor %}
+        </div>
+        {% if !block.more_url.is_empty() %}
+        <p class="section-more"><a href="{{ block.more_url }}">もっと見る</a></p>
+        {% endif %}
+    </section>
+{% else if block.key == "featured" %}{% if !featured_products.is_empty() %}
+    <section class="homepart">
+        <h2>{{ block.heading }}</h2>
+        <div class="product-grid">
+            {% for card in featured_products %}
+{% include "storefront/parts/product_card.html" %}
+            {% endfor %}
+        </div>
+        <p class="section-more"><a href="/special">特集を見る</a></p>
+    </section>
+{% else %}
+    <section class="feature-banner">
+        <h2>{{ block.heading }}</h2>
+        <p>{{ block.description }}</p>
+        <a href="/special">特集を見る</a>
+    </section>
+{% endif %}{% else if block.key == "staff_picks" %}
+    <section class="homepart">
+        <h2>{{ block.heading }}</h2>
+        <div class="product-grid">
+            {% for card in staff_products %}
+{% include "storefront/parts/product_card.html" %}
+            {% endfor %}
+        </div>
+        {% if !block.more_url.is_empty() %}
+        <p class="section-more"><a href="{{ block.more_url }}">もっと見る</a></p>
+        {% endif %}
+    </section>
+{% else if block.key == "notices" %}
+    <section class="news">
+        <h2>{{ block.heading }}</h2>
+        <ul>
+            {% for notice in notices %}
+                <li><time>{{ notice.date_text }}</time> {% if !notice.title.is_empty() %}<span class="news-title">{{ notice.title }}</span> {% endif %}{{ notice.body }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+{% endif %}{% endfor %}
+    <section class="recently-viewed" data-recently-viewed hidden>
+        <h2>最近見た商品</h2>
+        <div class="recently-viewed-row" data-recently-viewed-row></div>
+    </section>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | お届け先の削除{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        {% include "storefront/parts/breadcrumb.html" %}
+        <h1>お届け先の削除</h1>
+        <p>このお届け先をアドレス帳から削除します。よろしいですか。</p>
+
+        <div class="address-card">
+            {% include "storefront/parts/address_lines.html" %}
+        </div>
+
+        {% if address.is_default %}
+        <p class="form-note">この住所はデフォルトのお届け先です。削除すると、残りの住所のうち最も古いものがデフォルトになります。</p>
+        {% endif %}
+        <p class="form-note">過去のご注文のお届け先は、そのまま保持されます（注文ごとに保存されているため）。</p>
+
+        <form method="post" action="/mypage/addresses/{{ address.id }}/delete" class="auth-form">
+            <button type="submit" class="danger-button">削除する</button>
+        </form>
+
+        <p class="back-link"><a href="/mypage/addresses">← アドレス帳へ戻る</a></p>
+    </section>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | ポイント{% endblock %}
+
+{% block homepart %}
+    <section class="account-shell">
+        {% include "storefront/parts/breadcrumb.html" %}
+        <h1>ポイント</h1>
+
+        <div class="points-summary">
+            <p class="points-balance">現在の残高 <strong>{{ balance }} ポイント</strong></p>
+            {% if let Some(label) = next_expiry_label %}
+            <p class="form-note">次回失効：{{ label }}</p>
+            {% endif %}
+            <p class="form-note">1ポイント＝1円として、お支払い方法の選択画面でご利用いただけます。ポイントはご注文の発送時に付与されます。ご注文のキャンセル・返金でご利用ポイントが戻る際、対象ポイントの有効期限が過ぎていた場合は、返金日を起点とした新たな有効期限でお戻しします。</p>
+        </div>
+
+        <h2>ポイント履歴</h2>
+        {% if rows.is_empty() %}
+            <div class="empty-state"><p class="empty-state-title">まだポイント履歴はありません</p></div>
+        {% else %}
+            <ul class="points-history">
+                {% for row in rows %}
+                    <li class="points-history-item">
+                        <span class="points-history-date">{{ row.date_label }}</span>
+                        <span class="points-history-kind">{{ row.kind_label }}{% if let Some(order_id) = row.order_id %}（<a href="/mypage/orders/{{ order_id }}">注文詳細</a>）{% endif %}</span>
+                        <span class="points-history-amount">{{ row.points_display }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </section>
+{% endblock %}

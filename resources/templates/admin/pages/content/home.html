@@ -1,0 +1,231 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}トップページ設定{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">トップページ設定</h1>
+<p class="admin-note">トップページに表示されるお知らせバー、ヒーロー、各セクションの見出し・表示・並び順を設定します。保存すると、次にページが表示されたときから反映されます。入力した文字はそのまま表示されます（HTMLタグは使えません）。お知らせの内容そのものは<a href="/admin/notices">お知らせ管理</a>で編集します。</p>
+
+<form method="post" action="/admin/content/home" class="admin-form" data-unsaved-guard>
+  <input type="hidden" name="form_ticket" value="{{ form_ticket }}">
+    <fieldset class="admin-fieldset admin-fieldset-section">
+    <legend>お知らせバー</legend>
+    <p class="admin-note">クーポンのお知らせ帯の下に表示される、汎用のお知らせバーです。年末年始の配送案内やメンテナンスのお知らせなどに使います。クーポンの案内はクーポン側で設定してください（会員限定のクーポンは「会員限定」と明記してください）。</p>
+    <label>お知らせ文 <span class="badge-optional">任意</span>
+        <input type="text" name="announcement_text" value="{{ values.announcement_text }}" maxlength="100">
+        {% if let Some(message) = announcement_text_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <div class="admin-form-row">
+        <label>リンクの表示文 <span class="badge-optional">任意</span>
+            <input type="text" name="announcement_link_label" value="{{ values.announcement_link_label }}" maxlength="20">
+            {% if let Some(message) = announcement_link_label_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>リンク先URL <span class="badge-optional">任意</span>
+            <input type="text" name="announcement_link_url" value="{{ values.announcement_link_url }}" placeholder="/guide">
+            {% if let Some(message) = announcement_link_url_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+    </div>
+    <div class="admin-form-row">
+        <label>表示開始 <span class="badge-optional">任意</span>
+            <input type="datetime-local" name="announcement_starts_at" value="{{ values.announcement_starts_at }}">
+            {% if let Some(message) = announcement_starts_at_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>表示終了 <span class="badge-optional">任意</span>
+            <input type="datetime-local" name="announcement_ends_at" value="{{ values.announcement_ends_at }}">
+            {% if let Some(message) = announcement_ends_at_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+    </div>
+    <p class="admin-note">日時は日本時間です。空欄の側は無制限になります。表示期間を過ぎたお知らせバーは、自動で表示されなくなります。</p>
+    <label class="admin-check">
+        <input type="checkbox" name="announcement_enabled"{% if values.announcement_enabled %} checked{% endif %}> 表示する
+    </label>
+    </fieldset>
+
+    <fieldset class="admin-fieldset admin-fieldset-section">
+    <legend>ヒーロー</legend>
+    <label>見出し <span class="badge-optional">任意</span>
+        <input type="text" name="hero_headline" value="{{ values.hero_headline }}" maxlength="60">
+        {% if let Some(message) = hero_headline_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>本文 <span class="badge-optional">任意</span>
+        <input type="text" name="hero_text" value="{{ values.hero_text }}" maxlength="200">
+        {% if let Some(message) = hero_text_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>ヒーロー画像 <span class="badge-optional">任意</span></label>
+    <div data-hero-images>
+        <ul class="pin-list" data-hero-image-rows>
+            {% for image in values.hero_images %}
+            <li class="pin-row" data-hero-image-row data-hero-image-path="{{ image.image_path }}">
+                <div>
+                    <div class="hero-image-main">
+                        <img class="hero-image-thumb" src="{{ image.image_path }}" alt="">
+                        <span class="pin-name">{{ image.image_path }}</span>
+                        <span class="pin-actions">
+                            <button type="button" class="secondary-button" data-hero-image-up aria-label="上へ">↑</button>
+                            <button type="button" class="secondary-button" data-hero-image-down aria-label="下へ">↓</button>
+                            <button type="button" class="secondary-button" data-hero-image-remove>外す</button>
+                        </span>
+                    </div>
+                    <label class="hero-image-link-row">リンク先
+                        <input type="text" data-hero-image-link value="{{ image.link_url }}" placeholder="/special（空欄ならリンクなし）">
+                    </label>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        <label>画像を追加
+            <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-hero-image-file>
+        </label>
+        <input type="hidden" name="hero_images" value="{{ values.hero_images_joined() }}" data-hero-images-field>
+        <input type="hidden" name="hero_image_links" value="{{ values.hero_image_links_joined() }}" data-hero-image-links-field>
+        <p class="admin-note" data-hero-image-status hidden>アップロード中…</p>
+        <p class="field-error" data-hero-image-error hidden></p>
+        {% if let Some(message) = hero_images_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+        <p class="admin-field-help">PNG / JPEG / WebP / GIF（20MBまで）。最大10枚まで、トップページでは自動でスライド表示されます。見出しと本文は画像の上に重なって表示され、画像をクリックするとその画像のリンク先へ移動します（ボタンはありません）。設定しない場合は文字だけのヒーローになります。横長の画像が向いています。</p>
+    </div>
+    <div class="admin-form-row">
+        <label>表示開始 <span class="badge-optional">任意</span>
+            <input type="datetime-local" name="hero_starts_at" value="{{ values.hero_starts_at }}">
+            {% if let Some(message) = hero_starts_at_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>表示終了 <span class="badge-optional">任意</span>
+            <input type="datetime-local" name="hero_ends_at" value="{{ values.hero_ends_at }}">
+            {% if let Some(message) = hero_ends_at_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+    </div>
+    <p class="admin-note">日時は日本時間です。空欄の側は無制限になります。</p>
+    <label class="admin-check">
+        <input type="checkbox" name="hero_enabled"{% if values.hero_enabled %} checked{% endif %}> 表示する
+    </label>
+    <div class="hero-preview">
+        <div class="hero-preview-head">
+            <span class="hero-preview-title">ヒーローのプレビュー</span>
+            <div class="hero-preview-widths" role="group" aria-label="プレビューの幅">
+                <button type="button" data-hero-preview-width="pc" class="is-active">パソコン</button>
+                <button type="button" data-hero-preview-width="sp">スマートフォン</button>
+            </div>
+        </div>
+        <div class="hero-preview-frame" data-hero-preview-frame>
+            <div class="hero-preview-band">
+                <div class="hero-preview-stage" data-hero-preview-stage{% if values.hero_images.is_empty() %} hidden{% endif %}>
+                    <img data-hero-preview-img src="{{ values.hero_first_image() }}" alt="">
+                    <div class="hero-preview-overlay">
+                        <h1 data-hero-preview-headline>{{ values.hero_headline }}</h1>
+                        <p data-hero-preview-text>{{ values.hero_text }}</p>
+                    </div>
+                </div>
+                <div data-hero-preview-plain{% if !values.hero_images.is_empty() %} hidden{% endif %}>
+                    <h1 data-hero-preview-headline-plain>{{ values.hero_headline }}</h1>
+                    <p data-hero-preview-text-plain>{{ values.hero_text }}</p>
+                </div>
+            </div>
+        </div>
+        <p class="admin-field-help">入力に合わせてその場で更新されます。トップページでの見え方に近いプレビューです（画像は1枚目を表示しています）。</p>
+    </div>
+
+    </fieldset>
+
+    <fieldset class="admin-fieldset admin-fieldset-section">
+    <legend>セクションの表示と並び順</legend>
+    <p class="admin-note">見出しを空欄にすると、標準の見出しが表示されます。並び順は数字の小さい順に表示されます。カテゴリーセクションを非表示にしても、ページ上部のナビゲーションや検索のカテゴリー絞り込みには影響しません。</p>
+    {% for row in sections %}
+    <h3 class="admin-h3">{{ row.label }}</h3>
+    <div class="admin-form-row">
+        <label>見出し <span class="badge-optional">任意</span>
+            <input type="text" name="heading_{{ row.key }}" value="{{ row.heading }}" maxlength="40" placeholder="{{ row.default_heading }}">
+            {% if let Some(message) = row.heading_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>並び順 <span class="badge-required">必須</span>
+            <input type="number" name="sort_{{ row.key }}" value="{{ row.sort_order }}" aria-required="true">
+            {% if let Some(message) = row.sort_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+    </div>
+    {% if row.has_description %}
+    <div class="admin-form-row">
+        <label>説明文 <span class="badge-optional">任意</span>
+            <textarea name="description_{{ row.key }}" rows="2" maxlength="120" placeholder="{{ row.description_placeholder }}">{{ row.description }}</textarea>
+            {% if let Some(message) = row.description_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+    </div>
+    <p class="admin-note">{{ row.description_hint }}</p>
+    {% endif %}
+    <label class="admin-check">
+        <input type="checkbox" name="visible_{{ row.key }}"{% if row.visible %} checked{% endif %}> 表示する
+    </label>
+    {% endfor %}
+    </fieldset>
+
+    <fieldset class="admin-fieldset admin-fieldset-section">
+    <legend>トップページの固定表示（ピン留め）</legend>
+    <p class="admin-note">各セクションの先頭に固定表示する商品を選べます。下書きの商品も固定できますが、公開されるまで表示されません。スタッフおすすめ商品のセクションには、商品編集で「おすすめバッジを表示」にチェックした商品が新着順で表示されます（固定表示の対象ではありません）。</p>
+    {% for editor in pin_editors %}
+    <div data-pin-editor="{{ editor.key }}" data-pin-cap="{{ editor.cap }}">
+        <h3 class="admin-h3">{{ editor.label }}{% if editor.cap > 0 %}（最大{{ editor.cap }}件）{% endif %}</h3>
+        <p class="admin-note">{{ editor.note }}</p>
+        <ul class="pin-list" data-pin-list>
+            {% for pin in editor.pins %}
+            <li class="pin-row" data-pin-row data-pin-id="{{ pin.id }}">
+                <span class="pin-name">{{ pin.name }}{% if !pin.status_label.is_empty() %} <span class="pin-status">{{ pin.status_label }}</span>{% endif %}</span>
+                <span class="pin-actions">
+                    <button type="button" class="secondary-button" data-pin-up aria-label="上へ">↑</button>
+                    <button type="button" class="secondary-button" data-pin-down aria-label="下へ">↓</button>
+                    <button type="button" class="secondary-button" data-pin-remove>外す</button>
+                </span>
+            </li>
+            {% endfor %}
+        </ul>
+        <input type="hidden" name="pins_{{ editor.key }}" value="{{ editor.joined_ids }}" data-pin-field>
+        <div class="pin-add">
+            <div class="admin-combobox" data-combobox>
+                <div class="admin-combobox-control">
+                    <input type="text" data-combobox-input placeholder="検索するか、一覧から選んでください" autocomplete="off">
+                    <button type="button" class="admin-combobox-toggle" data-combobox-toggle aria-label="商品の一覧を開く"><span aria-hidden="true">▾</span></button>
+                </div>
+                <select data-combobox-select name="pin_add_{{ editor.key }}">
+                    <option value="">選択してください</option>
+                    {% for option in pin_options %}
+                    <option value="{{ option.id }}">{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="button" class="secondary-button" data-pin-add>固定に追加</button>
+        </div>
+        {% if let Some(message) = editor.error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </div>
+    {% endfor %}
+    </fieldset>
+
+    <div class="admin-form-actions">
+        <p class="admin-unsaved-note" data-unsaved-note hidden>未保存の変更があります</p>
+        <button type="submit" class="primary-button">保存する</button>
+    </div>
+</form>
+{% endblock %}

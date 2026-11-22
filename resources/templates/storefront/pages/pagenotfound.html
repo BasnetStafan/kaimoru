@@ -1,0 +1,15 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | ページが見つかりません{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        <h1>ページが見つかりませんでした</h1>
+        <div class="empty-state">
+            <p class="empty-state-title">お探しのページは存在しないか、移動しました</p>
+            <p class="form-note">URLをご確認ください。</p>
+            <p><a href="/" class="primary-button">トップページへ戻る</a></p>
+            <p class="form-note"><a href="/search">商品を探す</a>　・　<a href="/agent">お買い物エージェントに相談する</a></p>
+        </div>
+    </section>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}配信の確認{% endblock %}
+
+{% block adminpart %}
+<p class="admin-back"><a href="/admin/mail/campaigns/{{ campaign_id }}/edit">← キャンペーン編集に戻る</a></p>
+<h1 class="admin-h1">配信の確認</h1>
+
+<div class="admin-table-scroll"><table class="admin-table">
+    <tbody>
+        <tr><th>キャンペーン名</th><td>{{ name }}</td></tr>
+        <tr><th>件名</th><td>{{ subject }}</td></tr>
+        <tr><th>状態</th><td>{{ status_label }}</td></tr>
+        <tr><th>宛先</th><td>{{ audience_label }} <strong>{{ recipient_count }} 名</strong>（現時点の人数。予約時に確定します）</td></tr>
+        <tr><th>配信日時</th><td>{% if let Some(label) = scheduled_label %}{{ label }}{% else %}未設定{% endif %}</td></tr>
+        {% if stats.total > 0 %}
+        <tr><th>配信結果</th><td>対象 {{ stats.total }} 名 / 送信済み {{ stats.sent }} / 失敗 {{ stats.failed }} / 除外 {{ stats.skipped }} / 処理中 {{ stats.queued }}</td></tr>
+        {% endif %}
+        {% if let Some(label) = tracking_label %}
+        <tr><th>開封・クリック</th><td>{{ label }}</td></tr>
+        {% endif %}
+    </tbody>
+</table></div>
+
+{% if let Some(message) = error %}
+<p class="form-error" role="alert">{{ message }}</p>
+{% endif %}
+
+{% if editable %}
+<form method="post" action="/admin/mail/campaigns/{{ campaign_id }}/enqueue" class="admin-form" data-recipient-count="{{ recipient_count }}">
+    <div class="admin-form-actions">
+        <button type="submit" name="timing" value="now" class="primary-button" id="campaign-send-now">今すぐ配信する</button>
+        <button type="submit" name="timing" value="scheduled" class="secondary-button" id="campaign-send-scheduled"{% if !has_schedule %} disabled{% endif %}>予約した日時で配信する</button>
+    </div>
+    <p class="admin-note">配信はバックグラウンドで実行されます。予約を取り消すことはできません。</p>
+    <p class="admin-note">配信メールの開封とリンクのクリックは計測され、配信後にこの画面の「開封・クリック」に表示されます。</p>
+</form>
+{% endif %}
+{% endblock %}

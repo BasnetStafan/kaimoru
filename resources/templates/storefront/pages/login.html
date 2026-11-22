@@ -1,0 +1,35 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | ログイン{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        <h1>ログイン</h1>
+
+        {% if let Some(message) = error %}
+            <p class="form-error">{{ message }}</p>
+        {% endif %}
+
+        <form method="post" action="/login" class="auth-form">
+            <label>
+                メールアドレス <span class="badge-required">必須</span>
+                <input type="email" name="email" value="{{ email }}" aria-required="true" autocomplete="email">
+            </label>
+            <label>
+                パスワード <span class="badge-required">必須</span>
+                <input type="password" name="password" aria-required="true" autocomplete="current-password">
+            </label>
+            {% if !next.is_empty() %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+            <button type="submit" class="primary-button">ログイン</button>
+        </form>
+
+        {% if !sns.buttons.is_empty() %}
+            {% include "storefront/parts/sns_buttons.html" %}
+            <p class="form-note">SNSログインでは、メールアドレスを取得し、アカウントの作成とご連絡に利用します。</p>
+        {% endif %}
+
+        <p class="form-note">アカウントをお持ちでない方は<a href="/signup">新規会員登録</a>へ。</p>
+        <p class="form-note">パスワードをお忘れの方は<a href="/password-reset">パスワードの再設定</a>へ。</p>
+        <p class="form-note">ゲストでご注文の方は<a href="/order-lookup">ご注文の確認</a>へ。</p>
+    </section>
+{% endblock %}

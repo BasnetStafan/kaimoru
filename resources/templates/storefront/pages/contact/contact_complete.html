@@ -1,0 +1,12 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | お問い合わせを受け付けました{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        <h1>お問い合わせを受け付けました</h1>
+        <p>受付番号：{{ reference }}</p>
+        <p>お問い合わせありがとうございます。内容を確認のうえ、通常2営業日以内にメールでご返信いたします。ご入力いただいたメールアドレス宛に受付確認メールをお送りしました。</p>
+        <p><a href="/">トップページへ戻る</a></p>
+    </section>
+{% endblock %}

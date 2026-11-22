@@ -1,0 +1,11 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}ページが見つかりません{% endblock %}
+
+{% block adminpart %}
+<div class="admin-notfound">
+    <h1 class="admin-h1">ページが見つかりません</h1>
+    <p>URLが間違っているか、ページが移動・削除された可能性があります。</p>
+    <p><a href="/admin">ダッシュボードへ戻る</a></p>
+</div>
+{% endblock %}

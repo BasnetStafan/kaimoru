@@ -1,0 +1,20 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | お気に入り商品{% endblock %}
+
+{% block homepart %}
+    <section class="mypage-hub">
+        {% include "storefront/parts/breadcrumb.html" %}
+        <h1>お気に入り商品</h1>
+
+        {% if cards.is_empty() %}
+            <div class="empty-state"><p class="empty-state-title">お気に入り商品はまだありません</p><p class="form-note">商品ページの♡から追加できます。</p><p><a href="/search" class="primary-button">商品を探す</a></p></div>
+        {% else %}
+            <div class="product-grid">
+                {% for card in cards %}
+                    {% include "storefront/parts/product_card.html" %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}
