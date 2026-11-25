@@ -1,0 +1,81 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}売上分析{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">売上分析</h1>
+<p class="admin-note">金額は税込、キャンセルされた注文は含みません。前期間は、同じ日数の直前の期間です。</p>
+
+<div class="admin-tabs">
+    <a href="/admin/analytics?period=this_month"{% if tab_this_month %} class="active" aria-current="page"{% endif %}>今月</a>
+    <a href="/admin/analytics?period=last_month"{% if tab_last_month %} class="active" aria-current="page"{% endif %}>先月</a>
+    <span{% if tab_custom %} class="active"{% endif %}>期間指定</span>
+</div>
+<form method="get" action="/admin/analytics" class="admin-filters">
+    <input type="hidden" name="period" value="custom">
+    <label>開始日
+        <input type="date" name="from" value="{{ from_value }}">
+    </label>
+    <label>終了日
+        <input type="date" name="to" value="{{ to_value }}">
+    </label>
+    <button type="submit" class="secondary-button">表示</button>
+</form>
+
+<h2 class="admin-h2">{{ span_label }}</h2>
+<section class="admin-cards">
+    <div class="admin-stat-card">
+        <p class="admin-stat-label">注文件数</p>
+        <p class="admin-stat-value">{{ orders }}<span class="admin-stat-unit">件</span></p>
+        <p class="admin-note">前期間 {{ prev_orders }}件（{{ orders_delta }}）</p>
+    </div>
+    <div class="admin-stat-card">
+        <p class="admin-stat-label">売上</p>
+        <p class="admin-stat-value">{{ sales }}</p>
+        <p class="admin-note">前期間 {{ prev_sales }}（{{ sales_delta }}）</p>
+    </div>
+    <div class="admin-stat-card">
+        <p class="admin-stat-label">リピート率（会員）</p>
+        <p class="admin-stat-value">{{ repeat_label }}</p>
+        <p class="admin-note">対象期間：{{ span_label }}／前期間：{{ prev_span_label }}</p>
+    </div>
+</section>
+
+<h2 class="admin-h2">商品別ランキング</h2>
+{% if products.is_empty() %}
+<p class="admin-note">期間中の売上はありません。</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead><tr><th>順位</th><th>商品</th><th>数量</th><th>金額</th></tr></thead>
+    <tbody>
+        {% for r in products %}
+        <tr>
+            <td>{{ r.rank }}</td>
+            <td><a href="{{ r.url }}">{{ r.name }}</a></td>
+            <td>{{ r.quantity }}</td>
+            <td>{{ r.amount }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+
+<h2 class="admin-h2">カテゴリー別ランキング</h2>
+{% if categories.is_empty() %}
+<p class="admin-note">期間中の売上はありません。</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead><tr><th>順位</th><th>カテゴリー</th><th>数量</th><th>金額</th></tr></thead>
+    <tbody>
+        {% for r in categories %}
+        <tr>
+            <td>{{ r.rank }}</td>
+            <td>{{ r.name }}</td>
+            <td>{{ r.quantity }}</td>
+            <td>{{ r.amount }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+{% endblock %}

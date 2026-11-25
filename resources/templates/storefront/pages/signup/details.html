@@ -1,0 +1,127 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | 会員情報の入力{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        <h1>会員情報の入力</h1>
+        <ol class="steps">
+            <li class="done"><span class="step-num">1</span>メールアドレス</li>
+            <li class="done"><span class="step-num">2</span>認証コード</li>
+            <li class="active"><span class="step-num">3</span>会員情報</li>
+            <li><span class="step-num">4</span>確認</li>
+        </ol>
+
+        {% if let Some(message) = error %}
+            <p class="form-error">{{ message }}</p>
+        {% endif %}
+
+        <form method="post" action="{% if sns_mode %}/signup/sns/details{% else %}/signup/details{% endif %}" class="auth-form">
+
+            <label>
+                メールアドレス(認証済み)
+                <input type="email" value="{{ email }}" readonly>
+            </label>
+            {% if !sns_mode %}
+            <label>
+                パスワード(半角英字と半角数字を含む8〜32文字) <span class="badge-required">必須</span>
+                <input type="password" name="password" aria-required="true" autocomplete="new-password">
+                {% if let Some(e) = errors.password %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+            <label>
+                パスワード(確認用) <span class="badge-required">必須</span>
+                <input type="password" name="password_confirm" aria-required="true" autocomplete="new-password">
+                {% if let Some(e) = errors.password_confirm %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+            {% endif %}
+
+            <div class="field-row">
+                <label>
+                    姓 <span class="badge-required">必須</span>
+                    <input type="text" name="family_name" value="{{ values.family_name }}" aria-required="true" autocomplete="family-name">
+                    {% if let Some(e) = errors.family_name %}<p class="field-error">{{ e }}</p>{% endif %}
+                </label>
+                <label>
+                    名 <span class="badge-required">必須</span>
+                    <input type="text" name="given_name" value="{{ values.given_name }}" aria-required="true" autocomplete="given-name">
+                    {% if let Some(e) = errors.given_name %}<p class="field-error">{{ e }}</p>{% endif %}
+                </label>
+            </div>
+            <div class="field-row">
+                <label>
+                    セイ(全角カタカナ) <span class="badge-required">必須</span>
+                    <input type="text" name="family_name_kana" value="{{ values.family_name_kana }}" aria-required="true">
+                    {% if let Some(e) = errors.family_name_kana %}<p class="field-error">{{ e }}</p>{% endif %}
+                </label>
+                <label>
+                    メイ(全角カタカナ) <span class="badge-required">必須</span>
+                    <input type="text" name="given_name_kana" value="{{ values.given_name_kana }}" aria-required="true">
+                    {% if let Some(e) = errors.given_name_kana %}<p class="field-error">{{ e }}</p>{% endif %}
+                </label>
+            </div>
+
+            <div class="field-row">
+                <label>
+                    生年月日 <span class="badge-optional">任意</span>
+                    <input type="date" name="birth_date" autocomplete="bday" value="{{ values.birth_date }}">
+                    {% if let Some(e) = errors.birth_date %}<p class="field-error">{{ e }}</p>{% endif %}
+                </label>
+                <label>
+                    性別 <span class="badge-optional">任意</span>
+                    <select name="gender">
+                        <option value="">選択しない</option>
+                        <option value="男性" {% if values.gender == "男性" %}selected{% endif %}>男性</option>
+                        <option value="女性" {% if values.gender == "女性" %}selected{% endif %}>女性</option>
+                        <option value="その他" {% if values.gender == "その他" %}selected{% endif %}>その他</option>
+                    </select>
+                </label>
+            </div>
+
+            <label>
+                郵便番号(ハイフンなし7桁) <span class="badge-required">必須</span>
+                <input type="text" name="postal_code" value="{{ values.postal_code }}" inputmode="numeric" aria-required="true" autocomplete="postal-code">
+                {% if let Some(e) = errors.postal_code %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+            <label>
+                都道府県 <span class="badge-required">必須</span>
+                <select name="prefecture" autocomplete="address-level1" aria-required="true">
+                    <option value="">選択してください</option>
+                    {% for pref in prefectures %}
+                        <option value="{{ pref }}" {% if values.prefecture == *pref %}selected{% endif %}>{{ pref }}</option>
+                    {% endfor %}
+                </select>
+                {% if let Some(e) = errors.prefecture %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+            <label>
+                市区町村 <span class="badge-required">必須</span>
+                <input type="text" name="city" autocomplete="address-level2" value="{{ values.city }}" aria-required="true">
+                {% if let Some(e) = errors.city %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+            <label>
+                番地 <span class="badge-required">必須</span>
+                <input type="text" name="address_line" autocomplete="street-address" value="{{ values.address_line }}" aria-required="true">
+                {% if let Some(e) = errors.address_line %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+            <label>
+                建物名・部屋番号 <span class="badge-optional">任意</span>
+                <input type="text" name="building" value="{{ values.building }}">
+            </label>
+            <label>
+                電話番号(ハイフンなし) <span class="badge-required">必須</span>
+                <input type="tel" name="phone" value="{{ values.phone }}" inputmode="numeric" aria-required="true" autocomplete="tel">
+                {% if let Some(e) = errors.phone %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+
+            <label class="checkbox-label">
+                <input type="checkbox" name="mail_magazine" value="true" {% if values.mail_magazine %}checked{% endif %}>
+                メールマガジンを受け取る
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" name="agree_terms" value="true" aria-required="true">
+                <a href="/terms" target="_blank" rel="noopener">利用規約</a>と<a href="/privacy" target="_blank" rel="noopener">プライバシーポリシー</a>に同意する
+            </label>
+
+            <button type="submit" class="primary-button">入力内容を確認する</button>
+        </form>
+    </section>
+{% endblock %}

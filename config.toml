@@ -1,0 +1,219 @@
+# Global application settings for Kaimoru.
+# Secrets such as the database password never go in this file.
+# They are read from environment variables (see .env.example).
+#
+# ------------------------------------------------------------------
+# HOW TO READ THIS FILE - a map of every setting, top to bottom.
+#
+# Rules that apply to the whole file:
+# - This file is read ONCE at startup. After editing it, restart
+#   the app (kill the server, then ./run.sh) or nothing changes.
+# - A value the app cannot parse stops the boot with an error
+#   naming the key. A bad edit never half-applies.
+# - Secrets (passwords, API keys) NEVER go in this file. They are
+#   read from environment variables; .env.example lists them.
+# - Keys above the [database] header belong to the root table;
+#   keys below it belong to [database]. A key placed under the
+#   wrong table is an unknown field and stops the boot.
+#
+# Display and server:
+#   yen_symbol .... how prices print: the yen sign or the kanji.
+#   app_role ...... "all" / "web" / "worker": which half of
+#                   the app this process runs.
+#   port .......... TCP port the app listens on (3000).
+#   log_dir ....... folder for the tracing log files.
+#   bind_host ..... interface to bind; 127.0.0.1 = this machine
+#                   only (AWS uses 0.0.0.0 behind the ALB).
+#   cookie_secure . true = session cookies travel over HTTPS
+#                   only (AWS); false for local HTTP.
+#   db_ssl_mode ... PostgreSQL TLS mode: "disable" locally,
+#                   "require" on AWS (RDS).
+#
+# Payments, social login and mail:
+#   komoju_enabled ............. true adds card / konbini /
+#                                PayPay at checkout; false leaves
+#                                the cash-on-delivery store.
+#   payment_sweep_interval_secs  seconds between reconciliations
+#                                of open payments against KOMOJU.
+#   sns_login_enabled .......... master switch for the LINE /
+#                                Google / Yahoo login buttons.
+#   mail_worker_interval_secs .. seconds between mail-queue
+#                                drains by the background worker.
+#   mail_send_concurrency ...... campaign deliveries one
+#                                worker pass sends in parallel.
+#   mail_send_rate_per_second .. ceiling on campaign sends
+#                                per second (SES pacing); 0 = off.
+#   log_retention_days ......... days of rotated log files
+#                                kept; older files are pruned.
+#                                0 keeps everything.
+#
+# Page sizes and limits (counts of rows/items unless noted):
+#   admin_per_page, search_per_page, api_per_page .. list pages.
+#   reviews_per_page, history_per_page ........... member pages.
+#   recent_orders_count ... orders in the MyPage recent block.
+#   home_section_product_count .. products in one top page
+#                         section row, every section alike.
+#   home_category_nav_count .. categories in the top page's
+#                         category nav.
+#   max_addresses ......... address-book entries per member.
+#   csv_max_rows, csv_max_file_bytes .. admin CSV import
+#                         ceilings (rows per file; upload size
+#                         in bytes - 10485760 is 10 MiB).
+#
+# Tax and stock:
+#   tax_rounding ...... "floor" / "round" / "ceil", applied once
+#                       per tax class per order.
+#   low_stock_default . fallback low-stock warning threshold
+#                       (dashboard warning and the stock label).
+#
+# Shopping agent (the chat):
+#   llm_base_url, llm_model ... OpenAI-compatible chat endpoint
+#                         and model for the translator (local
+#                         Ollama by default; the API key is the
+#                         LLM_API_KEY environment variable).
+#   llm_timeout_secs .... seconds before a chat call times out.
+#   agent_approval_ttl_minutes .. how long a cart approval
+#                         stays usable (fingerprint-bound,
+#                         single-use).
+#   agent_checkout_max_per_hour . approvals per cart owner
+#                         per hour.
+#
+# Sessions and admin access:
+#   member_session_ttl, admin_session_ttl .. idle lifetimes
+#                         with a unit suffix (s / m / h / d);
+#                         activity extends them (sliding).
+#   session_cleanup_interval .. how often expired session rows
+#                         are deleted (same unit-suffix format).
+#   admin_allowed_ips ... source IPs allowed to reach /admin
+#                         (exact addresses or CIDR ranges);
+#                         see its own note further below.
+#
+# [database] - PostgreSQL (no password here by design):
+#   host, port, name .... the server and the database.
+#   user ................ owner connection: migrations at
+#                         boot only.
+#   app_user ............ restricted runtime role the app
+#                         serves as (ledger tables stay
+#                         read/insert only for it).
+# ------------------------------------------------------------------
+
+# Set to either "￥" or "円" to choose the display style for yen.
+yen_symbol = "￥"
+# Which half of the app this process runs: "all" (HTTP and
+# background tasks — the single-server setup), "web" (HTTP
+# only, no background tasks start), or "worker" (background
+# tasks only, no HTTP listener). Only needed when several
+# processes share one database; the tasks are safe to run
+# in several processes either way (atomic claims and
+# advisory locks), the split exists so the halves can scale
+# independently.
+app_role = "all"
+port = 3000
+log_dir = "logs"
+log_retention_days = 30
+# Local development values. The AWS deployment overrides these:
+# bind_host = "0.0.0.0", cookie_secure = true, db_ssl_mode = "require".
+bind_host = "127.0.0.1"
+cookie_secure = false
+db_ssl_mode = "disable"
+# KOMOJU payments: when true, checkout also offers card, konbini
+# and PayPay (the secrets stay in environment variables; see
+# .env.example). Left false, the store is exactly the
+# cash-on-delivery store. payment_sweep_interval_secs is how
+# often open payments are reconciled against KOMOJU.
+komoju_enabled = true
+stripe_enabled = false
+hosted_gateway = "komoju"
+# SNS (social) login master switch. Provider credentials come
+# from the environment only; a provider stays hidden until both
+# its id and secret resolve (see .env.example).
+sns_login_enabled = false
+payment_sweep_interval_secs = 600
+# Uploaded product image derivatives (PERF-7): the longest
+# edge, in pixels, of the WebP copies generated beside each
+# upload — the thumbnail serves cards and the detail gallery
+# strip, the medium serves the detail main image.
+image_thumb_max_px = 480
+image_medium_max_px = 1024
+# JPEG quality for derivatives of JPEG uploads (the other
+# formats' derivatives are lossless WebP).
+image_jpeg_quality = 82
+mail_worker_interval_secs = 30
+low_stock_alert_interval_secs = 3600
+backup_dir = "./backups"
+cart_reminder_delay_hours = 24
+cart_reminder_interval_secs = 900
+# Days a guest cart may sit untouched before the cleanup
+# sweep deletes it (member carts are never swept).
+# 0 disables the sweep.
+guest_cart_retention_days = 30
+mail_send_concurrency = 5
+mail_send_rate_per_second = 10
+# List page sizes, in rows. Admin lists and storefront search
+# show 20; the member order history and product reviews show
+# 10 so those personal pages stay compact.
+admin_per_page = 20
+search_per_page = 20
+api_per_page = 20
+# Admin CSV import ceilings: data rows per file, and the
+# upload size in bytes (10 MiB).
+csv_max_rows = 5000
+csv_max_file_bytes = 10485760
+reviews_per_page = 10
+history_per_page = 10
+# Orders shown in the mypage hub's recent-orders block.
+recent_orders_count = 5
+# Products shown in one top page section row.
+home_section_product_count = 20
+# Categories shown in the top page's category nav.
+home_category_nav_count = 6
+max_addresses = 5
+# Consumption-tax rounding: "floor" (切り捨て), "round" (四捨五入)
+# or "ceil" (切り上げ), applied once per tax class per order.
+tax_rounding = "floor"
+# Low-stock threshold used when a product has no threshold of
+# its own: the dashboard warning and 残りわずか label trigger.
+low_stock_default = 3
+# Shopping-agent chat (Session 5 slice 4): the translator talks
+# to an OpenAI-compatible chat API — the local Ollama server by
+# default, a cloud provider by changing llm_base_url/llm_model.
+# The API key never goes in this file: LLM_API_KEY in the
+# environment, only when the provider needs one.
+llm_base_url = "http://localhost:11434/v1"
+llm_model = "qwen2.5:1.5b-instruct"
+llm_timeout_secs = 60
+# Most digest lines one category may contribute to a chat
+# call's grounding; the digest is re-sent on every call.
+llm_digest_max_products = 40
+# Agent checkout approvals (Session 6): how long an approval
+# of the cart stays usable, and how many approvals one cart
+# owner may create per hour.
+agent_approval_ttl_minutes = 30
+agent_checkout_max_per_hour = 10
+# Session idle lifetimes (sliding: activity extends
+# them). Each value is a number with a unit suffix:
+# s, m, h or d. Members get 14 days; admins get 8
+# hours, because the back office is privileged.
+member_session_ttl = "14d"
+admin_session_ttl = "8h"
+# How often expired session rows are deleted.
+session_cleanup_interval = "20m"
+
+# Source IPs allowed to reach the /admin surface (exact
+# addresses or CIDR ranges); anything else gets a 404 there.
+# OPEN BY OPERATOR DECISION (2026-11-08): 0.0.0.0/0 and ::/0
+# allow every source IP - the /admin login page is reachable
+# from anywhere, so the admin password is the only barrier.
+# To restrict again, replace these with explicit addresses
+# (e.g. "127.0.0.1", "::1", the operator's home IP).
+admin_allowed_ips = ["0.0.0.0/0", "::/0"]
+
+# Database configuration (no password here by design).
+
+[database]
+host = "localhost"
+port = 5432
+name = "agentic_commerce"
+user = "agentic"
+app_user = "agentic_app"
+

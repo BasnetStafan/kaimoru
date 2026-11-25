@@ -1,0 +1,31 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}コンテンツ{% endblock %}
+
+{% block adminpart %}
+<div class="admin-page-head">
+    <h1 class="admin-h1">コンテンツ</h1>
+    <a class="primary-button admin-new-button" href="/admin/content/pages/new">ページを登録</a>
+</div>
+
+<p class="admin-note">送料・お支払いの案内、利用規約、プライバシーポリシーなどのページと、自由に追加するページを編集します。固定ページは店舗に必要なページのため、削除はできません。</p>
+
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>タイトル</th><th>URL</th><th>種別</th><th>ステータス</th><th>最終更新</th><th>編集者</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td><a href="{{ row.edit_url }}">{{ row.title }}</a></td>
+            <td>{{ row.url_path }}</td>
+            <td>{{ row.kind_label }}</td>
+            <td>{% if row.published %}<span class="content-status content-status-published">公開</span>{% else %}<span class="content-status content-status-draft">下書き</span>{% endif %}</td>
+            <td>{{ row.updated_label }}</td>
+            <td>{% if let Some(name) = row.editor_name %}{{ name }}{% else %}-{% endif %}</td>
+            <td>{% if row.is_system %}<span class="admin-note">削除できません</span>{% else %}<a href="{{ row.edit_url }}">編集</a>{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endblock %}

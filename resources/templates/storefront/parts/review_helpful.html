@@ -1,0 +1,9 @@
+<span class="review-helpful">
+{% if voted %}
+<span class="helpful-done">参考になった（{{ helpful_count }}）</span>
+{% else %}
+<form method="post" action="{{ helpful_url }}" hx-post="{{ helpful_url }}" hx-target="closest .review-helpful" hx-swap="outerHTML" class="helpful-form">
+    <button type="submit" class="helpful-button">参考になった（{{ helpful_count }}）</button>
+</form>
+{% endif %}
+</span>

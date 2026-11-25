@@ -1,0 +1,102 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}商品管理{% endblock %}
+
+{% block adminpart %}
+<div class="admin-page-head">
+    <h1 class="admin-h1">商品管理</h1>
+    <a class="primary-button admin-new-button" href="/admin/products/new">商品を登録</a>
+    <a class="secondary-button" href="{{ csv_export_url }}">CSVダウンロード</a>
+    <a class="secondary-button" href="/admin/products/csv-import">CSV取込</a>
+</div>
+
+<nav class="admin-tabs" aria-label="ステータス">
+    <a href="{{ tab_all_url }}"{% if tab == "all" %} class="active" aria-current="page"{% endif %}>アーカイブ以外（{{ count_all }}）</a>
+    <a href="{{ tab_public_url }}"{% if tab == "public" %} class="active" aria-current="page"{% endif %}>公開（{{ count_public }}）</a>
+    <a href="{{ tab_draft_url }}"{% if tab == "draft" %} class="active" aria-current="page"{% endif %}>下書き（{{ count_draft }}）</a>
+    <a href="{{ tab_archived_url }}"{% if tab == "archived" %} class="active" aria-current="page"{% endif %}>アーカイブ（{{ count_archived }}）</a>
+</nav>
+
+<form method="get" action="/admin/products" class="admin-filters">
+    <input type="hidden" name="tab" value="{{ tab }}">
+    <label class="admin-filter-search">キーワード
+        <input type="search" name="q" value="{{ q }}" placeholder="商品名・カテゴリーで検索">
+    </label>
+    <label>カテゴリー
+<div class="admin-combobox" data-combobox>
+            <div class="admin-combobox-control">
+                <input type="text" data-combobox-input placeholder="検索して選ぶ" autocomplete="off">
+                <button type="button" class="admin-combobox-toggle" data-combobox-toggle aria-label="カテゴリーの一覧を開く"><span aria-hidden="true">▾</span></button>
+            </div>
+            <select name="category" data-combobox-select>
+            <option value="">すべて</option>
+            {% for c in categories %}
+            <option value="{{ c.value }}"{% if c.selected %} selected{% endif %}>{{ c.value }}</option>
+            {% endfor %}
+        </select>
+        </div>
+    </label>
+    <label>タグ
+<div class="admin-combobox" data-combobox>
+            <div class="admin-combobox-control">
+                <input type="text" data-combobox-input placeholder="検索して選ぶ" autocomplete="off">
+                <button type="button" class="admin-combobox-toggle" data-combobox-toggle aria-label="タグの一覧を開く"><span aria-hidden="true">▾</span></button>
+            </div>
+            <select name="tag" data-combobox-select>
+            <option value="">すべて</option>
+            {% for t in tags %}
+            <option value="{{ t.id }}"{% if t.selected %} selected{% endif %}>{{ t.label }}</option>
+            {% endfor %}
+        </select>
+        </div>
+    </label>
+    <label>並び替え
+        <select name="sort">
+            {% for s in sorts %}
+            <option value="{{ s.value }}"{% if s.selected %} selected{% endif %}>{{ s.label }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <button type="submit" class="secondary-button">絞り込む</button>
+</form>
+
+<form method="post" action="/admin/products" id="admin-bulk-form">
+    <input type="hidden" name="return_url" value="{{ bulk_return_url }}">
+    <div class="admin-bulk-bar" id="admin-bulk-bar" hidden>
+        <span id="admin-bulk-count">0件選択中</span>
+        <button type="submit" name="action" value="public" class="secondary-button" id="admin-bulk-publish">公開する</button>
+        <button type="submit" name="action" value="draft" class="secondary-button" id="admin-bulk-draft">下書きにする</button>
+        <button type="submit" name="action" value="archive" class="secondary-button" id="admin-bulk-archive">アーカイブする</button>
+    </div>
+
+    {% if products.is_empty() %}
+    <p class="admin-empty">条件に一致する商品がありません</p>
+    {% else %}
+    <div class="admin-table-scroll"><table class="admin-table">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="admin-check-all" aria-label="すべて選択"></th>
+                <th>画像</th><th>商品名</th><th>カテゴリー</th><th>価格</th><th>在庫数</th><th>ステータス</th><th>更新日時</th><th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in products %}
+            <tr>
+                <td><input type="checkbox" name="ids" value="{{ row.product.id }}" class="admin-row-check" aria-label="{{ row.product.name }} を選択"></td>
+                <td>{% if row.product.image_path.is_empty() %}<span class="admin-thumb-none" aria-hidden="true"></span>{% else %}<img src="{{ row.product.image_path }}" alt="" class="admin-thumb">{% endif %}</td>
+                <td>{{ row.product.name }}</td>
+                <td>{{ row.product.category }}</td>
+                <td class="num">{{ row.price_text }}</td>
+                <td class="num">{{ row.product.stock }}</td>
+                <td><span class="admin-badge status-{{ row.product.status }}">{{ row.product.status_label() }}</span></td>
+                <td>{{ row.updated_text }}</td>
+                <td><a href="/admin/products/{{ row.product.id }}/edit">編集</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table></div>
+    {% endif %}
+</form>
+
+{% include "admin/parts/pagination.html" %}
+{% endblock %}

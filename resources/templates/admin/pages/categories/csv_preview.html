@@ -1,0 +1,45 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}カテゴリーCSV取込の確認{% endblock %}
+
+{% block adminpart %}
+<p class="admin-back"><a href="/admin/categories">← カテゴリー一覧に戻る</a></p>
+<h1 class="admin-h1">カテゴリーCSV取込の確認</h1>
+
+<p class="admin-note">ファイル名: {{ file_name }} ／ 状態: {% if status == "preview" %}確認中{% else if status == "applied" %}適用済み{% else %}破棄済み{% endif %}</p>
+
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>新規</th><th>更新</th><th>エラー</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>{{ new_count }}件</td><td>{{ update_count }}件</td><td>{{ error_count }}件</td></tr>
+    </tbody>
+</table></div>
+
+{% if !errors.is_empty() %}
+<h2 class="admin-form-section-title">エラー内容</h2>
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>行</th><th>内容</th></tr>
+    </thead>
+    <tbody>
+        {% for e in errors %}
+        <tr><td>{{ e.line }}</td><td>{{ e.message }}</td></tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+
+{% if status == "preview" %}
+<p class="admin-note">「取り込む」を押すと、新規 {{ new_count }} 件・更新 {{ update_count }} 件が反映されます。エラーのあるカテゴリーは取り込まれません。</p>
+<div class="admin-form-actions">
+    <form method="post" action="/admin/categories/csv-import/{{ batch_id }}/apply" class="csv-import-apply-form">
+        <button type="submit" class="primary-button">この内容で取り込む</button>
+    </form>
+    <form method="post" action="/admin/categories/csv-import/{{ batch_id }}/discard" class="csv-import-discard-form">
+        <button type="submit" class="secondary-button">破棄する</button>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

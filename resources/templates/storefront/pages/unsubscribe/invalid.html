@@ -1,0 +1,12 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | メールマガジンの配信停止{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        <h1>このリンクは無効です</h1>
+        <p>配信停止リンクが正しく読み取れませんでした。メール本文のリンクが途中で切れている場合は、リンク全体をそのまま開き直してください。</p>
+        <p>最新のメールに記載されたリンクからお手続きいただくか、会員の方はマイページの会員情報編集からも配信設定を変更できます。</p>
+        <p><a href="/" class="secondary-button">トップページへ戻る</a></p>
+    </section>
+{% endblock %}

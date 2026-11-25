@@ -1,0 +1,24 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}カテゴリーCSV取込{% endblock %}
+
+{% block adminpart %}
+<p class="admin-back"><a href="/admin/categories">← カテゴリー一覧に戻る</a></p>
+<h1 class="admin-h1">カテゴリーCSV取込</h1>
+
+<p class="admin-note">「CSVダウンロード」で書き出したファイルと同じ列構成で取り込みます。親カテゴリーはカテゴリーIDで指定します。表示順と有効フラグはCSVに含まれないため、更新時は現在の値をそのまま引き継ぎます。文字コードはUTF-8 / UTF-8（BOM付き）/ Shift_JISに対応します。</p>
+
+<form method="post" action="/admin/categories/csv-import" enctype="multipart/form-data" class="admin-form">
+    <section class="admin-form-section">
+        <h2 class="admin-form-section-title">ファイル選択</h2>
+        <label>CSVファイル <span class="badge-required">必須</span>
+            <input type="file" name="file" accept=".csv,text/csv">
+            <span class="admin-field-help">アップロードすると内容の確認画面が表示され、確認するまでカテゴリーは変更されません。</span>
+        </label>
+    </section>
+    <div class="admin-form-actions">
+        <button type="submit" class="primary-button">アップロードして確認する</button>
+        <a class="secondary-button" href="/admin/categories">キャンセル</a>
+    </div>
+</form>
+{% endblock %}

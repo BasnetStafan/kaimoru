@@ -1,0 +1,12 @@
+{% if !brief_chips.is_empty() %}
+<div class="chat-brief" role="group" aria-label="現在の検索条件">
+    <span class="chat-brief-title">現在の条件</span>
+    {% for chip in brief_chips %}
+        <form method="post" action="/agent/brief/clear" class="chat-chip-form" hx-post="/agent/brief/clear" hx-target="#chat-thread" hx-swap="beforeend">
+            <input type="hidden" name="field" value="{{ chip.field }}">
+            <input type="hidden" name="value" value="{{ chip.value }}">
+            <button type="submit" class="chat-chip" aria-label="条件「{{ chip.label }}」を外す">{{ chip.label }} ×</button>
+        </form>
+    {% endfor %}
+</div>
+{% endif %}

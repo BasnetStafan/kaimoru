@@ -1,0 +1,60 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | 退会手続き{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        {% include "storefront/parts/breadcrumb.html" %}
+        <h1>退会手続き</h1>
+
+        {% if blockers.is_empty() %}
+            <p>退会すると、以下の内容は元に戻せません。</p>
+            <ul>
+                <li>このアカウントではログインできなくなります。</li>
+                <li>未使用のクーポン(WELCOME500を含みます)は無効になります。</li>
+                <li>保存したお届け先は削除されます。</li>
+                <li>ご注文の履歴は、返金対応や法令上の保存のため、個人を特定できない形で残ります。お名前やご住所は削除されます。</li>
+                <li>投稿したレビューは、表示が匿名のため、そのまま残ります。</li>
+                <li>同じメールアドレスで再度ご登録いただけます。ただし、前にWELCOME500を利用済みの場合は、新しいアカウントへの付与はありません。</li>
+            </ul>
+
+            <form method="post" action="/mypage/withdraw" class="auth-form">
+                {% if has_password %}
+                <label>
+                    現在のパスワード <span class="badge-required">必須</span>
+                    <input type="password" name="password" aria-required="true" autocomplete="current-password">
+                </label>
+                {% if let Some(message) = password_error %}
+                    <p class="field-error">{{ message }}</p>
+                {% endif %}
+                {% else if code_verified %}
+                <p>メールアドレスによる本人確認が完了しました。「退会する」を押すと、退会が完了します。</p>
+                {% if let Some(message) = password_error %}
+                    <p class="field-error">{{ message }}</p>
+                {% endif %}
+                {% else %}
+                <p>このアカウントにはパスワードが設定されていないため、本人確認として、登録メールアドレスに6桁の認証コードをお送りします。</p>
+                {% if let Some(message) = password_error %}
+                    <p class="field-error">{{ message }}</p>
+                {% endif %}
+                {% endif %}
+                <label class="checkbox-label">
+                    <input type="checkbox" name="confirm" value="true">
+                    退会すると元に戻せないことを理解しました <span class="badge-required">必須</span>
+                </label>
+                {% if let Some(message) = confirm_error %}
+                    <p class="field-error">{{ message }}</p>
+                {% endif %}
+                <button type="submit" class="{% if !has_password && !code_verified %}primary-button{% else %}danger-button{% endif %}">{% if !has_password && !code_verified %}認証コードを送信する{% else %}退会する{% endif %}</button>
+            </form>
+        {% else %}
+            <p>以下のご注文が進行中のため、退会手続きができません。発送・お支払い・返金の完了後に、再度お手続きください。</p>
+            <ul>
+                {% for blocker in blockers %}
+                    <li><a href="/mypage/orders/{{ blocker.0 }}">注文番号 {{ blocker.1 }}</a></li>
+                {% endfor %}
+            </ul>
+            <p>進行中のご注文の詳細は<a href="/mypage/orders">注文履歴</a>からご確認いただけます。</p>
+        {% endif %}
+    </section>
+{% endblock %}

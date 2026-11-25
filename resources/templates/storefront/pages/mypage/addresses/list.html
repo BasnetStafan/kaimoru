@@ -1,0 +1,40 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | お届け先アドレス帳{% endblock %}
+
+{% block homepart %}
+    <section class="account-shell">
+        {% include "storefront/parts/breadcrumb.html" %}
+        <h1>お届け先アドレス帳</h1>
+        <p>よく使うお届け先を登録しておくと、ご注文のときに選ぶだけで入力できます。</p>
+
+        {% if at_cap %}
+            <p class="form-note">上限（{{ max_addresses }}件）に達しています。新しい住所を登録するには、いずれかを削除してください。</p>
+        {% else %}
+            <p><a href="/mypage/addresses/new" class="primary-button">新しい住所を追加する</a></p>
+        {% endif %}
+
+        {% if addresses.is_empty() %}
+            <p class="form-note">お届け先はまだ登録されていません。</p>
+        {% else %}
+            <ul class="address-list">
+                {% for address in addresses %}
+                <li class="address-card">
+                    {% include "storefront/parts/address_lines.html" %}
+                    <p class="address-actions">
+                        <a href="/mypage/addresses/{{ address.id }}/edit" class="secondary-button">編集</a>
+                        <a href="/mypage/addresses/{{ address.id }}/delete" class="secondary-button">削除</a>
+                        {% if !address.is_default %}
+                        <form method="post" action="/mypage/addresses/{{ address.id }}/default" class="inline-form">
+                            <button type="submit" class="secondary-button">デフォルトに設定する</button>
+                        </form>
+                        {% endif %}
+                    </p>
+                </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <p class="back-link"><a href="/mypage">← マイページへ戻る</a></p>
+    </section>
+{% endblock %}

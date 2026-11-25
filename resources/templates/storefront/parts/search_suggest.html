@@ -1,0 +1,7 @@
+{% if !names.is_empty() %}
+<ul class="suggest-list" id="search-suggest-list" role="listbox">
+    {% for name in names %}
+        <li role="presentation"><a role="option" aria-selected="false" href="/search?q={{ name|urlencode }}">{{ name }}</a></li>
+    {% endfor %}
+</ul>
+{% endif %}

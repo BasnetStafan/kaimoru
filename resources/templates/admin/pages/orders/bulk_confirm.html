@@ -1,0 +1,52 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}一括変更の確認{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">一括変更の確認</h1>
+
+<p>選択した {{ rows.len() }} 件の注文を「{{ target_label }}」に変更します。変更できるのは {{ applicable_count }} 件です。現在のステータスから変更できない注文は、実行時に自動で対象外になります。</p>
+{% if truncated > 0 %}
+<p class="admin-note">一度に処理できる上限を超えたため、{{ truncated }} 件は対象から外しました。</p>
+{% endif %}
+
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>注文番号</th><th>会員</th><th>現在のステータス</th><th>変更可否</th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td><a href="/admin/orders/{{ row.id }}">{{ row.number }}</a></td>
+            <td>{{ row.buyer }}</td>
+            <td>{{ row.current_label }}</td>
+            <td>{% if row.applicable %}変更できます{% else %}変更できません{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+
+<form method="post" action="/admin/orders/bulk-status" class="admin-bulk-confirm-form">
+    {% for row in rows %}
+    <input type="hidden" name="order_id" value="{{ row.id }}">
+    <input type="hidden" name="expected_status" value="{{ row.expected }}">
+    {% endfor %}
+    <input type="hidden" name="target" value="{{ target }}">
+    <input type="hidden" name="return_url" value="{{ return_url }}">
+    {% if is_shipped %}
+    <label>配送会社
+        <select name="carrier">
+            <option value="">指定しない</option>
+            {% for carrier in carriers %}
+            <option value="{{ carrier.code }}">{{ carrier.label }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <p>伝票番号は一括では設定しません。送り状CSVの取り込み、または注文詳細から注文ごとに設定してください。発送メールはバックグラウンドで順次送信されます。</p>
+    {% endif %}
+    <p>
+        <a href="{{ return_url }}" class="secondary-button">一覧に戻る</a>
+        <button type="submit" class="primary-button">確認して実行</button>
+    </p>
+</form>
+{% endblock %}

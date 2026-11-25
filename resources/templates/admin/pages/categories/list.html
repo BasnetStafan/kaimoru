@@ -1,0 +1,69 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}カテゴリー管理{% endblock %}
+
+{% block adminpart %}
+<div class="admin-page-head">
+    <h1 class="admin-h1">カテゴリー管理</h1>
+    <a class="primary-button admin-new-button" href="/admin/categories/new">カテゴリーを登録</a>
+    <a class="secondary-button" href="/admin/categories/csv-export">CSVダウンロード</a>
+    <a class="secondary-button" href="/admin/categories/csv-import">CSV取込</a>
+</div>
+
+<form method="get" action="/admin/categories" class="admin-filters">
+    <label>キーワード
+        <input type="search" name="q" value="{{ q }}" placeholder="カテゴリー名・スラッグ">
+    </label>
+    <label>状態
+        <select name="status">
+            {% for option in status_options %}
+            <option value="{{ option.value }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>並び順
+        <select name="sort">
+            {% for option in sort_options %}
+            <option value="{{ option.value }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <button type="submit" class="secondary-button">絞り込む</button>
+</form>
+
+{% if rows.is_empty() %}
+{% if filtered %}
+<p class="admin-empty">条件に一致するカテゴリーはありません</p>
+{% else %}
+<p class="admin-empty">カテゴリーはまだありません</p>
+{% endif %}
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>カテゴリー名</th><th>スラッグ</th><th>親カテゴリー</th><th>表示順</th><th>状態</th><th>商品数</th><th>更新日時</th><th></th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td><a href="/admin/categories/{{ row.id }}/edit">{{ row.name }}</a></td>
+            <td>{{ row.slug }}</td>
+            <td>{% if let Some(parent) = row.parent_name %}{{ parent }}{% else %}（なし）{% endif %}</td>
+            <td>{{ row.display_order }}</td>
+            <td><span class="admin-badge {{ row.state_class }}">{{ row.state_label }}</span></td>
+            <td>{{ row.product_count }}{% if row.product_count == 0 && row.child_count == 0 %} <span class="admin-badge unused">未使用</span>{% endif %}</td>
+            <td>{{ row.updated_text }}</td>
+            <td><a href="/admin/categories/{{ row.id }}/edit">編集</a></td>
+            <td>
+                <form method="post" action="/admin/categories/{{ row.id }}/delete" class="category-delete-form">
+                <input type="hidden" name="return_url" value="{{ return_url }}">
+                    <button type="submit" class="secondary-button danger">削除</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+
+{% include "admin/parts/pagination.html" %}
+{% endblock %}

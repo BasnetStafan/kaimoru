@@ -1,0 +1,27 @@
+# Build artifacts
+/target
+**/target
+
+# Environment files and secrets (the example file is the only exception)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Database dumps and backups
+agentic_commerce-*.sql
+backups/
+
+# Runtime output
+logs/
+*.log
+
+# User-uploaded content
+resources/static/images/uploads/
+
+# Scratch / editor files
+*.swp
+*.tmp
+.DS_Store
+__pycache__/

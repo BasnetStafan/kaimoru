@@ -1,0 +1,58 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | お買い物エージェント{% endblock %}
+
+{% block homepart %}
+    <section class="search-page">
+        <h1>お買い物エージェント</h1>
+        <p>販売員エージェントとの会話でお買い物できます。お探しのものやご予算を文章で伝えると、条件を聞き取りながら商品を探してカートに入れます。気に入ったら、この画面のままお届け先とお支払い方法を選んで注文まで進めます。</p>
+
+        <div class="chat-window">
+            <div class="chat-thread" id="chat-thread">
+                {% if entries.is_empty() %}
+                    <div class="chat-row chat-row-agent">
+                        <div class="chat-bubble chat-bubble-agent">{{ greeting }}</div>
+                    </div>
+                    <div class="chat-examples" id="chat-examples">
+                        <p class="form-note">たとえば、こんなふうに話しかけてみてください。</p>
+                        {% for example in examples %}
+                            <form method="post" action="/agent/chat" class="chat-chip-form" hx-post="/agent/chat" hx-target="#chat-thread" hx-swap="beforeend">
+                                <input type="hidden" name="message" value="{{ example }}">
+                                <button type="submit" class="chat-chip">{{ example }}</button>
+                            </form>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% for entry in entries %}
+                    {% include "storefront/parts/agent_chat_entry.html" %}
+                {% endfor %}
+            </div>
+
+            <div id="agent-brief-slot">
+                {% include "storefront/parts/agent_brief.html" %}
+            </div>
+
+            <div id="agent-settlement-slot">
+                {% include "storefront/parts/agent_settlement.html" %}
+            </div>
+
+            <form method="post" action="/agent/reset" class="chat-reset" id="chat-reset-form"{% if entries.is_empty() %} hidden{% endif %}>
+                <button type="submit" class="secondary-button">新しい相談をはじめる</button>
+            </form>
+
+            <div class="chat-composer">
+                {% include "storefront/parts/agent_presets.html" %}
+                <div id="chat-note">
+                    {% if let Some(message) = note %}
+                        <p class="form-error">{{ message }}</p>
+                    {% endif %}
+                </div>
+                <form method="post" action="/agent/chat" class="chat-input-bar" hx-post="/agent/chat" hx-target="#chat-thread" hx-swap="beforeend">
+                    <textarea name="message" rows="1" placeholder="お探しのものやご予算を入力してください" aria-label="エージェントへのメッセージ"></textarea>
+                    <button type="submit" class="chat-send" aria-label="送信">↑</button>
+                </form>
+                <p class="form-note">提案された商品は、「カートに入れる」を押したものだけがカートに追加されます。注文はこの画面の案内に沿って、そのまま確定できます。</p>
+            </div>
+        </div>
+    </section>
+{% endblock %}

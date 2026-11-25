@@ -1,0 +1,85 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}{{ inquiry.reference() }} | お問い合わせ{% endblock %}
+
+{% block adminpart %}
+<p><a href="/admin/inquiries">← お問い合わせ一覧へ戻る</a></p>
+<h1 class="admin-h1">お問い合わせ {{ inquiry.reference() }}</h1>
+
+<section class="admin-section" aria-label="お問い合わせ内容">
+    <h2 class="admin-h2">お問い合わせ内容</h2>
+    <dl class="admin-dl">
+        <dt>受付日時</dt><dd>{{ inquiry.received_jst() }}</dd>
+        <dt>お名前</dt><dd>{{ inquiry.name }}</dd>
+        <dt>メールアドレス</dt><dd>{{ inquiry.email }}</dd>
+        {% if let Some((uid, uemail)) = member %}
+        <dt>会員</dt><dd><a href="/admin/customers/{{ uid }}">{{ uemail }}</a></dd>
+        {% endif %}
+        <dt>種別</dt><dd>{{ inquiry.category_label() }}</dd>
+        {% if let Some(order_number) = inquiry.order_number %}
+        <dt>ご注文番号</dt>
+        <dd>{{ order_number }}{% if let Some((oid, onum)) = matched_order %}（<a href="/admin/orders/{{ oid }}">{{ onum }} の注文詳細</a>）{% endif %}</dd>
+        {% endif %}
+        <dt>状況</dt><dd>{{ inquiry.status_label() }}</dd>
+    </dl>
+    <h3>お問い合わせ内容</h3>
+    <p class="admin-pre">{{ inquiry.body }}</p>
+</section>
+
+<section class="admin-section" aria-label="状況・管理メモ">
+    <h2 class="admin-h2">状況・管理メモ</h2>
+    <form method="post" action="/admin/inquiries/{{ inquiry.id }}/update" class="admin-form">
+      <input type="hidden" name="form_ticket" value="{{ form_ticket }}">
+        <label>状況 <span class="badge-required">必須</span>
+            <select name="status" aria-required="true">
+                <option value="open"{% if inquiry.status == "open" %} selected{% endif %}>未対応</option>
+                <option value="in_progress"{% if inquiry.status == "in_progress" %} selected{% endif %}>対応中</option>
+                <option value="closed"{% if inquiry.status == "closed" %} selected{% endif %}>対応済み</option>
+            </select>
+        </label>
+        <label>管理メモ（お客様には表示されません） <span class="badge-optional">任意</span>
+            <textarea name="memo" rows="3">{{ inquiry.admin_memo }}</textarea>
+            {% if let Some(e) = memo_error %}<p class="field-error">{{ e }}</p>{% endif %}
+        </label>
+        <button type="submit" class="primary-button">保存する</button>
+    </form>
+</section>
+
+<section class="admin-section" aria-label="返信">
+    <h2 class="admin-h2">返信する</h2>
+    <form method="post" action="/admin/inquiries/{{ inquiry.id }}/reply" class="admin-form">
+        <label>件名 <span class="badge-required">必須</span>
+            <input type="text" name="subject" value="{{ reply.subject }}" aria-required="true">
+            {% if let Some(e) = reply_errors.subject %}<p class="field-error">{{ e }}</p>{% endif %}
+        </label>
+        <label>本文 <span class="badge-required">必須</span>
+            <textarea name="body" rows="8" aria-required="true">{{ reply.body }}</textarea>
+            {% if let Some(e) = reply_errors.body %}<p class="field-error">{{ e }}</p>{% endif %}
+        </label>
+        <button type="submit" class="primary-button">確認画面へ</button>
+    </form>
+</section>
+
+{% if inquiry.category == "returns" %}
+<section class="admin-section" aria-label="返品申請">
+    <h2 class="admin-h2">返品申請</h2>
+    <p class="admin-note">このお問い合わせをもとに返品申請を作成し、返品管理で進行を追跡できます。</p>
+    <form method="post" action="/admin/returns/from-inquiry/{{ inquiry.id }}">
+        <button type="submit" class="secondary-button">返品申請を作成する</button>
+    </form>
+</section>
+{% endif %}
+
+{% if !replies.is_empty() %}
+<section class="admin-section" aria-label="返信履歴">
+    <h2 class="admin-h2">返信履歴</h2>
+    {% for r in replies %}
+    <div>
+        <p class="admin-muted">{{ r.sent_jst() }} 送信</p>
+        <p>件名：{{ r.subject }}</p>
+        <p class="admin-pre">{{ r.body }}</p>
+    </div>
+    {% endfor %}
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}タグCSV取込{% endblock %}
+
+{% block adminpart %}
+<p class="admin-back"><a href="/admin/tags">← タグ一覧に戻る</a></p>
+<h1 class="admin-h1">タグCSV取込</h1>
+
+<p class="admin-note">「CSVダウンロード」で書き出したファイルと同じ列構成で取り込みます。スラッグは商品の条件マッチングに使うため、変更するとマッチング結果が変わります。文字コードはUTF-8 / UTF-8（BOM付き）/ Shift_JISに対応します。</p>
+
+<form method="post" action="/admin/tags/csv-import" enctype="multipart/form-data" class="admin-form">
+    <section class="admin-form-section">
+        <h2 class="admin-form-section-title">ファイル選択</h2>
+        <label>CSVファイル <span class="badge-required">必須</span>
+            <input type="file" name="file" accept=".csv,text/csv">
+            <span class="admin-field-help">アップロードすると内容の確認画面が表示され、確認するまでタグは変更されません。</span>
+        </label>
+    </section>
+    <div class="admin-form-actions">
+        <button type="submit" class="primary-button">アップロードして確認する</button>
+        <a class="secondary-button" href="/admin/tags">キャンセル</a>
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,285 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}注文詳細 {{ order.order_number() }}{% endblock %}
+
+{% block adminpart %}
+<p class="admin-back"><a href="/admin/orders">← 注文一覧に戻る</a></p>
+<h1 class="admin-h1">注文詳細</h1>
+
+<div class="admin-order-head">
+    <p class="admin-order-number">{{ order.order_number() }}</p>
+    {% if order.is_agent_placed() %}<p><span class="admin-badge agent">エージェント経由の注文</span></p>{% endif %}
+    <p><span class="admin-badge status-{{ order.status }}">{{ status_label }}</span></p>
+    <p class="admin-order-placed">注文日時：{{ placed }}</p>
+    <p class="admin-order-buyer">購入者：
+        {% if let Some(mid) = member_id %}
+        <a href="/admin/customers/{{ mid }}">{{ buyer }}</a>（会員）
+        {% else %}
+        {{ buyer }}（ゲスト）
+        {% endif %}
+    </p>
+</div>
+
+<section class="admin-section" aria-label="配送先">
+    <h2 class="admin-h2">配送先</h2>
+    <dl class="admin-dl">
+        <dt>郵便番号</dt><dd>{{ postal_line() }}</dd>
+        <dt>住所</dt><dd>{{ address_line() }}</dd>
+        <dt>宛名</dt><dd>{{ recipient() }}</dd>
+        <dt>電話番号</dt><dd>{{ order.phone }}</dd>
+        <dt>連絡先メールアドレス</dt><dd>{{ order.email }}</dd>
+    </dl>
+</section>
+
+<section class="admin-section" aria-label="配送希望日時">
+    <h2 class="admin-h2">配送希望日時</h2>
+    <p class="admin-delivery-request">{{ order.delivery_request_display() }}</p>
+    {% for line in order.gift_lines() %}
+    <p class="admin-delivery-request">{{ line }}</p>
+    {% endfor %}
+</section>
+
+<section class="admin-section" aria-label="注文明細">
+    <h2 class="admin-h2">注文明細</h2>
+    <div class="admin-table-scroll"><table class="admin-table">
+        <thead>
+            <tr><th>商品</th><th>単価</th><th>数量</th><th>小計</th></tr>
+        </thead>
+        <tbody>
+            {% for line in lines %}
+            <tr>
+                <td>{{ line.product_name }}{% if !line.variant_label.is_empty() %}<br><span class="admin-muted">{{ line.variant_label }}</span>{% endif %}</td>
+                <td class="num">{{ line.formatted_unit_price() }}</td>
+                <td class="num">{{ line.quantity }}</td>
+                <td class="num">{{ line.formatted_line_total() }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table></div>
+    <dl class="admin-totals">
+        <div><dt>商品小計</dt><dd>{{ order.formatted_subtotal() }}</dd></div>
+        {% if order.discount_yen > 0 %}
+        <div><dt>クーポン割引（{{ order.coupon_code.as_deref().unwrap_or_default() }}）</dt><dd>−{{ order.formatted_discount() }}</dd></div>
+        {% endif %}
+        <div><dt>送料</dt><dd>{{ order.formatted_shipping_gross() }}</dd></div>
+        {% if order.shipping_discount_yen > 0 %}
+        <div><dt>送料割引</dt><dd>−{{ order.formatted_shipping_discount() }}</dd></div>
+        {% endif %}
+        {% if order.cod_fee_yen > 0 %}<div><dt>代引き手数料</dt><dd>{{ order.formatted_cod_fee() }}</dd></div>{% endif %}
+        <div class="grand"><dt>合計</dt><dd>{{ order.formatted_total() }}</dd></div>
+        {% if order.points_used_yen > 0 %}
+        <div><dt>ポイント利用</dt><dd>−{{ order.points_used_yen }} ポイント</dd></div>
+        <div class="grand"><dt>お支払い金額</dt><dd>{{ order.formatted_payable() }}</dd></div>
+        {% endif %}
+        {% if order.points_earned > 0 %}
+        <div><dt>獲得ポイント</dt><dd>{{ order.points_earned }} ポイント</dd></div>
+        {% endif %}
+    </dl>
+    {% if !tax_breakdown.is_empty() %}
+    <p class="admin-note">税率ごとの内訳</p>
+    <dl class="admin-totals">
+        {% for row in tax_breakdown %}
+        <div><dt>{{ row.tax_class_name }}（{{ row.rate_percent }}%）対象</dt><dd>{{ row.formatted_base() }}</dd></div>
+        <div><dt>うち消費税</dt><dd>{{ row.formatted_tax() }}</dd></div>
+        {% endfor %}
+        <div><dt>内消費税合計</dt><dd>{{ formatted_tax_total() }}</dd></div>
+    </dl>
+    {% endif %}
+    <dl class="admin-detail-list">
+        <div><dt>お支払い方法</dt><dd>{% if let Some(pb) = payment %}{{ pb.method_label }}{% else %}代金引換（現金）{% endif %}</dd></div>
+        <div><dt>お支払い状況</dt><dd>{{ payment_status_label }}</dd></div>
+        <div><dt>請求金額</dt><dd>{{ order.formatted_total() }}</dd></div>
+    </dl>
+    {% if let Some(pb) = payment %}
+        {% if !pb.is_hosted %}<p class="admin-note">代引きのため、オンラインでの支払いは発生しません。配達完了時に回収済みとなります。</p>{% endif %}
+    {% else %}
+        <p class="admin-note">代引きのため、オンラインでの支払いは発生しません。配達完了時に回収済みとなります。</p>
+    {% endif %}
+</section>
+
+{% if let Some(pb) = payment %}
+{% if pb.is_hosted %}
+<section class="admin-section" aria-label="決済情報">
+    <h2 class="admin-h2">決済情報</h2>
+    {% if let Some(note) = pb.flag_note %}<p class="form-error" role="alert">{{ note }}</p>{% endif %}
+    <dl class="admin-detail-list">
+        <div><dt>決済方法</dt><dd>{{ pb.method_label }}（{{ pb.provider_label }}）</dd></div>
+        <div><dt>決済状況</dt><dd>{{ pb.status_label }}</dd></div>
+        <div><dt>決済金額</dt><dd>{{ pb.formatted_amount }}</dd></div>
+        {% if let Some(refunded) = pb.refunded %}<div><dt>返金済み</dt><dd>{{ refunded }}</dd></div>{% endif %}
+        {% if let Some(sid) = pb.session_id %}<div><dt>セッションID</dt><dd>{{ sid }}</dd></div>{% endif %}
+        {% if let Some(pid) = pb.payment_id %}<div><dt>支払いID</dt><dd>{{ pid }}</dd></div>{% endif %}
+        {% if let Some(deadline) = pb.deadline %}<div><dt>支払い期限</dt><dd>{{ deadline }}</dd></div>{% endif %}
+        {% if let Some(captured) = pb.captured_at %}<div><dt>入金日時</dt><dd>{{ captured }}</dd></div>{% endif %}
+    </dl>
+    {% if pb.can_sync %}
+    <form method="post" action="/admin/orders/{{ order.id }}/payment-sync">
+        <button type="submit" class="secondary-button">{{ pb.provider_label }}と同期する</button>
+        <span class="admin-note">Webhookが遅れたときに、最新の支払い状況を取得します。</span>
+    </form>
+    {% endif %}
+    {% if pb.can_refund %}
+    <form method="post" action="/admin/orders/{{ order.id }}/refund" class="admin-refund-form">
+        <input type="hidden" name="expected_refunded_yen" value="{{ pb.refunded_yen }}">
+        <label>返金額（円・空欄で残り全額） <span class="badge-optional">任意</span>
+            <input type="text" name="amount_yen" inputmode="numeric" autocomplete="off">
+        </label>
+        <button type="submit" class="secondary-button danger">返金する</button>
+        <p class="admin-note">返金は{{ pb.provider_label }}を通じて行われます。チャージバックなどで既に返金されている分は、二重に返金されません。</p>
+    </form>
+    {% endif %}
+    {% if pb.konbini_refund_note %}
+    <p class="admin-note">コンビニ決済の返金は、{{ pb.provider_label }}ダッシュボードの返金リクエストから行ってください（振込先の口座情報はこの画面では扱いません）。</p>
+    {% endif %}
+    {% if !payment_history.is_empty() %}
+    <h3 class="admin-h3">決済イベント履歴</h3>
+    <div class="admin-table-scroll"><table class="admin-table">
+        <thead>
+            <tr><th>受信日時</th><th>イベント</th><th>結果</th></tr>
+        </thead>
+        <tbody>
+            {% for row in payment_history %}
+            <tr>
+                <td>{{ row.at }}</td>
+                <td>{{ row.event_type }}</td>
+                <td>{{ row.applied_label }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table></div>
+    {% endif %}
+</section>
+{% endif %}
+{% endif %}
+
+<section class="admin-section" aria-label="変更履歴">
+    <h2 class="admin-h2">変更履歴</h2>
+    {% if history.is_empty() %}
+    <p class="admin-empty">変更履歴はまだありません</p>
+    {% else %}
+    <div class="admin-table-scroll"><table class="admin-table">
+        <thead>
+            <tr><th>日時</th><th>管理者</th><th>操作</th></tr>
+        </thead>
+        <tbody>
+            {% for row in history %}
+            <tr>
+                <td>{{ row.at }}</td>
+                <td>{{ row.admin_name }}</td>
+                <td>{{ row.action_label }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table></div>
+    {% endif %}
+</section>
+
+{% if order.status == "shipped" || order.status == "delivered" %}
+<section class="admin-section" aria-label="発送情報">
+    <h2 class="admin-h2">発送情報</h2>
+    <dl class="admin-detail-list">
+        {% if let Some(label) = order.carrier_label() %}<div><dt>配送会社</dt><dd>{{ label }}</dd></div>{% endif %}
+        {% if let Some(number) = order.tracking_number %}<div><dt>お問い合わせ伝票番号</dt><dd>{% if let Some(url) = order.tracking_url() %}<a href="{{ url }}" target="_blank" rel="noopener">{{ number }}</a>{% else %}{{ number }}{% endif %}</dd></div>{% endif %}
+        {% if let Some(sent) = order.shipped_mail_sent_long() %}
+        <div><dt>発送メール</dt><dd>送信済み（{{ sent }}）</dd></div>
+        {% else %}
+        <div><dt>発送メール</dt><dd>未送信</dd></div>
+        {% endif %}
+    </dl>
+    {% if order.shipped_mail_sent_long().is_none() %}
+    <form method="post" action="/admin/orders/{{ order.id }}/shipping-mail/resend" class="admin-shipping-resend-form">
+        <button type="submit" class="secondary-button">発送メールを送信する</button>
+        <span class="admin-note">発送通知メールが届いていない場合に送信します。送信済みの注文では送信されません。</span>
+    </form>
+    {% endif %}
+</section>
+{% endif %}
+
+<section class="admin-section admin-panel" aria-label="ステータス変更">
+    <h2 class="admin-h2">ステータス変更</h2>
+    {% if let Some(message) = form_error %}
+    <p class="form-error" role="alert">{{ message }}</p>
+    {% endif %}
+    <section class="admin-section" aria-label="分割出荷">
+    <h2 class="admin-h2">分割出荷</h2>
+    {% if shipments.is_empty() %}
+    <p class="admin-note">分割出荷はありません（通常の1回出荷として扱われます）。「出荷準備中」の注文は、下のフォームで商品ごとに分けて出荷を作成できます。</p>
+    {% else %}
+    {% for s in shipments %}
+    <div class="shipment-box">
+        <p><strong>出荷 {{ s.index }}</strong>：{{ s.items_label }}</p>
+        {% if s.shipped %}
+        <p class="admin-note">配送会社：{{ s.carrier_label }}{% if !s.tracking_number.is_empty() %} ／ 伝票番号：{{ s.tracking_number }}{% endif %} ／ 発送メール：{{ s.mail_label }}</p>
+        {% else %}
+        <form method="post" action="/admin/orders/{{ order.id }}/shipments/{{ s.id }}/ship" class="admin-inline-form">
+            <label>配送会社
+                <select name="carrier" aria-required="true">
+                    {% for c in carrier_options() %}
+                    <option value="{{ c.code }}">{{ c.label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>伝票番号 <input type="text" name="tracking_number"></label>
+            <button type="submit" class="primary-button">この出荷を発送する</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% if !split_lines.is_empty() %}
+    <form method="post" action="/admin/orders/{{ order.id }}/shipments" class="admin-split-form">
+        <div class="admin-table-scroll"><table class="admin-table">
+            <thead><tr><th>商品</th><th>未出荷</th><th>今回の出荷数</th></tr></thead>
+            <tbody>
+            {% for line in split_lines %}
+                <tr>
+                    <td>{{ line.label }}</td>
+                    <td>{{ line.remaining }}</td>
+                    <td><input type="number" name="ship_qty_{{ line.item_id }}" value="0" min="0" max="{{ line.remaining }}"></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+        <button type="submit" class="secondary-button">出荷を作成する</button>
+    </form>
+    {% endif %}
+</section>
+
+{% if has_actions %}
+    {% if !next_statuses.is_empty() %}
+    <form method="post" action="/admin/orders/{{ order.id }}/status" class="admin-status-form" data-order-status-form>
+        <input type="hidden" name="expected" value="{{ order.status }}">
+        <label>変更先ステータス <span class="badge-required">必須</span>
+            <select name="status" aria-required="true">
+                {% for s in next_statuses %}
+                <option value="{{ s.value }}">{{ s.label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label data-shipping-field>配送会社（発送済みにする場合）
+            <select name="carrier">
+                <option value="">指定なし</option>
+                {% for c in carrier_options() %}
+                <option value="{{ c.code }}" {% if c.selected %}selected{% endif %}>{{ c.label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label data-shipping-field>お問い合わせ伝票番号（発送済みにする場合）
+            <input type="text" name="tracking_number" value="{{ tracking_number_value() }}" autocomplete="off">
+        </label>
+        <p class="admin-note" data-shipping-field>配送会社・伝票番号は「発送済み」へ変更する場合に保存され、発送メールとお客様の注文詳細に表示されます。</p>
+        <button type="submit" class="primary-button">ステータスを変更する</button>
+    </form>
+    {% endif %}
+    {% if can_cancel %}
+    <form method="post" action="/admin/orders/{{ order.id }}/cancel" class="admin-cancel-form">
+        <input type="hidden" name="expected" value="{{ order.status }}">
+        <button type="submit" class="secondary-button danger">この注文をキャンセルする</button>
+        <span class="admin-cancel-note">キャンセルすると在庫が自動で戻ります</span>
+    </form>
+    {% endif %}
+    {% else %}
+    <p class="admin-note">この注文は最終状態のため、ステータス変更はできません。</p>
+    {% endif %}
+</section>
+{% endblock %}

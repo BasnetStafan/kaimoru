@@ -1,0 +1,7 @@
+{% for entry in entries %}
+    {% include "storefront/parts/agent_chat_entry.html" %}
+{% endfor %}
+<div id="chat-note" hx-swap-oob="true">{% if let Some(message) = note %}<p class="form-error">{{ message }}</p>{% endif %}</div>
+{% include "storefront/parts/cart_badge.html" %}
+<div id="agent-settlement-slot" hx-swap-oob="true">{% include "storefront/parts/agent_settlement.html" %}</div>
+<div id="agent-brief-slot" hx-swap-oob="true">{% include "storefront/parts/agent_brief.html" %}</div>

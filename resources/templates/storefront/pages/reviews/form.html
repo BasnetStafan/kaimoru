@@ -1,0 +1,64 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | {% if editing_id.is_some() %}レビューを編集する{% else %}レビューを書く{% endif %}{% endblock %}
+
+{% block homepart %}
+    <section class="review-form-page">
+        <h1>{% if editing_id.is_some() %}レビューを編集する{% else %}レビューを書く{% endif %}</h1>
+
+        <div class="review-product">
+            <a href="/products/{{ product.id }}"><img src="{{ product.thumb_image_path() }}" alt="{{ product.name }}"></a>
+            <div>
+                <a href="/products/{{ product.id }}" class="review-product-name">{{ product.name }}</a>
+                <span class="review-product-price">{{ product.formatted_price() }}(税込)</span>
+            </div>
+        </div>
+
+        {% if let Some(message) = form_error %}
+            <p class="form-error">{{ message }}</p>
+        {% endif %}
+
+        <form method="post" action="{% if let Some(rid) = editing_id %}/reviews/{{ rid }}{% else %}/products/{{ product.id }}/reviews{% endif %}" class="auth-form">
+            <input type="hidden" name="form_ticket" value="{{ form_ticket }}">
+            <div class="form-field">
+                <span class="field-label">評価 <span class="badge-required">必須</span></span>
+                <div class="star-input">
+                    <span class="star-row star-row-bg">★★★★★</span>
+                    <span class="star-row star-row-fg">★★★★★</span>
+                    <label class="zone" style="left: 0%"><input type="radio" name="rating" value="0.5" {% if rating == Some(0.5) %}checked{% endif %} aria-label="星0.5"></label>
+                    <label class="zone" style="left: 10%"><input type="radio" name="rating" value="1" {% if rating == Some(1.0) %}checked{% endif %} aria-label="星1"></label>
+                    <label class="zone" style="left: 20%"><input type="radio" name="rating" value="1.5" {% if rating == Some(1.5) %}checked{% endif %} aria-label="星1.5"></label>
+                    <label class="zone" style="left: 30%"><input type="radio" name="rating" value="2" {% if rating == Some(2.0) %}checked{% endif %} aria-label="星2"></label>
+                    <label class="zone" style="left: 40%"><input type="radio" name="rating" value="2.5" {% if rating == Some(2.5) %}checked{% endif %} aria-label="星2.5"></label>
+                    <label class="zone" style="left: 50%"><input type="radio" name="rating" value="3" {% if rating == Some(3.0) %}checked{% endif %} aria-label="星3"></label>
+                    <label class="zone" style="left: 60%"><input type="radio" name="rating" value="3.5" {% if rating == Some(3.5) %}checked{% endif %} aria-label="星3.5"></label>
+                    <label class="zone" style="left: 70%"><input type="radio" name="rating" value="4" {% if rating == Some(4.0) %}checked{% endif %} aria-label="星4"></label>
+                    <label class="zone" style="left: 80%"><input type="radio" name="rating" value="4.5" {% if rating == Some(4.5) %}checked{% endif %} aria-label="星4.5"></label>
+                    <label class="zone" style="left: 90%"><input type="radio" name="rating" value="5" {% if rating == Some(5.0) %}checked{% endif %} aria-label="星5"></label>
+                </div>
+                <span class="field-hint">星の左半分で0.5刻みの評価も選べます</span>
+                {% if let Some(e) = errors.rating %}<p class="field-error">{{ e }}</p>{% endif %}
+            </div>
+
+            <label>
+                コメント <span class="badge-optional">任意</span>
+                <textarea name="comment" rows="5" aria-required="false">{{ comment }}</textarea>
+                <span class="field-hint">1000文字まで・未入力でも評価のみで投稿できます</span>
+                {% if let Some(e) = errors.comment %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+
+            <div class="form-actions">
+                <button type="submit" class="primary-button">{% if editing_id.is_some() %}レビューを更新する{% else %}レビューを投稿する{% endif %}</button>
+            </div>
+        </form>
+
+        {% if let Some(rid) = editing_id %}
+            <div class="review-delete-zone">
+                <p class="review-delete-note">削除したレビューは元に戻せません。</p>
+                <form method="post" action="/reviews/{{ rid }}/delete" class="review-delete-form">
+                    <button type="submit" class="secondary-button">レビューを削除する</button>
+                </form>
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

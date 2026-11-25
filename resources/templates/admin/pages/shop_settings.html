@@ -1,0 +1,207 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}店舗設定{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">店舗設定</h1>
+<p class="admin-note">店舗の名前や連絡先など、ストアに表示される文言を設定します。保存すると、次にページが表示されたときから反映されます。送料・手数料・お支払いなどの設定はここにはありません。入力した文字はそのまま表示されます（HTMLタグは使えません）。</p>
+
+<form method="post" action="/admin/settings/shop" class="admin-form" data-unsaved-guard>
+<input type="hidden" name="form_ticket" value="{{ form_ticket }}">
+    <h2 class="admin-h2">店舗情報</h2>
+    <label>店舗名 <span class="badge-required">必須</span>
+        <input type="text" name="shop_name" value="{{ values.shop_name }}" maxlength="50" aria-required="true" autocomplete="organization">
+        {% if let Some(message) = shop_name_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>キャッチコピー <span class="badge-optional">任意</span>
+        <input type="text" name="tagline" value="{{ values.tagline }}" maxlength="80">
+        {% if let Some(message) = tagline_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>店舗紹介 <span class="badge-optional">任意</span>
+        <textarea name="shop_description" rows="3" maxlength="500">{{ values.shop_description }}</textarea>
+        {% if let Some(message) = shop_description_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <p class="admin-note">店舗紹介は、フッターと検索結果の説明文（初期値）に使われます。</p>
+
+    <h2 class="admin-h2">お問い合わせ</h2>
+    <label>お問い合わせメールアドレス <span class="badge-optional">任意</span>
+        <input type="text" name="contact_email" value="{{ values.contact_email }}" autocomplete="email">
+        {% if let Some(message) = contact_email_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>お問い合わせページのURL <span class="badge-optional">任意</span>
+        <input type="text" name="contact_url" value="{{ values.contact_url }}" placeholder="/guide">
+        {% if let Some(message) = contact_url_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>サポート案内 <span class="badge-optional">任意</span>
+        <input type="text" name="support_note" value="{{ values.support_note }}" maxlength="200" placeholder="受付時間：平日10時〜17時">
+        {% if let Some(message) = support_note_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <p class="admin-note">メールアドレスとURLのどちらも空欄の間は、フッターにお問い合わせ先を表示しません。URLは「/」で始まるパスか、https://で始まるURLを入力してください。</p>
+
+    <h2 class="admin-h2">メンテナンスモード</h2>
+    <label>
+        <input type="checkbox" name="maintenance_mode" value="on"{% if values.maintenance_mode %} checked{% endif %}>
+        メンテナンス中にする（店舗フロントと公開APIが503になります。管理画面は使えます）
+    </label>
+    <label>
+        メンテナンスメッセージ
+        <textarea name="maintenance_message" rows="3">{{ values.maintenance_message }}</textarea>
+        {% if let Some(e) = maintenance_message_error %}<span class="field-error">{{ e }}</span>{% endif %}
+    </label>
+
+    <h2 class="admin-h2">請求書</h2>
+    <label>適格請求書発行事業者登録番号 <span class="badge-optional">任意</span>
+        <input type="text" name="invoice_registration_number" value="{{ values.invoice_registration_number }}" placeholder="T1234567890123">
+        {% if let Some(message) = invoice_number_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <p class="admin-note">登録番号がある場合のみ入力してください（T＋13桁の数字）。入力すると納品書と領収書に印字されます。未登録の場合は空欄のままにしてください。</p>
+
+    <h2 class="admin-h2">メール</h2>
+    <label>メール署名 <span class="badge-optional">任意</span>
+        <textarea name="mail_signature" rows="4" maxlength="1000" placeholder="株式会社サンプル
+サポートチーム
+https://example.co.jp">{{ values.mail_signature }}</textarea>
+        {% if let Some(message) = mail_signature_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <p class="admin-note">通知メール（注文確認・発送通知など）のテンプレートで {signature} と書いた場所に、この署名が入ります。空欄の場合は店舗名が入ります。署名は店舗ごとに1つだけです。</p>
+
+    <h2 class="admin-h2">フッター</h2>
+    <label>フッター補足 <span class="badge-optional">任意</span>
+        <input type="text" name="footer_note" value="{{ values.footer_note }}" maxlength="200">
+        {% if let Some(message) = footer_note_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>著作権者名 <span class="badge-optional">任意</span>
+        <input type="text" name="copyright_holder" value="{{ values.copyright_holder }}" maxlength="50">
+        {% if let Some(message) = copyright_holder_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <p class="admin-note">著作権者名が空欄の場合は、店舗名で表示します。</p>
+
+    <h2 class="admin-h2">SEO（検索結果への表示）</h2>
+    <label>トップページのタイトル <span class="badge-optional">任意</span>
+        <input type="text" name="top_title" value="{{ values.top_title }}" maxlength="80">
+        {% if let Some(message) = top_title_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>メタディスクリプション <span class="badge-optional">任意</span>
+        <textarea name="default_meta_description" rows="2" maxlength="160">{{ values.default_meta_description }}</textarea>
+        {% if let Some(message) = default_meta_description_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <p class="admin-note">現在有効な支払方法：{{ payment_methods_label }}</p>
+    <p class="admin-note">タイトルが空欄の場合は「店舗名 | トップページ」、メタディスクリプションが空欄の場合は店舗紹介が使われます。</p>
+
+    <div class="admin-form-actions">
+        <p class="admin-unsaved-note" data-unsaved-note hidden>未保存の変更があります</p>
+        <button type="submit" class="primary-button">店舗設定を保存する</button>
+    </div>
+</form>
+
+<p class="admin-note">店舗の休業日は<a href="/admin/settings/holidays">休業日カレンダー</a>で管理します（お届け希望日の計算に反映されます）。</p>
+
+<form method="post" action="/admin/settings/shop/shipping" class="admin-form">
+<input type="hidden" name="form_ticket" value="{{ form_ticket }}">
+    <h2 class="admin-h2">送料・配送設定</h2>
+    <p class="admin-note">送料と配送希望日の計算に使われます。変更は次の注文から適用されます（確定済みの注文には影響しません）。</p>
+    <label>送料（円） <span class="badge-required">必須</span>
+        <input type="text" name="shipping_flat_yen" value="{{ shipping_values.shipping_flat_yen }}" inputmode="numeric">
+        {% if let Some(message) = shipping_flat_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>送料無料になる購入金額（円） <span class="badge-required">必須</span>
+        <input type="text" name="free_shipping_threshold_yen" value="{{ shipping_values.free_shipping_threshold_yen }}" inputmode="numeric">
+        {% if let Some(message) = free_shipping_threshold_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>代引き手数料（円） <span class="badge-required">必須</span>
+        <input type="text" name="cod_fee_yen" value="{{ shipping_values.cod_fee_yen }}" inputmode="numeric">
+        {% if let Some(message) = cod_fee_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>最短お届け日（注文日から何日後） <span class="badge-required">必須</span>
+        <input type="text" name="delivery_earliest_offset_days" value="{{ shipping_values.delivery_earliest_offset_days }}" inputmode="numeric">
+        {% if let Some(message) = delivery_earliest_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>最長お届け日（注文日から何日後） <span class="badge-required">必須</span>
+        <input type="text" name="delivery_latest_offset_days" value="{{ shipping_values.delivery_latest_offset_days }}" inputmode="numeric">
+        {% if let Some(message) = delivery_latest_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+
+    <fieldset class="admin-fieldset">
+        <legend>お届け時間帯（チェックを外した時間帯は選択できません）</legend>
+        {% for slot in slot_options %}
+        <label class="admin-checkbox">
+            <input type="checkbox" name="enabled_slot" value="{{ slot.code }}"{% if slot.enabled %} checked{% endif %}{% if slot.code == "none" %} disabled{% endif %}>
+            {{ slot.label }}{% if slot.code == "none" %}（常時選択可）{% endif %}
+        </label>
+        {% endfor %}
+    </fieldset>
+
+    <fieldset class="admin-fieldset">
+        <legend>利用する配送会社（チェックを外した会社は発送時に選べません）</legend>
+        {% for carrier in carrier_options %}
+        <label class="admin-checkbox">
+            <input type="checkbox" name="enabled_carrier" value="{{ carrier.code }}"{% if carrier.enabled %} checked{% endif %}>
+            {{ carrier.label }}
+        </label>
+        {% endfor %}
+    </fieldset>
+
+    <div class="admin-form-actions">
+        <button type="submit" class="primary-button">送料・配送設定を保存する</button>
+    </div>
+</form>
+
+<form method="post" action="/admin/settings/shop/points" class="admin-form">
+<input type="hidden" name="form_ticket" value="{{ form_ticket }}">
+    <h2 class="admin-h2">ポイント設定</h2>
+    <p class="admin-note">会員向けポイントプログラムの設定です。ポイントは1ポイント＝1円としてお支払いに使え、発送時に購入金額（クーポン・ポイント利用分を除く）へ付与率を掛けて付与されます。変更は次の注文から適用されます。</p>
+    <label class="admin-checkbox">
+        <input type="checkbox" name="points_enabled" value="on"{% if points_values.points_enabled %} checked{% endif %}>
+        ポイントプログラムを有効にする
+    </label>
+    <label>付与率（％） <span class="badge-required">必須</span>
+        <input type="text" name="points_earn_percent" value="{{ points_values.points_earn_percent }}" inputmode="numeric">
+        {% if let Some(message) = points_earn_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>有効期限（付与日から何日） <span class="badge-required">必須</span>
+        <input type="text" name="points_expiry_days" value="{{ points_values.points_expiry_days }}" inputmode="numeric">
+        {% if let Some(message) = points_expiry_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <div class="admin-form-actions">
+        <button type="submit" class="primary-button">ポイント設定を保存する</button>
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | {{ heading }}{% endblock %}
+
+{% block homepart %}
+    <section class="special-page">
+        {% include "storefront/parts/breadcrumb.html" %}
+        <h1>{{ heading }}</h1>
+        {% if !products.is_empty() %}
+        <div class="product-grid">
+            {% for card in products %}
+{% include "storefront/parts/product_card.html" %}
+            {% endfor %}
+        </div>
+        {% if total_pages > 1 %}
+            <nav class="pagination">
+                {% if page > 1 %}
+                    <a href="/sections/{{ key }}?page={{ page - 1 }}">← 前へ</a>
+                {% endif %}
+                {% for p in 1..=total_pages %}
+                    {% if p == page %}
+                        <span class="page-current" aria-current="page">{{ p }}</span>
+                    {% else %}
+                        <a href="/sections/{{ key }}?page={{ p }}">{{ p }}</a>
+                    {% endif %}
+                {% endfor %}
+                {% if page < total_pages %}
+                    <a href="/sections/{{ key }}?page={{ page + 1 }}">次へ →</a>
+                {% endif %}
+            </nav>
+        {% endif %}
+        {% else %}
+        <div class="empty-state empty-state-plain"><p>現在、販売中の商品はありません。</p></div>
+        <p class="section-more"><a href="/">トップページへ戻る</a></p>
+        {% endif %}
+    </section>
+{% endblock %}

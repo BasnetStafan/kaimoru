@@ -1,0 +1,37 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}返品管理{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">返品管理</h1>
+<p class="admin-note">返品・交換のお問い合わせから作成した申請の進行管理です。返金そのものは注文詳細画面の返金操作からのみ実行します（この画面に返金ボタンはありません）。検品済みになったら注文詳細で返金を行い、完了後にここで「返金済」に進めてください。</p>
+
+{% if rows.is_empty() %}
+<p class="admin-empty">返品申請はまだありません。お問い合わせ（返品・交換）の詳細画面から作成できます。</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>注文</th><th>金額</th><th>理由</th><th>状態</th><th>申請日時</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td><a href="/admin/orders/{{ row.order_id }}">{{ row.order_number }}</a></td>
+            <td>{{ row.order_total }}</td>
+            <td>{{ row.reason }}</td>
+            <td>{{ row.status_label }}{% if row.show_refund_hint %}<br><span class="admin-muted">返金は注文詳細の返金操作から行ってください</span>{% endif %}</td>
+            <td>{{ row.created_label }}</td>
+            <td>
+                {% for n in row.next %}
+                <form method="post" action="/admin/returns/{{ row.id }}/status">
+                    <input type="hidden" name="status" value="{{ n.0 }}">
+                    <button type="submit" class="secondary-button">{{ n.1 }}へ進める</button>
+                </form>
+                {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+{% endblock %}

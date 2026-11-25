@@ -1,0 +1,75 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}会員詳細{% endblock %}
+
+{% block adminpart %}
+<p class="admin-back"><a href="/admin/customers">← 会員一覧に戻る</a></p>
+<h1 class="admin-h1">会員詳細</h1>
+{% if let Some(text) = withdrawn_text() %}<p class="admin-badge">{{ text }}</p>{% endif %}
+
+<dl class="admin-dl">
+    <dt>会員ID</dt><dd>{{ customer.id }}</dd>
+    <dt>氏名</dt><dd>{{ full_name() }}（{{ full_name_kana() }}）</dd>
+    <dt>メールアドレス</dt><dd>{{ customer.email }}</dd>
+    <dt>電話番号</dt><dd>{{ customer.phone }}</dd>
+    <dt>住所</dt><dd>{{ address() }}</dd>
+    <dt>生年月日</dt><dd>{{ birth_date_text() }}</dd>
+    <dt>性別</dt><dd>{{ gender_text() }}</dd>
+    <dt>登録日</dt><dd>{{ registered_text() }}</dd>
+</dl>
+
+<section class="admin-section admin-panel admin-summary" aria-label="購入サマリー">
+    <h2 class="admin-h2">購入サマリー</h2>
+    <p>注文件数：{{ order_count }}件（キャンセルを除く）</p>
+    <p>購入金額合計：{{ purchase_total }}（キャンセルを除く）</p>
+</section>
+
+<section class="admin-section" aria-label="運用メモとタグ">
+    <h2 class="admin-h2">運用メモ・タグ（社内用）</h2>
+    <p class="admin-note">この欄は店舗の運用メモです。会員本人には表示されません。会員の登録情報そのものは変更できません。</p>
+    <form method="post" action="/admin/customers/{{ customer.id }}/memo" class="admin-memo-form">
+        <label>メモ
+            <textarea name="memo" rows="3" maxlength="2000" placeholder="対応履歴、注意点など">{{ memo }}</textarea>
+        </label>
+        <button type="submit" class="secondary-button">メモを保存</button>
+    </form>
+    <div class="admin-tag-list">
+        {% for tag in tags %}
+        <form method="post" action="/admin/customers/{{ customer.id }}/tags/remove" class="admin-tag-chip">
+            <input type="hidden" name="tag" value="{{ tag }}">
+            <span>{{ tag }}</span>
+            <button type="submit" aria-label="タグ {{ tag }} を外す">×</button>
+        </form>
+        {% endfor %}
+    </div>
+    <form method="post" action="/admin/customers/{{ customer.id }}/tags" class="admin-tag-add">
+        <label>タグを追加
+            <input type="text" name="tag" maxlength="50" placeholder="例：常連">
+        </label>
+        <button type="submit" class="secondary-button">追加</button>
+    </form>
+</section>
+
+<section class="admin-section" aria-label="注文履歴">
+    <h2 class="admin-h2">注文履歴</h2>
+    {% if orders.is_empty() %}
+    <p class="admin-empty">注文履歴がありません</p>
+    {% else %}
+    <div class="admin-table-scroll"><table class="admin-table">
+        <thead>
+            <tr><th>注文番号</th><th>注文日時</th><th>合計</th><th>ステータス</th></tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td><a href="/admin/orders/{{ order.id }}">{{ order.order_number() }}</a></td>
+                <td>{{ order.placed_display() }}</td>
+                <td class="num">{{ order.formatted_total() }}</td>
+                <td><span class="admin-badge status-{{ order.status }}">{{ order.status_label() }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table></div>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | メールアドレスの変更{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        {% include "storefront/parts/breadcrumb.html" %}
+        <h1>メールアドレスの変更</h1>
+
+        <p>メールアドレスはログインIDです。変更には現在のパスワードの確認と、
+        新しいメールアドレス宛に送る認証コードの入力が必要です。</p>
+
+        {% if let Some(message) = error %}
+            <p class="form-error">{{ message }}</p>
+        {% endif %}
+
+        <form method="post" action="/mypage/email" class="auth-form">
+            <label>
+                現在のメールアドレス
+                <input type="email" value="{{ current_email }}" readonly>
+            </label>
+            <label>
+                現在のパスワード <span class="badge-required">必須</span>
+                <input type="password" name="current_password" aria-required="true" autocomplete="current-password">
+            </label>
+            <label>
+                新しいメールアドレス <span class="badge-required">必須</span>
+                <input type="email" name="new_email" value="{{ new_email }}" aria-required="true" autocomplete="email">
+            </label>
+            <button type="submit" class="primary-button">認証コードを送信する</button>
+        </form>
+    </section>
+{% endblock %}

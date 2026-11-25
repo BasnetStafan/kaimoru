@@ -1,0 +1,37 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | 新規会員登録{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        <h1>新規会員登録</h1>
+        <ol class="steps">
+            <li class="active"><span class="step-num">1</span>メールアドレス</li>
+            <li><span class="step-num">2</span>認証コード</li>
+            <li><span class="step-num">3</span>会員情報</li>
+            <li><span class="step-num">4</span>確認</li>
+        </ol>
+
+        <form method="post" action="/signup" class="auth-form">
+            <label>
+                メールアドレス <span class="badge-required">必須</span>
+                <input type="email" name="email" value="{{ email }}" aria-required="true" autocomplete="email">
+            </label>
+            <label>
+                メールアドレス(確認用) <span class="badge-required">必須</span>
+                <input type="email" name="email_confirm" aria-required="true" autocomplete="email">
+            </label>
+            {% if let Some(message) = error %}
+                <p class="field-error">{{ message }}</p>
+            {% endif %}
+            <p class="form-note">入力したメールアドレスに、6桁の認証コードをお送りします。</p>
+            <button type="submit" class="primary-button">認証コードを送信する</button>
+        </form>
+
+        {% if !sns.buttons.is_empty() %}
+            {% include "storefront/parts/sns_buttons.html" %}
+        {% endif %}
+
+        <p class="form-note">すでに会員の方は<a href="/login">ログイン</a>してください。</p>
+    </section>
+{% endblock %}

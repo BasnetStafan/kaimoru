@@ -1,0 +1,32 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | ご注文の確認{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        <h1>ご注文の確認</h1>
+        <p>ゲストでご注文のお客様は、注文番号とご注文時にご入力いただいたメールアドレスで、ご注文の状況をご確認いただけます。</p>
+        <p>注文番号は注文確認メールに記載されています（例：AS-20261109-0123）。</p>
+
+        {% if let Some(message) = form_error %}
+            <p class="form-error" role="alert">{{ message }}</p>
+        {% endif %}
+
+        <form method="post" action="/order-lookup" class="auth-form">
+            <label>
+                注文番号 <span class="badge-required">必須</span>
+                <input type="text" name="order_number" value="{{ values.order_number }}" aria-required="true" autocomplete="off" placeholder="例：AS-20261109-0123">
+                {% if let Some(e) = errors.order_number %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+
+            <label>
+                メールアドレス <span class="badge-required">必須</span>
+                <input type="email" name="email" value="{{ values.email }}" aria-required="true" autocomplete="email">
+                {% if let Some(e) = errors.email %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+
+            <button type="submit" class="primary-button">注文を確認する</button>
+        </form>
+        <p class="form-note">会員のお客様は<a href="/login">ログイン</a>すると、注文履歴からもご確認いただけます。</p>
+    </section>
+{% endblock %}

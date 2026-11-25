@@ -1,0 +1,52 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}メールテンプレート{% endblock %}
+
+{% block adminpart %}
+<div class="admin-page-head">
+    <h1 class="admin-h1">メールテンプレート</h1>
+    <a class="primary-button admin-new-button" href="/admin/mail/templates/new">テンプレートを登録</a>
+</div>
+
+<p class="admin-note">キャンペーンの本文として使い回せる雛形です。HTMLは保存時に自動でサニタイズされます（スクリプトなどは除去されます）。</p>
+
+{% if rows.is_empty() %}
+<p class="admin-empty">テンプレートはまだありません</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>名前</th><th>件名</th><th>更新日時</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td><a href="/admin/mail/templates/{{ row.id }}/edit">{{ row.name }}</a></td>
+            <td>{{ row.subject }}</td>
+            <td>{{ row.updated_label }}</td>
+            <td><a href="/admin/mail/templates/{{ row.id }}/edit">編集</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+
+<section class="admin-section" aria-label="通知メール">
+    <h2 class="admin-h2">通知メール（自動送信）</h2>
+    <p class="admin-note">注文確認や発送通知など、操作のたびに自動で送られるメールの文面です。店舗ごとに編集でき、タグを使うと注文番号やお客様の氏名などが送信時に自動で入ります。送信のタイミングや宛先は変わりません。</p>
+    <div class="admin-table-scroll"><table class="admin-table">
+        <thead>
+            <tr><th>メール</th><th>状態</th><th>最終更新</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for row in notifications %}
+            <tr>
+                <td><a href="/admin/mail/notifications/{{ row.key }}/edit">{{ row.name }}</a></td>
+                <td>{% if row.customized %}<span class="admin-badge nt-custom">カスタマイズ済み</span>{% else %}<span class="admin-badge">初期値のまま</span>{% endif %}</td>
+                <td>{% if let Some(label) = row.updated_label %}{{ label }}{% else %}—{% endif %}</td>
+                <td><a href="/admin/mail/notifications/{{ row.key }}/edit">編集</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table></div>
+</section>
+{% endblock %}

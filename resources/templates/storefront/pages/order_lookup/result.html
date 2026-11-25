@@ -1,0 +1,122 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | 注文詳細{% endblock %}
+
+{% block homepart %}
+    <section class="order-detail">
+        {% include "storefront/parts/breadcrumb.html" %}
+
+        <h1>注文詳細</h1>
+
+        <div class="order-head-card">
+            <div>
+                <p class="order-head-label">注文番号</p>
+                <p class="order-head-number">{{ order.order_number() }}</p>
+                {% if order.is_agent_placed() %}<p class="order-head-origin"><span class="badge agent">エージェント経由の注文</span></p>{% endif %}
+                <p class="order-head-date">注文日時:{{ order.placed_long() }}</p>
+            </div>
+            <div class="order-head-side">
+                <span class="badge state">{{ order.status_label() }}</span>
+                <p class="order-head-total">お支払い金額 {{ order.formatted_total() }}</p>
+            </div>
+        </div>
+
+        <div class="order-detail-grid">
+            <div class="order-card">
+                <h2>ご注文内容</h2>
+                <ul class="order-lines">
+                    {% for line in lines %}
+                        <li>
+                            {% if let Some(img) = line.image_path %}
+                                <img src="{{ img }}" alt="" class="order-line-thumb">
+                            {% else %}
+                                <span class="order-line-thumb order-line-thumb-empty" aria-hidden="true"></span>
+                            {% endif %}
+                            <div class="order-line-main">
+                                <a href="/products/{{ line.product_id }}">{{ line.product_name }}</a>
+                                {% if !line.variant_label.is_empty() %}
+                                    <p class="order-line-variant">{{ line.variant_label }}</p>
+                                {% endif %}
+                                <p class="order-line-price">{{ line.formatted_unit_price() }} × {{ line.quantity }}点</p>
+                            </div>
+                            <span class="order-line-total">{{ line.formatted_line_total() }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="order-side">
+                <div class="order-card">
+                    <h2>お支払い</h2>
+                    <dl class="totals-list">
+                        <div><dt>商品合計</dt><dd>{{ order.formatted_subtotal() }}</dd></div>
+                        {% if order.discount_yen > 0 %}
+                        <div><dt>クーポン({% if let Some(code) = order.coupon_code %}{{ code }}{% endif %})</dt><dd>−{{ order.formatted_discount() }}</dd></div>
+                        {% endif %}
+                        <div><dt>送料</dt><dd>{{ order.formatted_shipping_gross() }}</dd></div>
+                        {% if order.shipping_discount_yen > 0 %}
+                        <div><dt>送料割引</dt><dd>−{{ order.formatted_shipping_discount() }}</dd></div>
+                        {% endif %}
+                        {% if order.cod_fee_yen > 0 %}<div><dt>代引き手数料</dt><dd>{{ order.formatted_cod_fee() }}</dd></div>{% endif %}
+                        <div class="totals-grand"><dt>合計</dt><dd>{{ order.formatted_total() }}</dd></div>
+                    </dl>
+                    {% if !tax_breakdown.is_empty() %}
+                    <div class="tax-breakdown">
+                        <p class="tax-breakdown-title">税率ごとの内訳</p>
+                        <dl class="totals-list">
+                            {% for row in tax_breakdown %}
+                            <div><dt>{{ row.tax_class_name }}（{{ row.rate_percent }}%）対象</dt><dd>{{ row.formatted_base() }}</dd></div>
+                            <div><dt>うち消費税</dt><dd>{{ row.formatted_tax() }}</dd></div>
+                            {% endfor %}
+                            <div><dt>内消費税合計</dt><dd>{{ formatted_tax_total() }}</dd></div>
+                        </dl>
+                    </div>
+                    {% endif %}
+                    {% if let Some(payment) = payment %}
+                        {% include "storefront/parts/payment_block.html" %}
+                    {% else %}
+                        <p class="form-note">お支払い方法:代金引換<br>お届け時に現金でお支払いください。</p>
+                    {% endif %}
+                </div>
+
+                {% if !shipments.is_empty() %}
+                <div class="order-card">
+                    <h2>出荷情報（分割出荷）</h2>
+                    {% for s in shipments %}
+                    <p>出荷 {{ s.index }}：{{ s.carrier_label }}{% if !s.tracking_number.is_empty() %} ／ 伝票番号：{{ s.tracking_number }}{% endif %}<br>{{ s.items_label }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                <div class="order-card">
+                    <h2>お届け先</h2>
+                    <p>〒{{ order.postal_code }}<br>
+                    {{ order.prefecture }}{{ order.city }}{{ order.address_line }}{% if let Some(b) = order.building %} {{ b }}{% endif %}<br>
+                    {{ order.family_name }} {{ order.given_name }} 様<br>
+                    電話番号:{{ order.phone }}</p>
+                    <p>お届け希望日時:{{ order.delivery_request_display() }}</p>
+                    {% for line in order.gift_lines() %}
+                    <p>{{ line }}</p>
+                    {% endfor %}
+                    <p class="form-note">注文確認メール送信先:{{ order.email }}</p>
+                </div>
+
+                {% if let Some(number) = order.tracking_number %}
+                <div class="order-card">
+                    <h2>配送情報</h2>
+                    {% if let Some(label) = order.carrier_label() %}<p>配送会社:{{ label }}</p>{% endif %}
+                    <p>お問い合わせ伝票番号:{{ number }}</p>
+                    {% if let Some(url) = order.tracking_url() %}<p><a href="{{ url }}" target="_blank" rel="noopener">配送状況を確認する</a></p>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <form method="post" action="/order-lookup/receipt" class="receipt-link-form">
+            <input type="hidden" name="order_number" value="{{ order.order_number() }}">
+            <input type="hidden" name="email" value="{{ order.email }}">
+            <button type="submit" class="secondary-button">領収書を表示する</button>
+        </form>
+
+        <p class="back-link"><a href="/order-lookup">← ご注文の確認に戻る</a></p>
+    </section>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | 注文履歴{% endblock %}
+
+{% block homepart %}
+    <section class="account-shell">
+        {% include "storefront/parts/breadcrumb.html" %}
+        <h1>注文履歴</h1>
+
+        {% if orders.is_empty() %}
+            <div class="empty-state"><p class="empty-state-title">まだ注文履歴がありません</p><p><a href="/" class="primary-button">買い物をはじめる</a></p></div>
+        {% else %}
+            <ul class="order-history">
+                {% for row in orders %}
+                    <li>
+                        <a href="/mypage/orders/{{ row.order.id }}" class="order-number">{{ row.order.order_number() }}</a>
+                        <span>{{ row.order.placed_display() }}</span>
+                        <span class="recent-items">{{ row.items_label() }}</span>
+                        <span>{{ row.order.formatted_total() }}</span>
+                        <span class="badge state">{{ row.order.status_label() }}</span>
+                        <a href="/mypage/orders/{{ row.order.id }}">注文詳細を見る</a>
+                        <form method="post" action="/mypage/orders/{{ row.order.id }}/reorder" class="reorder-form">
+                            <button type="submit" class="secondary-button">もう一度購入</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+            {% if total_pages > 1 %}
+                <nav class="pagination">
+                    {% if page > 1 %}
+                        <a href="/mypage/orders?page={{ page - 1 }}">← 前へ</a>
+                    {% endif %}
+                    <span>{{ page }} / {{ total_pages }}</span>
+                    {% if page < total_pages %}
+                        <a href="/mypage/orders?page={{ page + 1 }}">次へ →</a>
+                    {% endif %}
+                </nav>
+            {% endif %}
+        {% endif %}
+    </section>
+{% endblock %}

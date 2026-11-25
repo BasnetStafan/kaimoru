@@ -1,0 +1,18 @@
+{% if page.total_pages > 1 || page.total > 0 %}
+<nav class="admin-pagination" aria-label="ページ">
+    {% if let Some(url) = page.prev_url() %}
+    <a href="{{ url }}" class="admin-page-link">前へ</a>
+    {% endif %}
+    {% for link in page.links() %}
+    {% if link.current %}
+    <span class="admin-page-link current" aria-current="page">{{ link.n }}</span>
+    {% else %}
+    <a href="{{ link.url }}" class="admin-page-link">{{ link.n }}</a>
+    {% endif %}
+    {% endfor %}
+    {% if let Some(url) = page.next_url() %}
+    <a href="{{ url }}" class="admin-page-link">次へ</a>
+    {% endif %}
+    <span class="admin-page-count">全{{ page.total }}件</span>
+</nav>
+{% endif %}

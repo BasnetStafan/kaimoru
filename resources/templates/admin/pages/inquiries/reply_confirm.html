@@ -1,0 +1,29 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}返信の確認 | お問い合わせ{% endblock %}
+
+{% block adminpart %}
+<p><a href="/admin/inquiries/{{ inquiry_id }}">← お問い合わせ詳細へ戻る</a></p>
+<h1 class="admin-h1">返信の確認</h1>
+
+<section class="admin-section" aria-label="返信内容">
+    <dl class="admin-dl">
+        <dt>受付番号</dt><dd>{{ reference }}</dd>
+        <dt>宛先</dt><dd>{{ to_email }}</dd>
+        <dt>件名</dt><dd>{{ subject }}</dd>
+    </dl>
+    <h3>本文</h3>
+    <p class="admin-pre">{{ body }}</p>
+    <p>この内容でメールを送信します。送信したメールは取り消せません。</p>
+    <form method="post" action="/admin/inquiries/{{ inquiry_id }}/reply/send">
+        <input type="hidden" name="subject" value="{{ subject }}">
+        <input type="hidden" name="body" value="{{ body }}">
+        <button type="submit" class="primary-button">返信を送信する</button>
+    </form>
+    <form method="post" action="/admin/inquiries/{{ inquiry_id }}/reply/back">
+        <input type="hidden" name="subject" value="{{ subject }}">
+        <input type="hidden" name="body" value="{{ body }}">
+        <button type="submit" class="secondary-button">編集に戻る</button>
+    </form>
+</section>
+{% endblock %}

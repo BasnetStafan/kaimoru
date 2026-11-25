@@ -1,0 +1,27 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}伝票番号の取込結果{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">伝票番号の取込結果</h1>
+
+<p>{{ rows.len() }} 件中 {{ applied_count }} 件を取り込みました。取り込めなかった行は、理由を確認してから再送してください。</p>
+
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>行</th><th>注文番号</th><th>結果</th><th>内容</th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td>{{ row.line }}</td>
+            <td>{{ row.number }}</td>
+            <td>{% if row.applied %}取込済み{% else %}対象外{% endif %}</td>
+            <td>{{ row.message }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+
+<p><a href="/admin/orders" class="secondary-button">注文一覧に戻る</a></p>
+{% endblock %}
