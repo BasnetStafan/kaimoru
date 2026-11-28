@@ -16,12 +16,13 @@ It is the first full-stack, server-rendered Rust
 e-commerce implementation built complete for Japan.
 
 The design starts from **agentic**: a normal human storefront
-today, with a conversational shopping agent built in (see "How
-the shopping agent works"), and a machine-readable layer planned
-so that external AI agents can discover products, compare them,
-build a cart and check out with explicit human approval
-(inspired by the ACP / UCP / AP2 agentic commerce protocols —
-"inspired by", not full protocol compliance).
+and a conversational shopping agent built in (see "How the
+shopping agent works"), plus an MCP server that external AI
+clients (Claude, Cursor, and others) can connect to. Agents can
+search the catalog and work a cart; an order exists only after
+a human approves and pays for a draft the agent prepared (see
+"MCP server"). (The wider agentic-commerce protocols — ACP /
+UCP / AP2 — remain an inspiration, not a compliance claim.)
 
 Built as a portfolio project by a Java/Spring and C#/.NET engineer
 moving deeper into Rust and AWS.
@@ -72,7 +73,7 @@ implemented in the core:
 |---|---|
 | Language | Rust (edition 2024, toolchain 1.99.1 pinned in `rust-toolchain.toml`) |
 | Web framework | Axum 0.8 / Tokio |
-| Database | PostgreSQL 16 (sqlx, 44 migrations) |
+| Database | PostgreSQL 16 (sqlx, 51 migrations) |
 | Templates | Askama (server-side rendering) |
 | Frontend | htmx + plain JavaScript (self-hosted, no build step) |
 | Sessions | tower-sessions (PostgreSQL backend) |
@@ -128,6 +129,18 @@ Admin dashboard — today's orders and sales, unshipped orders, low stock, the l
 - Sessions: `tower-sessions` on PostgreSQL. The session record holds
   only the user ID (plus transient flow state); the cart lives in its
   own table. In-memory state is used only for disposable counters.
+- MCP server: an MCP server built on the official Rust SDK
+  (rmcp), mounted in-process at `/mcp`. Catalog search and
+  product fetches are public; cart tools require an
+  operator-issued API key; draft orders are approval-gated;
+  order status is queryable. OAuth 2.1 (Auth0) is supported.
+- RFM analytics: members are banded by Recency / Frequency /
+  Monetary quintiles, usable as segment conditions in the admin.
+- Content: a blog (scheduled posts, RSS, categories), shoppable
+  embeds that put product and category cards with add-to-cart
+  inside articles, and landing pages. Pages are managed as
+  types — blog post, landing page, standard page — in one
+  admin area.
 
 ## How the shopping agent (beta) works
 
@@ -166,9 +179,33 @@ Implementation notes: an LLM interprets the conversation (an
 OpenAI-compatible chat API — local Ollama by default in
 development; a cloud endpoint can be configured). The model's
 only job is turning messages into brief updates; it never
-touches product facts. The machine-readable layer for
-agent-to-agent commerce (ACP/UCP-inspired catalog and checkout
-APIs) is planned, not built — see "Current limitations".
+touches product facts. The machine-readable layer is built — as the
+MCP server (see "MCP server").
+
+## MCP server
+
+Kaimoru ships an MCP server at `/mcp`, built on the official
+Rust SDK (rmcp) and mounted in-process on the same Axum
+router. AI clients such as Claude and Cursor can search the
+catalog and fetch products anonymously; cart tools sit behind
+operator-issued API keys; and ordering is approval-gated by
+design — an agent prepares a draft order, a human reviews and
+pays, and only then does the order exist. OAuth 2.1 via Auth0
+is supported for clients that prefer tokens over keys.
+
+- Catalog search, product fetches and category listing are
+  public — no credentials needed.
+- Cart tools require an operator-issued API key (scoped).
+  Checkout is handed off to the browser, where a human pays on
+  the store's own screens.
+- Ordering is approval-gated: an agent can only prepare a
+  draft order; a human reviews, approves and pays before any
+  order exists.
+- OAuth 2.1 (with Auth0 as the authorization server) is also
+  supported, with automatic discovery via Protected Resource
+  Metadata.
+
+See the [MCP server documentation](docs/development/MCP_SERVER.md) for the tool list and connection details.
 
 ## Production-ready by design
 
@@ -176,8 +213,8 @@ Kaimoru is not a tutorial project with a checkout button attached.
 The claim is narrower, and checkable: this code runs in
 production today — the live demo above is the instance (a 1 GB
 VPS, behind HTTPS, payments in test mode) — and it is held to
-that standard by 301 unit-test cases, 55 end-to-end suites, and
-44 migrations that are never edited once applied.
+that standard by 361 unit-test cases, 62 end-to-end suites, and
+51 migrations that are never edited once applied.
 
 - **Layered, one direction only.** Routes -> controllers ->
   services -> repositories -> models. Business rules live in the
@@ -203,10 +240,10 @@ that standard by 301 unit-test cases, 55 end-to-end suites, and
   addresses and phone numbers — stored as AES-256-GCM ciphertext,
   with email lookups served by an HMAC blind index. Logs never
   contain emails, addresses or request bodies.
-- **Tested like it matters.** 301 unit-test cases, plus 55
+- **Tested like it matters.** 361 unit-test cases, plus 62
   end-to-end suites that drive the running application over HTTP -
   forged webhooks, tampering and concurrency cases included.
-  44 migrations are versioned and, once applied, never edited.
+  51 migrations are versioned and, once applied, never edited.
 
 ## Why Rust
 
@@ -256,15 +293,16 @@ Kaimoru is a deliberate choice of Rust instead:
 
 Stated plainly:
 
-- **The machine-readable layer is planned only.** Catalog and
-  checkout APIs for external AI agents (ACP/UCP-inspired) are
-  not built. What works today is the human-facing chat agent.
+- **No ACP/UCP compliance is claimed.** The machine-readable
+  layer is built — as the MCP server above — but in a shape
+  inspired by those protocols, not as a full implementation
+  of ACP, UCP or AP2.
 - **Stripe is verified in test mode.** The live-mode manual
   pass (3-D Secure, the PayPay handoff, real webhook payload
   shapes) is still to come. The demo store's payments also run
   in KOMOJU test mode.
-- **RFM analytics and subscriptions are not built.** They are
-  items on the V2 roadmap.
+- **Subscriptions are not built.** They are an item on the
+  V2 roadmap.
 - **Single-store design.** No multi-store or multi-tenant
   support.
 
@@ -332,10 +370,10 @@ Before committing a change, run the gate:
 `cargo test`, `cargo doc` (warnings treated as errors) and
 `cargo audit` in one pass.
 
-Beyond that, 55 shell E2E suites in `scripts/tests/` drive the
+Beyond that, 62 shell E2E suites in `scripts/tests/` drive the
 running application over HTTP. The suite inventory, prerequisites
 and case-ID conventions are in the
-[testing guide](docs/development/TESTING.md). The 301 unit-test
+[testing guide](docs/development/TESTING.md). The 365 unit-test
 cases and their execution records are managed in the
 [unit test specification](docs/development/UNIT_TEST_SPEC.md).
 
@@ -435,7 +473,6 @@ the policy for AI-assisted contributions is in
 
 ## Roadmap
 
-Store core and storefront are complete. Next: the agent-readable
-layer (`/.well-known` store profile + catalog API),
-human-approved agent checkout with a dummy payment token,
-RFM analytics, subscriptions, and the AWS deployment.
+Store core and storefront are complete. Next: subscriptions,
+deployment to AWS, and validating the MCP server against real
+clients.
