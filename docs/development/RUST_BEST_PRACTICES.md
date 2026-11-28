@@ -45,6 +45,17 @@ optimisation pass that preceded it.
   config ranges) and refuses to start with a named message,
   instead of panicking later on first use. Config validation
   covers every numeric knob, not most of them.
+- An error type is a typed enum per layer that implements
+  `std::error::Error` and `Display` and preserves the underlying
+  error as its `source()`. Errors are never flattened to `String`
+  or an opaque boxed error at a layer boundary: the kind must
+  survive to the layer that decides retry, conflict or status
+  from it.
+- A public fallible function's doc carries an `# Errors` section
+  naming the conditions it returns an error for, and a `# Panics`
+  section where a documented invariant can panic. The caller
+  cannot honour fail-closed behaviour for failure modes the doc
+  does not name.
 
 ## Concurrency and races
 
@@ -60,6 +71,13 @@ optimisation pass that preceded it.
   still-locked connection to the pool.
 - No database transaction stays open across a network call:
   commit first, call second, compensate on failure.
+- A request task can be dropped at any `.await` when the client
+  disconnects, and a detached `tokio::spawn` is unsupervised:
+  work that must happen after the response — sends, payment
+  follow-ups, notifications — goes through a durable queue or a
+  supervised background task whose failure is logged, never a
+  fire-and-forget spawn. A detached spawn is for best-effort work
+  only, and a comment at the site says it is best-effort.
 
 ## Numbers and money
 
@@ -73,6 +91,14 @@ optimisation pass that preceded it.
   intermediates for multiply-then-divide on large values.
   Overflow at an input boundary is a bug class to test, not an
   edge case to ignore.
+- In new code, a domain quantity that must never be mixed with
+  another — yen, points, a quantity, a rate — is a newtype with a
+  checked constructor at the parse boundary, not a bare `i64`, so
+  a unit mix-up is a compile error instead of a wrong total.
+  Existing code adopts the wrapper when the surrounding code is
+  already being touched, not by retrofit. A service function
+  takes an enum, not adjacent `bool` parameters, when the flags
+  choose behaviour.
 
 ## Data access
 
@@ -87,6 +113,14 @@ optimisation pass that preceded it.
 - Migrations are the schema's only source of truth. After
   adding a migration, force a recompile before running, or an
   embedded-migrations build silently skips it.
+- The connection pool is configured, never defaulted: pool size
+  and acquire timeout are explicit settings, validated at startup
+  like every other numeric knob. The size is chosen against the
+  database's own connection budget across every app instance that
+  shares it, and the arithmetic is written down where the setting
+  lives. The acquire timeout is short — seconds, so an exhausted
+  pool fails fast into a retryable error instead of queueing a
+  request for tens of seconds.
 
 ## Ownership, allocation and async
 
@@ -138,6 +172,12 @@ optimisation pass that preceded it.
 - Comments state the rule or reason that still holds today, in
   the fewest lines that keep the meaning. History belongs in
   git and the audit docs.
+- A type that carries a secret or decrypted personal data — a
+  password hash, a TOTP secret, a session token, plaintext PII —
+  does not derive `Debug`. It either omits the impl or hand-writes
+  it with the sensitive fields redacted, so no log line, error
+  message or panic payload can print the value. The same applies
+  to `Display` written for logging.
 
 ## Verification
 
@@ -151,3 +191,16 @@ optimisation pass that preceded it.
 - Rejected techniques stay rejected without new evidence —
   record the rejection and its reason where the next session
   will see it, instead of re-proposing on a fresh brief.
+- The gate denies a named set of cherry-picked lints beyond the
+  clippy default groups, chosen because they enforce this rule's
+  own prose: `clippy::arithmetic_side_effects`,
+  `clippy::float_arithmetic` (at minimum on money modules),
+  `clippy::cast_possible_truncation`, `clippy::cast_possible_wrap`,
+  `clippy::cast_sign_loss`, `clippy::unwrap_used`,
+  `clippy::expect_used`, `clippy::indexing_slicing`, and
+  `clippy::todo`. The set lives in the workspace `Cargo.toml`
+  `[lints]` table so every crate inherits it. Restriction lints
+  are enabled individually, never as a group. A site that
+  legitimately needs the forbidden shape uses `#[expect]` with a
+  reason, so a suppression that stops firing is itself reported;
+  test code may allow the panic lints at module scope.
