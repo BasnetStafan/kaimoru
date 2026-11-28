@@ -4,6 +4,7 @@
 //! summed over variants — so an agent and a person looking at
 //! the same product never see different facts.
 
+use schemars::JsonSchema;
 use serde::Serialize;
 use sqlx::PgPool;
 
@@ -11,11 +12,13 @@ use crate::config::CONFIG;
 use crate::error::AppError;
 use crate::models::Product;
 use crate::repositories::{
-    product_repository, review_repository, tag_repository, variant_repository,
+    category_repository, product_repository, review_repository, search_repository, tag_repository,
+    variant_repository,
 };
+use crate::services::{search_service, shop_settings_service};
 
 /// One tag on a product, as exposed to agents.
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 pub struct ApiTag {
     /// Stable ASCII identifier (the agent's matching key).
     pub slug: String,
@@ -27,7 +30,7 @@ pub struct ApiTag {
 /// aggregate. `average` is null when the product has no
 /// reviews — the API reports the honest aggregate and never
 /// invents one.
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 pub struct ApiRating {
     /// Average rating rounded to one decimal; null at 0 reviews.
     pub average: Option<f64>,
@@ -36,7 +39,7 @@ pub struct ApiRating {
 }
 
 /// The product's category as exposed to agents.
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 pub struct ApiCategory {
     /// Category id; null when the product has none.
     pub id: Option<i64>,
@@ -45,7 +48,7 @@ pub struct ApiCategory {
 }
 
 /// One catalog product as exposed to agents.
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 pub struct ApiProduct {
     /// Product id.
     pub id: i64,
@@ -55,8 +58,11 @@ pub struct ApiProduct {
     pub path: String,
     /// Product description, carried for in-process consumers
     /// (the shopping agent's keyword matching). Never
-    /// serialised: the API's wire shape is unchanged.
+    /// serialised: the API's wire shape is unchanged — and the
+    /// schema skips it too, so a generated output schema never
+    /// requires a field the wire never carries.
     #[serde(skip_serializing)]
+    #[schemars(skip)]
     pub description: String,
     /// Current selling price in integer yen, tax included,
     /// after any active sale — the price a buyer would pay.
@@ -85,7 +91,7 @@ pub struct ApiProduct {
 
 /// One purchasable combination of a product, as exposed to
 /// agents: the cart keys on the variant id.
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 pub struct ApiVariant {
     /// Variant id (the cart line identity).
     pub id: i64,
@@ -103,7 +109,7 @@ pub struct ApiVariant {
 }
 
 /// One page of the catalog.
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 pub struct CatalogPage {
     /// The page's products, in id order.
     pub products: Vec<ApiProduct>,
@@ -264,4 +270,156 @@ pub async fn get_product(pool: &PgPool, id: i64) -> Result<Option<ApiProduct>, A
         variants: Some(variants),
         ..item
     }))
+}
+
+/// One page of catalog search results, in the search's own
+/// ordering (the list endpoint's id order does not apply here).
+#[derive(Serialize, JsonSchema)]
+pub struct SearchPage {
+    /// The page's products, in result order.
+    pub products: Vec<ApiProduct>,
+    /// The 1-based page number this response serves.
+    pub page: i64,
+    /// The page size in effect.
+    pub per_page: i64,
+    /// Total matches for the same conditions.
+    pub total: i64,
+    /// Total number of pages at this page size.
+    pub total_pages: i64,
+}
+
+/// The catalog search inputs for machine clients, bundled so
+/// the call site names every knob it sets.
+pub struct CatalogSearch<'a> {
+    /// Keyword text; empty browses the whole catalog.
+    pub query: &'a str,
+    /// Category name filter (the snapshot match the storefront
+    /// filter uses); `None` searches every category.
+    pub category: Option<&'a str>,
+    /// Lowest effective price to keep, in yen (inclusive).
+    pub min_price_yen: Option<i64>,
+    /// Highest effective price to keep, in yen (inclusive).
+    pub max_price_yen: Option<i64>,
+    /// Sort key: one of the allowlisted keys, already
+    /// validated by the caller.
+    pub sort: &'a str,
+    /// Whether to keep only products with stock.
+    pub in_stock_only: bool,
+    /// 1-based page number.
+    pub page: i64,
+}
+
+/// Searches the public catalog with the storefront search's own
+/// machinery — the same normalisation, term splitting and public
+/// predicate — so an MCP client and a person typing in the
+/// storefront search box get the same products for the same
+/// words.
+pub async fn search_products(
+    pool: &PgPool,
+    search: CatalogSearch<'_>,
+) -> Result<SearchPage, AppError> {
+    let per_page = CONFIG.api_per_page;
+    let page = search.page.max(1);
+    let patterns = search_service::normalize_patterns(search.query);
+    let (sort, _) = search_service::parse_sort(Some(search.sort));
+    let outcome = search_repository::search(
+        pool,
+        search_repository::SearchArgs {
+            patterns: &patterns,
+            category: search.category,
+            tag_slug: None,
+            in_stock_only: search.in_stock_only,
+            min_price: search.min_price_yen,
+            max_price: search.max_price_yen,
+            sort,
+            limit: per_page,
+            offset: (page - 1).saturating_mul(per_page),
+        },
+    )
+    .await?;
+    let total = outcome.total;
+    let items = assemble(pool, &outcome.products).await?;
+    Ok(SearchPage {
+        products: items,
+        page,
+        per_page,
+        total,
+        total_pages: crate::util::pagination::total_pages(total, per_page),
+    })
+}
+
+/// One product category as exposed to machine clients.
+#[derive(Serialize, JsonSchema)]
+pub struct ApiCategoryEntry {
+    /// Category id.
+    pub id: i64,
+    /// Display name — the value search filters match on.
+    pub name: String,
+    /// Stable ASCII identifier.
+    pub slug: String,
+    /// Parent category id; null at the top level.
+    pub parent_id: Option<i64>,
+}
+
+/// The category list as one object: machine surfaces that
+/// attach a schema to their results (the MCP tools) need an
+/// object at the root, not a bare array.
+#[derive(Serialize, JsonSchema)]
+pub struct CategoryList {
+    /// Every category, in display order.
+    pub categories: Vec<ApiCategoryEntry>,
+}
+
+/// Every product category, in display order.
+pub async fn list_categories(pool: &PgPool) -> Result<CategoryList, AppError> {
+    let categories = category_repository::list_all(pool).await?;
+    Ok(CategoryList {
+        categories: categories
+            .into_iter()
+            .map(|c| ApiCategoryEntry {
+                id: c.id,
+                name: c.name,
+                slug: c.slug,
+                parent_id: c.parent_id,
+            })
+            .collect(),
+    })
+}
+
+/// The store's identity and shopping basics, from the same
+/// shop settings the storefront renders.
+#[derive(Serialize, JsonSchema)]
+pub struct StoreInfo {
+    /// Shop name.
+    pub shop_name: String,
+    /// Short shop tagline.
+    pub tagline: String,
+    /// Shop description.
+    pub description: String,
+    /// Public contact email; empty when the shop shows none.
+    pub contact_email: String,
+    /// Public contact page URL; empty when the shop shows none.
+    pub contact_url: String,
+    /// Flat shipping fee in integer yen, tax included.
+    pub shipping_flat_yen: i64,
+    /// Product subtotal at or above which shipping is free,
+    /// in integer yen.
+    pub free_shipping_threshold_yen: i64,
+    /// Currency every price on this surface uses.
+    pub currency: String,
+}
+
+/// The store info machine clients introduce the shop with.
+pub async fn store_info(pool: &PgPool) -> Result<StoreInfo, AppError> {
+    let settings = shop_settings_service::load(pool).await;
+    Ok(StoreInfo {
+        shop_name: settings.shop_name,
+        tagline: settings.tagline,
+        description: settings.shop_description,
+        contact_email: settings.contact_email,
+        contact_url: settings.contact_url,
+        shipping_flat_yen: settings.shipping_flat_yen,
+        free_shipping_threshold_yen: settings.free_shipping_threshold_yen,
+        currency: "JPY".to_string(),
+    })
 }

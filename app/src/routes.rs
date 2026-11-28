@@ -158,6 +158,28 @@ pub fn create_router(
             logging::request_log,
         ));
 
+    // The MCP server (Phase 1: the read-only public catalog
+    // for external AI clients) mounts only when the deployment
+    // enables it — with the flag off the path does not exist.
+    // Like the agent API it carries no session stack and no
+    // CSRF layer: its callers are MCP clients, not browsers,
+    // and Phase 1 serves public data only. It sits under the
+    // maintenance gate, logged on the API surface.
+    let mcp_api = if crate::config::CONFIG.mcp_enabled {
+        Router::new()
+            .route_service("/mcp", crate::api::mcp::service(pool.clone()))
+            .layer(axum::middleware::from_fn_with_state(
+                pool.clone(),
+                crate::middleware::maintenance::gate,
+            ))
+            .layer(axum::middleware::from_fn_with_state(
+                logging::Surface::Api,
+                logging::request_log,
+            ))
+    } else {
+        Router::new()
+    };
+
     // Each surface gets its own stack: CSRF inside, its own session
     // layer outside, so the two cookie jars never mix.
     let pages = surface_stack(
@@ -215,6 +237,7 @@ pub fn create_router(
         .merge(agent_cart)
         .merge(postal_api)
         .merge(crawler_docs)
+        .merge(mcp_api)
         // The header layers come after every merge: in axum a
         // layer applied before a `.merge` does not reach the
         // merged-in routes, so the health, webhook and API

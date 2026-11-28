@@ -26,8 +26,18 @@
 
 ## ケース一覧
 
-<!-- MAX_UT_ID: 306 -->
+<!-- MAX_UT_ID: 311 -->
 <!-- INVENTORY:BEGIN -->
+
+### app / api::mcp::tools
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-307 | api::mcp::tools::tests::defaults_are_valid | api::mcp::tools | （未記入） | （未記入） | 未実施 |
+| UT-308 | api::mcp::tools::tests::inverted_price_range_is_refused | api::mcp::tools | （未記入） | （未記入） | 未実施 |
+| UT-309 | api::mcp::tools::tests::negative_price_is_refused | api::mcp::tools | （未記入） | （未記入） | 未実施 |
+| UT-310 | api::mcp::tools::tests::page_below_one_is_refused | api::mcp::tools | （未記入） | （未記入） | 未実施 |
+| UT-311 | api::mcp::tools::tests::unknown_sort_is_refused | api::mcp::tools | （未記入） | （未記入） | 未実施 |
 
 ### app / api::stripe_webhook
 

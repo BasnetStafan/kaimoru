@@ -70,3 +70,8 @@ csv = "1.4.0"
 # Already in the tree transitively at this version; named
 # directly because csv_xfer decodes Shift_JIS uploads with it.
 encoding_rs = "0.8.44"
+rmcp = { version = "3.12.0", features = ["server", "macros", "transport-streamable-http-server"] }
+schemars = { version = "1.2.3", features = ["derive"] }
+
+[dev-dependencies]
+rmcp = { version = "3.12.0", features = ["client", "transport-streamable-http-client-reqwest"] }

@@ -274,6 +274,14 @@ pub struct Config {
     /// KOMOJU payments.
     #[serde(default)]
     pub sns_login_enabled: bool,
+    /// Master switch for the MCP (Model Context Protocol)
+    /// server mounted at `/mcp` for external AI clients. Off by
+    /// default: the surface does not exist unless a deployment
+    /// turns it on. It serves the public catalog only — the
+    /// same data the storefront and the agent API already
+    /// expose without a login.
+    #[serde(default)]
+    pub mcp_enabled: bool,
     /// Seconds between payment reconciliation sweep passes.
     #[serde(default = "default_payment_sweep_interval_secs")]
     pub payment_sweep_interval_secs: u64,

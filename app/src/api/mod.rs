@@ -8,6 +8,7 @@ pub mod cart;
 pub mod catalog;
 pub mod komoju_webhook;
 pub mod mail_tracking;
+pub mod mcp;
 pub mod postal_codes;
 pub mod stripe_webhook;
 pub mod ucp_profile;

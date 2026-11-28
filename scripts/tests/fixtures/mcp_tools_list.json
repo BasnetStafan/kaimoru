@@ -1,0 +1,591 @@
+{
+  "tools": [
+    {
+      "description": "Get one public product by id, including its purchasable variants. Use an id from search_products results.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "id": {
+            "description": "The product id, from a search or list result.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "get_product",
+      "outputSchema": {
+        "$defs": {
+          "ApiCategory": {
+            "description": "The product's category as exposed to agents.",
+            "properties": {
+              "id": {
+                "description": "Category id; null when the product has none.",
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "name": {
+                "description": "Category name (the product's snapshot of it).",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "type": "object"
+          },
+          "ApiRating": {
+            "description": "The product's rating as exposed to agents: the live reviews\naggregate. `average` is null when the product has no\nreviews — the API reports the honest aggregate and never\ninvents one.",
+            "properties": {
+              "average": {
+                "description": "Average rating rounded to one decimal; null at 0 reviews.",
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "count": {
+                "description": "Number of reviews behind the average.",
+                "format": "int64",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "average",
+              "count"
+            ],
+            "type": "object"
+          },
+          "ApiTag": {
+            "description": "One tag on a product, as exposed to agents.",
+            "properties": {
+              "label": {
+                "description": "Japanese label shown to people.",
+                "type": "string"
+              },
+              "slug": {
+                "description": "Stable ASCII identifier (the agent's matching key).",
+                "type": "string"
+              }
+            },
+            "required": [
+              "slug",
+              "label"
+            ],
+            "type": "object"
+          },
+          "ApiVariant": {
+            "description": "One purchasable combination of a product, as exposed to\nagents: the cart keys on the variant id.",
+            "properties": {
+              "id": {
+                "description": "Variant id (the cart line identity).",
+                "format": "int64",
+                "type": "integer"
+              },
+              "label": {
+                "description": "Combination label, e.g. `サイズ: M / カラー: ブラック`;\nempty for the default variant of a plain product.",
+                "type": "string"
+              },
+              "price_yen": {
+                "description": "The combination's price in integer yen: its own price\nwhen it has one, else the product's effective price.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "purchasable": {
+                "description": "Whether this combination can be bought right now,\nunder the same rule as the product-level flag.",
+                "type": "boolean"
+              },
+              "stock": {
+                "description": "Units in stock for this combination.",
+                "format": "int32",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "price_yen",
+              "stock",
+              "purchasable"
+            ],
+            "type": "object"
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "allow_backorder": {
+            "description": "Whether the product can be ordered beyond its stock.",
+            "type": "boolean"
+          },
+          "category": {
+            "$ref": "#/$defs/ApiCategory",
+            "description": "The product's category."
+          },
+          "id": {
+            "description": "Product id.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "description": "Product name.",
+            "type": "string"
+          },
+          "path": {
+            "description": "Storefront path of the product page.",
+            "type": "string"
+          },
+          "price_yen": {
+            "description": "Current selling price in integer yen, tax included,\nafter any active sale — the price a buyer would pay.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "purchasable": {
+            "description": "Whether the product can be bought right now, under the\nsame rule the cart applies: untracked stock or backorder\nis always buyable; tracked stock needs a unit on hand.",
+            "type": "boolean"
+          },
+          "rating": {
+            "$ref": "#/$defs/ApiRating",
+            "description": "Live reviews aggregate for this product."
+          },
+          "stock": {
+            "description": "Stock summed over the product's enabled variants.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "tags": {
+            "description": "The product's tags from the controlled vocabulary.",
+            "items": {
+              "$ref": "#/$defs/ApiTag"
+            },
+            "type": "array"
+          },
+          "variants": {
+            "description": "The product's purchasable combinations. Present on the\ndetail response only — the list stays a summary — so an\nagent chooses a combination from the detail it already\nfetched before adding to a cart.",
+            "items": {
+              "$ref": "#/$defs/ApiVariant"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "path",
+          "price_yen",
+          "stock",
+          "allow_backorder",
+          "purchasable",
+          "rating",
+          "category",
+          "tags"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Get the store's identity and shopping basics: name, tagline, description, contact, the flat shipping fee and the free-shipping threshold in yen.",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "get_store_info",
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "contact_email": {
+            "description": "Public contact email; empty when the shop shows none.",
+            "type": "string"
+          },
+          "contact_url": {
+            "description": "Public contact page URL; empty when the shop shows none.",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency every price on this surface uses.",
+            "type": "string"
+          },
+          "description": {
+            "description": "Shop description.",
+            "type": "string"
+          },
+          "free_shipping_threshold_yen": {
+            "description": "Product subtotal at or above which shipping is free,\nin integer yen.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "shipping_flat_yen": {
+            "description": "Flat shipping fee in integer yen, tax included.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "shop_name": {
+            "description": "Shop name.",
+            "type": "string"
+          },
+          "tagline": {
+            "description": "Short shop tagline.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shop_name",
+          "tagline",
+          "description",
+          "contact_email",
+          "contact_url",
+          "shipping_flat_yen",
+          "free_shipping_threshold_yen",
+          "currency"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "List the store's product categories (id, name, slug, parent) so searches can be filtered by category name.",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "list_categories",
+      "outputSchema": {
+        "$defs": {
+          "ApiCategoryEntry": {
+            "description": "One product category as exposed to machine clients.",
+            "properties": {
+              "id": {
+                "description": "Category id.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "name": {
+                "description": "Display name — the value search filters match on.",
+                "type": "string"
+              },
+              "parent_id": {
+                "description": "Parent category id; null at the top level.",
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "slug": {
+                "description": "Stable ASCII identifier.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "slug",
+              "parent_id"
+            ],
+            "type": "object"
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "categories": {
+            "description": "Every category, in display order.",
+            "items": {
+              "$ref": "#/$defs/ApiCategoryEntry"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "categories"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search the store's public catalog by keyword, with optional category, price-range and stock filters and several sort orders. Returns one page of products with prices in integer yen (tax included), stock and ratings — exactly what the storefront shows.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "category": {
+            "description": "Category name, exactly as `list_categories` reports it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "in_stock_only": {
+            "description": "Keep only products with stock on hand.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "max_price_yen": {
+            "description": "Highest price to keep, in integer yen (inclusive).",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "min_price_yen": {
+            "description": "Lowest price to keep, in integer yen (inclusive).",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "page": {
+            "description": "1-based page number. Defaults to 1.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "query": {
+            "description": "Keyword text matched against product names and\ncategories (multi-term AND). Empty or omitted browses\nthe whole catalog.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sort": {
+            "description": "One of: recommended, newest, price_asc, price_desc,\nrating. Defaults to recommended.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "name": "search_products",
+      "outputSchema": {
+        "$defs": {
+          "ApiCategory": {
+            "description": "The product's category as exposed to agents.",
+            "properties": {
+              "id": {
+                "description": "Category id; null when the product has none.",
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "name": {
+                "description": "Category name (the product's snapshot of it).",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "type": "object"
+          },
+          "ApiProduct": {
+            "description": "One catalog product as exposed to agents.",
+            "properties": {
+              "allow_backorder": {
+                "description": "Whether the product can be ordered beyond its stock.",
+                "type": "boolean"
+              },
+              "category": {
+                "$ref": "#/$defs/ApiCategory",
+                "description": "The product's category."
+              },
+              "id": {
+                "description": "Product id.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "name": {
+                "description": "Product name.",
+                "type": "string"
+              },
+              "path": {
+                "description": "Storefront path of the product page.",
+                "type": "string"
+              },
+              "price_yen": {
+                "description": "Current selling price in integer yen, tax included,\nafter any active sale — the price a buyer would pay.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "purchasable": {
+                "description": "Whether the product can be bought right now, under the\nsame rule the cart applies: untracked stock or backorder\nis always buyable; tracked stock needs a unit on hand.",
+                "type": "boolean"
+              },
+              "rating": {
+                "$ref": "#/$defs/ApiRating",
+                "description": "Live reviews aggregate for this product."
+              },
+              "stock": {
+                "description": "Stock summed over the product's enabled variants.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "tags": {
+                "description": "The product's tags from the controlled vocabulary.",
+                "items": {
+                  "$ref": "#/$defs/ApiTag"
+                },
+                "type": "array"
+              },
+              "variants": {
+                "description": "The product's purchasable combinations. Present on the\ndetail response only — the list stays a summary — so an\nagent chooses a combination from the detail it already\nfetched before adding to a cart.",
+                "items": {
+                  "$ref": "#/$defs/ApiVariant"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "path",
+              "price_yen",
+              "stock",
+              "allow_backorder",
+              "purchasable",
+              "rating",
+              "category",
+              "tags"
+            ],
+            "type": "object"
+          },
+          "ApiRating": {
+            "description": "The product's rating as exposed to agents: the live reviews\naggregate. `average` is null when the product has no\nreviews — the API reports the honest aggregate and never\ninvents one.",
+            "properties": {
+              "average": {
+                "description": "Average rating rounded to one decimal; null at 0 reviews.",
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "count": {
+                "description": "Number of reviews behind the average.",
+                "format": "int64",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "average",
+              "count"
+            ],
+            "type": "object"
+          },
+          "ApiTag": {
+            "description": "One tag on a product, as exposed to agents.",
+            "properties": {
+              "label": {
+                "description": "Japanese label shown to people.",
+                "type": "string"
+              },
+              "slug": {
+                "description": "Stable ASCII identifier (the agent's matching key).",
+                "type": "string"
+              }
+            },
+            "required": [
+              "slug",
+              "label"
+            ],
+            "type": "object"
+          },
+          "ApiVariant": {
+            "description": "One purchasable combination of a product, as exposed to\nagents: the cart keys on the variant id.",
+            "properties": {
+              "id": {
+                "description": "Variant id (the cart line identity).",
+                "format": "int64",
+                "type": "integer"
+              },
+              "label": {
+                "description": "Combination label, e.g. `サイズ: M / カラー: ブラック`;\nempty for the default variant of a plain product.",
+                "type": "string"
+              },
+              "price_yen": {
+                "description": "The combination's price in integer yen: its own price\nwhen it has one, else the product's effective price.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "purchasable": {
+                "description": "Whether this combination can be bought right now,\nunder the same rule as the product-level flag.",
+                "type": "boolean"
+              },
+              "stock": {
+                "description": "Units in stock for this combination.",
+                "format": "int32",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "price_yen",
+              "stock",
+              "purchasable"
+            ],
+            "type": "object"
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "page": {
+            "description": "The 1-based page number this response serves.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "per_page": {
+            "description": "The page size in effect.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "products": {
+            "description": "The page's products, in result order.",
+            "items": {
+              "$ref": "#/$defs/ApiProduct"
+            },
+            "type": "array"
+          },
+          "total": {
+            "description": "Total matches for the same conditions.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_pages": {
+            "description": "Total number of pages at this page size.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "products",
+          "page",
+          "per_page",
+          "total",
+          "total_pages"
+        ],
+        "type": "object"
+      }
+    }
+  ]
+}

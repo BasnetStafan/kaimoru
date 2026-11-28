@@ -37,6 +37,9 @@
 #                                of open payments against KOMOJU.
 #   sns_login_enabled .......... master switch for the LINE /
 #                                Google / Yahoo login buttons.
+#   mcp_enabled ................ master switch for the MCP
+#                                server at /mcp (public catalog
+#                                for external AI clients).
 #   mail_worker_interval_secs .. seconds between mail-queue
 #                                drains by the background worker.
 #   mail_send_concurrency ...... campaign deliveries one
@@ -128,6 +131,10 @@ hosted_gateway = "komoju"
 # from the environment only; a provider stays hidden until both
 # its id and secret resolve (see .env.example).
 sns_login_enabled = false
+# MCP (Model Context Protocol) server master switch: when true,
+# /mcp serves the public catalog to external AI clients
+# (read-only; see docs/development/MCP_SERVER.md).
+mcp_enabled = true
 payment_sweep_interval_secs = 600
 # Uploaded product image derivatives (PERF-7): the longest
 # edge, in pixels, of the WebP copies generated beside each
