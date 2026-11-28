@@ -98,6 +98,7 @@ dependencies = [
  "image",
  "jsonwebtoken",
  "lettre",
+ "mcp-defs",
  "pulldown-cmark",
  "qrcode",
  "rand 0.8.8",
@@ -1608,6 +1609,28 @@ name = "matchit"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
+
+[[package]]
+name = "mcp-defs"
+version = "0.1.0"
+dependencies = [
+ "rmcp",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "mcp-stdio"
+version = "0.1.0"
+dependencies = [
+ "mcp-defs",
+ "reqwest 0.12.28",
+ "rmcp",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "md-5"

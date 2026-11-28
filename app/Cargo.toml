@@ -72,6 +72,10 @@ csv = "1.4.0"
 encoding_rs = "0.8.44"
 rmcp = { version = "3.12.0", features = ["server", "macros", "transport-streamable-http-server"] }
 schemars = { version = "1.2.3", features = ["derive"] }
+# The MCP tool definitions (names, descriptions, DTOs and
+# the listing), shared with the stdio adapter crate so both
+# transports serve the identical surface.
+mcp-defs = { path = "../mcp-defs" }
 
 [dev-dependencies]
 rmcp = { version = "3.12.0", features = ["client", "transport-streamable-http-client-reqwest"] }

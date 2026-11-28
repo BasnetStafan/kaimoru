@@ -391,6 +391,64 @@ enabling the flag; an unset or unparseable value fails
 closed and `/mcp` keeps answering 403 to non-loopback
 hosts even with the flag on.
 
+## Stdio adapter
+
+The same server also ships as a stdio transport: the
+`mcp-stdio` binary (a workspace crate). Registries that
+introspect a server by building and running it — Glama's
+server checker is the one that prompted this — speak
+stdio only, and so do some local MCP hosts. The adapter
+is a genuine second transport for the same server, not
+a stub:
+
+- **Definitions are shared, not copied.** Tool names,
+  descriptions and the parameter/result types live in
+  the `mcp-defs` crate. The HTTP handler's router and
+  the adapter both build their listings from it, and an
+  app unit test
+  (`tool_definitions_match_the_shared_definitions`)
+  fails if the two listings ever drift apart.
+- **Startup needs nothing.** No environment, no
+  database, no network: `initialize` and `tools/list`
+  are answered locally from the shared definitions.
+- **Calls are proxied.** A `tools/call` is forwarded as
+  one stateless JSON-RPC POST to an upstream
+  streamable-HTTP endpoint, and the upstream's result
+  (structured content included) or its error (code and
+  message) comes back verbatim. The upstream is the
+  store's own sessionless server, so no handshake or
+  session header is involved.
+
+| Variable | Meaning |
+| --- | --- |
+| `KAIMORU_MCP_ENDPOINT` | The upstream MCP endpoint. Defaults to the live store, `https://ik1-104-58605.vs.sakura.ne.jp/mcp`. |
+| `KAIMORU_MCP_API_KEY` | An API key forwarded to the upstream as the bearer token. The cart and draft tools need one; the catalog tools work anonymously without it. |
+
+A proxied call is capped at 30 seconds end to end. An
+upstream that cannot be reached, answers too slowly, or
+answers something unreadable surfaces as a generic
+internal error naming which of the three it was — the
+detail is logged to stderr, because stdout carries
+JSON-RPC only. The store's resources are not proxied:
+the adapter serves the tools only.
+
+Build and run:
+
+```sh
+cargo run -p mcp-stdio
+cargo build --release -p mcp-stdio   # the registry shape
+```
+
+For Glama's servers registry the build spec is: a base
+image carrying the repo's pinned Rust toolchain (the
+official `rust` image at the `rust-toolchain.toml`
+version, or Debian with a rustup install step), one
+build step `cargo build --release -p mcp-stdio`, CMD
+`./target/release/mcp-stdio`, and an empty environment
+schema — the checker only needs the process to start
+and answer introspection, which never touches the
+upstream.
+
 ## Security posture
 
 - The catalog surface is anonymous, public data only — the
@@ -473,6 +531,13 @@ hosts even with the flag on.
 - `cargo run --example mcp_client_check` — an acceptance
   harness that connects as a real rmcp client and calls
   every tool and a resource.
+- The stdio adapter's unit tests (in the workspace
+  `cargo test` run): the shared listing's shape, the
+  upstream envelope mapping (result, error pass-through,
+  event-stream picking), a stub-upstream proxy round
+  trip that checks the forwarded key, and the
+  dead-upstream clean error. The app also carries the
+  listing parity test named in the stdio section above.
 
 ## Later phases (not built)
 

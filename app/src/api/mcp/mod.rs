@@ -57,8 +57,9 @@ use rmcp::{
 
 use self::tools::{
     AddCartItemParams, CartIdParams, CreateOrderDraftParams, DraftIdParams, GetProductParams,
-    McpCart, McpCheckoutLink, McpOrderDraft, McpOrderStatus, OrderIdParams, RemoveCartItemParams,
-    SearchProductsParams, UpdateCartItemParams, validate_draft, validate_search,
+    McpCart, McpCheckoutLink, McpDraftLine, McpOrderDraft, McpOrderStatus, OrderIdParams,
+    RemoveCartItemParams, SearchProductsParams, UpdateCartItemParams, validate_draft,
+    validate_search,
 };
 use crate::config::CONFIG;
 use crate::middleware::mcp_oauth::{OAUTH_SCOPES_HEADER, OAUTH_SUBJECT_HEADER};
@@ -522,10 +523,11 @@ impl ServerHandler for StoreMcpHandler {
                 .enable_resources()
                 .build(),
         )
-        .with_server_info(Implementation::new("kaimoru", env!("CARGO_PKG_VERSION")))
-        .with_instructions(
-            "Kaimoru is a Japanese e-commerce store. This server exposes its public catalog: search and read products, list categories, and read store information and published pages. Prices are integer Japanese yen, tax included. With an API key (cart:write scope) it also builds carts; checkout finishes in the customer's own browser via the link from get_checkout_link, or — with an orders:write key — as an order draft from create_order_draft that the customer approves and pays for in the browser. An MCP client never places an order itself and never takes payment details: the person approving in the browser places every order.",
-        )
+        .with_server_info(Implementation::new(
+            mcp_defs::SERVER_NAME,
+            env!("CARGO_PKG_VERSION"),
+        ))
+        .with_instructions(mcp_defs::SERVER_INSTRUCTIONS)
     }
 
     async fn list_resources(
@@ -639,7 +641,7 @@ impl ServerHandler for StoreMcpHandler {
 impl StoreMcpHandler {
     /// Searches the public catalog.
     #[tool(
-        description = "Search the store's public catalog by keyword, with optional category, price-range and stock filters and several sort orders. Returns one page of products with prices in integer yen (tax included), stock and ratings — exactly what the storefront shows.",
+        description = mcp_defs::SEARCH_PRODUCTS_DESCRIPTION,
         output_schema = rmcp::handler::server::common::schema_for_output::<SearchPage>()
     )]
     async fn search_products(
@@ -668,7 +670,7 @@ impl StoreMcpHandler {
 
     /// Reads one product in full.
     #[tool(
-        description = "Get one public product by id, including its purchasable variants. Use an id from search_products results.",
+        description = mcp_defs::GET_PRODUCT_DESCRIPTION,
         output_schema = rmcp::handler::server::common::schema_for_output::<ApiProduct>()
     )]
     async fn get_product(
@@ -695,7 +697,7 @@ impl StoreMcpHandler {
 
     /// Lists the catalog's categories.
     #[tool(
-        description = "List the store's product categories (id, name, slug, parent) so searches can be filtered by category name.",
+        description = mcp_defs::LIST_CATEGORIES_DESCRIPTION,
         output_schema = rmcp::handler::server::common::schema_for_output::<api_catalog_service::CategoryList>()
     )]
     async fn list_categories(&self) -> Result<Json<api_catalog_service::CategoryList>, McpError> {
@@ -707,7 +709,7 @@ impl StoreMcpHandler {
 
     /// Reads the store's identity and shopping basics.
     #[tool(
-        description = "Get the store's identity and shopping basics: name, tagline, description, contact, the flat shipping fee and the free-shipping threshold in yen.",
+        description = mcp_defs::GET_STORE_INFO_DESCRIPTION,
         output_schema = rmcp::handler::server::common::schema_for_output::<StoreInfo>()
     )]
     async fn get_store_info(&self) -> Result<Json<StoreInfo>, McpError> {
@@ -719,7 +721,7 @@ impl StoreMcpHandler {
 
     /// Creates a cart bound to the caller's API key.
     #[tool(
-        description = "Create an empty cart and get its cart_id handle. Requires an API key with the cart:write scope. The cart belongs to that key: only the same key can read or change it.",
+        description = mcp_defs::CREATE_CART_DESCRIPTION,
         output_schema = rmcp::handler::server::common::schema_for_output::<McpCart>()
     )]
     async fn create_cart(
@@ -736,7 +738,7 @@ impl StoreMcpHandler {
 
     /// Reads one of the caller's carts.
     #[tool(
-        description = "Get one of your carts by cart_id: its lines and totals in integer yen, computed exactly as the store's cart page computes them.",
+        description = mcp_defs::GET_CART_DESCRIPTION,
         output_schema = rmcp::handler::server::common::schema_for_output::<McpCart>()
     )]
     async fn get_cart(
@@ -751,7 +753,7 @@ impl StoreMcpHandler {
 
     /// Adds units of one product to the caller's cart.
     #[tool(
-        description = "Add units of a product to one of your carts. Pass variant_id when the product has combinations (see get_product). Stock is re-validated on every call; the answer is the cart read back after the add.",
+        description = mcp_defs::ADD_CART_ITEM_DESCRIPTION,
         output_schema = rmcp::handler::server::common::schema_for_output::<McpCart>()
     )]
     async fn add_cart_item(
@@ -776,7 +778,7 @@ impl StoreMcpHandler {
 
     /// Sets one cart line's quantity.
     #[tool(
-        description = "Set the quantity of one line in one of your carts, addressed by variant_id. The cart service caps the quantity at the stock on hand. Use remove_cart_item to remove a line.",
+        description = mcp_defs::UPDATE_CART_ITEM_DESCRIPTION,
         output_schema = rmcp::handler::server::common::schema_for_output::<McpCart>()
     )]
     async fn update_cart_item(
@@ -801,7 +803,7 @@ impl StoreMcpHandler {
 
     /// Removes one cart line.
     #[tool(
-        description = "Remove one line from one of your carts, addressed by variant_id.",
+        description = mcp_defs::REMOVE_CART_ITEM_DESCRIPTION,
         output_schema = rmcp::handler::server::common::schema_for_output::<McpCart>()
     )]
     async fn remove_cart_item(
@@ -820,7 +822,7 @@ impl StoreMcpHandler {
 
     /// Mints the browser checkout handoff for a cart.
     #[tool(
-        description = "Get a single-use checkout link for one of your carts. A person opens it in a browser within 30 minutes; the cart becomes theirs and they complete checkout and payment on the store site. This tool never places an order or takes payment details.",
+        description = mcp_defs::GET_CHECKOUT_LINK_DESCRIPTION,
         output_schema = rmcp::handler::server::common::schema_for_output::<McpCheckoutLink>()
     )]
     async fn get_checkout_link(
@@ -849,7 +851,7 @@ impl StoreMcpHandler {
 
     /// Freezes a cart into an order draft for human approval.
     #[tool(
-        description = "Freeze one of your carts, with a delivery address, into an order draft and get its approval URL. Requires an API key with the orders:write scope. A person opens the URL, checks the frozen lines, address and totals, picks a payment method and pays in the browser — this tool never places the order itself, and any later change to the cart voids the draft. Repeating the call with the same idempotency_key returns the same draft, but the approval URL is shown only on the first, creating call.",
+        description = mcp_defs::CREATE_ORDER_DRAFT_DESCRIPTION,
         output_schema = rmcp::handler::server::common::schema_for_output::<McpOrderDraft>()
     )]
     async fn create_order_draft(
@@ -893,7 +895,7 @@ impl StoreMcpHandler {
 
     /// Reads one of the caller's order drafts.
     #[tool(
-        description = "Read one of your order drafts by id: its status (pending, consumed, expired or void), the frozen lines and totals from its snapshot, and the placed order's id once the draft is consumed. Requires an orders:read or orders:write key.",
+        description = mcp_defs::GET_ORDER_DRAFT_DESCRIPTION,
         output_schema = rmcp::handler::server::common::schema_for_output::<McpOrderDraft>()
     )]
     async fn get_order_draft(
@@ -926,7 +928,7 @@ impl StoreMcpHandler {
 
     /// Reads the status of an order a draft placed.
     #[tool(
-        description = "Read the status of an order one of your drafts placed: fulfilment status, grand total, and the shipment facts (carrier, tracking number, delivery time) once they exist. Orders placed any other way are not visible here. Requires an orders:read or orders:write key.",
+        description = mcp_defs::GET_ORDER_STATUS_DESCRIPTION,
         output_schema = rmcp::handler::server::common::schema_for_output::<McpOrderStatus>()
     )]
     async fn get_order_status(
@@ -974,14 +976,17 @@ fn draft_answer(
     approval_url: Option<String>,
 ) -> Result<Json<McpOrderDraft>, McpError> {
     let snapshot = mcp_order_draft_service::snapshot_of(row).ok_or_else(internal_error)?;
-    Ok(Json(McpOrderDraft::new(
-        row.id,
-        row.status.clone(),
-        row.order_id,
+    Ok(Json(McpOrderDraft {
+        draft_id: row.id,
+        status: row.status.clone(),
+        order_id: row.order_id,
         approval_url,
-        row.expires_at.to_rfc3339(),
-        &snapshot,
-    )))
+        expires_at: row.expires_at.to_rfc3339(),
+        lines: snapshot.lines.iter().map(McpDraftLine::from).collect(),
+        subtotal_yen: snapshot.subtotal_yen,
+        shipping_yen: snapshot.shipping_yen,
+        total_yen: snapshot.total_yen,
+    }))
 }
 
 /// Serialises a value as a JSON resource body.
@@ -997,7 +1002,7 @@ fn json_resource<T: serde::Serialize>(uri: &str, value: &T) -> ReadResourceRespo
 
 #[cfg(test)]
 mod tests {
-    use super::public_host;
+    use super::{StoreMcpHandler, public_host};
 
     #[test]
     fn public_host_extracts_the_authority() {
@@ -1025,5 +1030,23 @@ mod tests {
         assert_eq!(public_host("https://"), None);
         assert_eq!(public_host("https:///path-only"), None);
         assert_eq!(public_host(""), None);
+    }
+
+    /// The stdio adapter serves its listing from the
+    /// shared definitions in `mcp-defs`; this router builds
+    /// its own from the same types and description
+    /// constants. The two listings must agree exactly — a
+    /// schema or description change on either side fails
+    /// here until both are updated together.
+    #[test]
+    fn tool_definitions_match_the_shared_definitions() {
+        let mut http = StoreMcpHandler::tool_router().list_all();
+        let mut shared = mcp_defs::tools();
+        http.sort_by_key(|tool| tool.name.to_string());
+        shared.sort_by_key(|tool| tool.name.to_string());
+        assert_eq!(
+            serde_json::to_value(&http).expect("router tools serialise"),
+            serde_json::to_value(&shared).expect("shared tools serialise"),
+        );
     }
 }

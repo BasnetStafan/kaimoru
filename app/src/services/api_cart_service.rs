@@ -4,8 +4,6 @@
 //! totals and ownership as a person's, because it is the same
 //! cart: the one its owner later reviews in the browser.
 
-use schemars::JsonSchema;
-use serde::Serialize;
 use sqlx::PgPool;
 use tower_sessions::Session;
 
@@ -13,45 +11,7 @@ use crate::error::AppError;
 use crate::repositories::{product_repository, variant_repository};
 use crate::services::cart_service::{self, AddOutcome, CartOwner};
 
-/// One cart line as exposed to agents.
-#[derive(Serialize, JsonSchema)]
-pub struct ApiCartLine {
-    /// Variant id: the line's identity.
-    pub variant_id: i64,
-    /// Product id.
-    pub product_id: i64,
-    /// Product name.
-    pub name: String,
-    /// Combination label; empty for a plain product.
-    pub variant_label: String,
-    /// Units in the cart.
-    pub quantity: i32,
-    /// Unit price in integer yen, tax included.
-    pub unit_price_yen: i64,
-    /// Line total in integer yen.
-    pub line_total_yen: i64,
-    /// Whether the line still counts toward the totals (a
-    /// product taken off sale after carting does not).
-    pub purchasable: bool,
-}
-
-/// The caller's cart as exposed to agents. Totals follow the
-/// cart page's own rule: no payment method is chosen yet, so
-/// no cash-on-delivery fee is included, and a guest cart never
-/// carries a coupon discount.
-#[derive(Serialize, JsonSchema)]
-pub struct ApiCart {
-    /// The cart's lines, in cart order.
-    pub lines: Vec<ApiCartLine>,
-    /// Total units across all lines.
-    pub item_count: i64,
-    /// Sum of purchasable line totals, in yen.
-    pub subtotal_yen: i64,
-    /// Shipping fee in yen (free at the store's threshold).
-    pub shipping_yen: i64,
-    /// Grand total in yen: subtotal plus shipping.
-    pub total_yen: i64,
-}
+pub use mcp_defs::{ApiCart, ApiCartLine};
 
 /// Why an API cart add was refused, in the API's terms. The
 /// controller maps each to a status and a stable error code.

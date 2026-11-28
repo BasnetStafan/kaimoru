@@ -1,212 +1,22 @@
-//! The MCP tools' parameter types and their boundary
-//! validation. The tool handlers themselves live in the
-//! parent module, next to the `ServerHandler` impl the
-//! `#[tool_handler]` macro completes. Validation lives here,
-//! at the protocol boundary — a bad parameter is a protocol
-//! error naming the parameter, never a silent fallback.
+//! The MCP tools' boundary validation. The parameter and
+//! result types live in the shared `mcp-defs` crate — both
+//! transports serve them — and are re-exported here for
+//! the handlers in the parent module. Validation lives in
+//! this module, at the protocol boundary: a bad parameter
+//! is a protocol error naming the parameter, never a
+//! silent fallback.
 
-use rmcp::{ErrorData as McpError, schemars::JsonSchema};
-use serde::{Deserialize, Serialize};
+use rmcp::ErrorData as McpError;
 
-use crate::models::agent_approval::{ApprovalSnapshot, ApprovalSnapshotLine};
-use crate::services::api_cart_service::{ApiCart, ApiCartLine};
+use crate::models::agent_approval::ApprovalSnapshotLine;
 use crate::services::mcp_order_draft_service::DraftAddress;
 use crate::validation;
 
-/// Parameters for `search_products`.
-#[derive(Debug, Deserialize, JsonSchema)]
-pub(crate) struct SearchProductsParams {
-    /// Keyword text matched against product names and
-    /// categories (multi-term AND). Empty or omitted browses
-    /// the whole catalog.
-    pub query: Option<String>,
-    /// Category name, exactly as `list_categories` reports it.
-    pub category: Option<String>,
-    /// Lowest price to keep, in integer yen (inclusive).
-    pub min_price_yen: Option<i64>,
-    /// Highest price to keep, in integer yen (inclusive).
-    pub max_price_yen: Option<i64>,
-    /// One of: recommended, newest, price_asc, price_desc,
-    /// rating. Defaults to recommended.
-    pub sort: Option<String>,
-    /// Keep only products with stock on hand.
-    pub in_stock_only: Option<bool>,
-    /// 1-based page number. Defaults to 1.
-    pub page: Option<i64>,
-}
-
-/// Parameters for `get_product`.
-#[derive(Debug, Deserialize, JsonSchema)]
-pub(crate) struct GetProductParams {
-    /// The product id, from a search or list result.
-    pub id: i64,
-}
-
-/// Parameters for the cart tools that address one cart.
-#[derive(Debug, Deserialize, JsonSchema)]
-pub(crate) struct CartIdParams {
-    /// The cart handle, from `create_cart`.
-    pub cart_id: String,
-}
-
-/// Parameters for `add_cart_item`.
-#[derive(Debug, Deserialize, JsonSchema)]
-pub(crate) struct AddCartItemParams {
-    /// The cart handle, from `create_cart`.
-    pub cart_id: String,
-    /// The product id, from a search or list result.
-    pub product_id: i64,
-    /// The combination to add; required when the product
-    /// has combinations, omitted for a plain product.
-    pub variant_id: Option<i64>,
-    /// Units to add (1 to 999999).
-    pub quantity: i32,
-}
-
-/// Parameters for `update_cart_item`.
-#[derive(Debug, Deserialize, JsonSchema)]
-pub(crate) struct UpdateCartItemParams {
-    /// The cart handle, from `create_cart`.
-    pub cart_id: String,
-    /// The line's variant id.
-    pub variant_id: i64,
-    /// The line's new quantity (at least 1; stock-capped
-    /// by the cart service).
-    pub quantity: i32,
-}
-
-/// Parameters for `remove_cart_item`.
-#[derive(Debug, Deserialize, JsonSchema)]
-pub(crate) struct RemoveCartItemParams {
-    /// The cart handle, from `create_cart`.
-    pub cart_id: String,
-    /// The line's variant id.
-    pub variant_id: i64,
-}
-
-/// One MCP cart as the cart tools return it: the API cart's
-/// lines and totals, plus the handle they belong to. Totals
-/// come from the store's one totals implementation — the
-/// same numbers the cart page shows.
-#[derive(Serialize, JsonSchema)]
-pub(crate) struct McpCart {
-    /// The cart handle.
-    pub cart_id: String,
-    /// The cart's lines, in cart order.
-    pub lines: Vec<ApiCartLine>,
-    /// Total units across all lines.
-    pub item_count: i64,
-    /// Sum of purchasable line totals, in yen.
-    pub subtotal_yen: i64,
-    /// Shipping fee in yen (free at the store's threshold).
-    pub shipping_yen: i64,
-    /// Grand total in yen: subtotal plus shipping.
-    pub total_yen: i64,
-}
-
-impl McpCart {
-    /// Wraps an API cart view under its handle.
-    pub(crate) fn new(cart_id: String, cart: ApiCart) -> Self {
-        Self {
-            cart_id,
-            lines: cart.lines,
-            item_count: cart.item_count,
-            subtotal_yen: cart.subtotal_yen,
-            shipping_yen: cart.shipping_yen,
-            total_yen: cart.total_yen,
-        }
-    }
-}
-
-/// The browser handoff the `get_checkout_link` tool returns:
-/// a person opens the URL and the cart becomes theirs.
-#[derive(Serialize, JsonSchema)]
-pub(crate) struct McpCheckoutLink {
-    /// The cart handle the link hands off.
-    pub cart_id: String,
-    /// The single-use claim URL to open in a browser.
-    pub checkout_url: String,
-    /// When the link stops working, as an RFC 3339 timestamp.
-    pub expires_at: String,
-}
-
-/// Parameters for `create_order_draft`: the cart to
-/// freeze, the idempotency key that makes the create safe
-/// to retry, and the delivery address the draft orders
-/// to — field for field the guest checkout's delivery
-/// step, because the draft is placed as a guest order.
-// No Debug derive: the address is personal data, and a
-// parameter struct is one log line away from leaking it.
-#[derive(Deserialize, JsonSchema)]
-pub(crate) struct CreateOrderDraftParams {
-    /// The cart handle, from `create_cart`.
-    pub cart_id: String,
-    /// A caller-chosen key: repeating a create with the
-    /// same key returns the same draft instead of drafting
-    /// twice. At most 128 characters.
-    pub idempotency_key: String,
-    /// The delivery address the order will ship to.
-    pub address: DraftAddressParams,
-}
-
-/// The delivery address inside [`CreateOrderDraftParams`].
-#[derive(Deserialize, JsonSchema)]
-pub(crate) struct DraftAddressParams {
-    /// Contact email the order confirms to.
-    pub email: String,
-    /// Recipient family name.
-    pub family_name: String,
-    /// Recipient given name.
-    pub given_name: String,
-    /// Postal code (hyphens optional).
-    pub postal_code: String,
-    /// Prefecture.
-    pub prefecture: String,
-    /// City / ward.
-    pub city: String,
-    /// Street address.
-    pub address_line: String,
-    /// Building, when given.
-    pub building: Option<String>,
-    /// Phone number (hyphens optional).
-    pub phone: String,
-}
-
-/// Parameters for `get_order_draft`.
-#[derive(Debug, Deserialize, JsonSchema)]
-pub(crate) struct DraftIdParams {
-    /// The draft id, from `create_order_draft`.
-    pub draft_id: i64,
-}
-
-/// Parameters for `get_order_status`.
-#[derive(Debug, Deserialize, JsonSchema)]
-pub(crate) struct OrderIdParams {
-    /// The order id, from `get_order_draft` once its
-    /// draft is consumed.
-    pub order_id: i64,
-}
-
-/// One line of a draft, from its frozen snapshot: what
-/// the approval page listed at creation (or, after the
-/// pay click, in the final binding).
-#[derive(Serialize, JsonSchema)]
-pub(crate) struct McpDraftLine {
-    /// The line's variant id.
-    pub variant_id: i64,
-    /// The line's product id.
-    pub product_id: i64,
-    /// Product name at draft time.
-    pub name: String,
-    /// Combination label; empty for a plain product.
-    pub variant_label: String,
-    /// Unit price in integer yen, tax included.
-    pub unit_price_yen: i64,
-    /// Units in the draft.
-    pub quantity: i64,
-    /// Line total in integer yen.
-    pub line_total_yen: i64,
-}
+pub(crate) use mcp_defs::{
+    AddCartItemParams, CartIdParams, CreateOrderDraftParams, DraftIdParams, GetProductParams,
+    McpCart, McpCheckoutLink, McpDraftLine, McpOrderDraft, McpOrderStatus, OrderIdParams,
+    RemoveCartItemParams, SearchProductsParams, UpdateCartItemParams,
+};
 
 impl From<&ApprovalSnapshotLine> for McpDraftLine {
     fn from(line: &ApprovalSnapshotLine) -> Self {
@@ -220,81 +30,6 @@ impl From<&ApprovalSnapshotLine> for McpDraftLine {
             line_total_yen: line.line_total_yen,
         }
     }
-}
-
-/// One order draft as the order tools return it: the
-/// frozen lines and totals from its snapshot, its status,
-/// and — at creation only — the approval URL a person
-/// opens to approve and pay. The URL is never shown again
-/// (only its digest is stored), so `approval_url` is
-/// present exactly on the create answer.
-#[derive(Serialize, JsonSchema)]
-pub(crate) struct McpOrderDraft {
-    /// The draft's id.
-    pub draft_id: i64,
-    /// `pending`, `consumed`, `expired` or `void`.
-    pub status: String,
-    /// The placed order's id, once the draft is consumed.
-    pub order_id: Option<i64>,
-    /// The browser approval URL (create answer only).
-    pub approval_url: Option<String>,
-    /// When the approval window closes, RFC 3339.
-    pub expires_at: String,
-    /// The draft's lines, from its snapshot.
-    pub lines: Vec<McpDraftLine>,
-    /// Sum of line totals in yen.
-    pub subtotal_yen: i64,
-    /// Shipping fee in yen.
-    pub shipping_yen: i64,
-    /// Grand total in yen.
-    pub total_yen: i64,
-}
-
-impl McpOrderDraft {
-    /// Shapes a draft from its stored parts and snapshot.
-    pub(crate) fn new(
-        draft_id: i64,
-        status: String,
-        order_id: Option<i64>,
-        approval_url: Option<String>,
-        expires_at: String,
-        snapshot: &ApprovalSnapshot,
-    ) -> Self {
-        Self {
-            draft_id,
-            status,
-            order_id,
-            approval_url,
-            expires_at,
-            lines: snapshot.lines.iter().map(McpDraftLine::from).collect(),
-            subtotal_yen: snapshot.subtotal_yen,
-            shipping_yen: snapshot.shipping_yen,
-            total_yen: snapshot.total_yen,
-        }
-    }
-}
-
-/// One placed order's status as `get_order_status`
-/// returns it: fulfilment status and shipment facts
-/// only — never the buyer's details.
-#[derive(Serialize, JsonSchema)]
-pub(crate) struct McpOrderStatus {
-    /// The order's id.
-    pub order_id: i64,
-    /// Fulfilment status: `received`, `preparing`,
-    /// `shipped`, `delivered` or `cancelled`.
-    pub status: String,
-    /// Grand total in integer yen.
-    pub total_yen: i64,
-    /// When the order was placed, RFC 3339.
-    pub created_at: String,
-    /// When the order was delivered, RFC 3339, when it
-    /// has been.
-    pub delivered_at: Option<String>,
-    /// Delivery carrier code, once shipped with one named.
-    pub carrier: Option<String>,
-    /// Carrier tracking number, once shipped with one.
-    pub tracking_number: Option<String>,
 }
 
 /// The validated draft inputs the service call runs with.
@@ -481,6 +216,7 @@ pub(crate) fn validate_search(params: &SearchProductsParams) -> Result<ValidSear
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mcp_defs::DraftAddressParams;
 
     /// Builds params with only the fields a case sets.
     fn params() -> SearchProductsParams {

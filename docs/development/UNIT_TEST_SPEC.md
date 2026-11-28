@@ -26,8 +26,16 @@
 
 ## ケース一覧
 
-<!-- MAX_UT_ID: 365 -->
+<!-- MAX_UT_ID: 378 -->
 <!-- INVENTORY:BEGIN -->
+
+### app / api::mcp
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-366 | api::mcp::tests::public_host_extracts_the_authority | api::mcp | スキーム・パス・明示ポート・ユーザー情報を含むベース URL | いずれの場合もベアな authority（ホストまたはホスト:ポート）が返されること | Pass |
+| UT-367 | api::mcp::tests::public_host_rejects_urls_without_an_authority | api::mcp | authority を持たない URL（ベアなホスト、スキームのみ、スキーム＋パスのみ、空文字列） | いずれも None となり、MCP のホスト許可リストがフェイルクローズすること | Pass |
+| UT-368 | api::mcp::tests::tool_definitions_match_the_shared_definitions | api::mcp | HTTP ルーターのツール一覧と共有 mcp-defs の一覧の比較（シリアライズし名前順にソート） | JSON が完全一致し、名前・説明・入力スキーマ・出力スキーマがすべて一致すること | Pass |
 
 ### app / api::mcp::tools
 
@@ -174,13 +182,13 @@
 
 | 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
 |---|---|---|---|---|---|
-| UT-330 | models::post::tests::excerpt_derives_from_html_text | models::post | （未記入） | タグ付きの HTML 本文（保存済み抜粋なし） | タグが除去され、残りのテキストが返される |
-| UT-331 | models::post::tests::excerpt_derives_from_markdown_text | models::post | （未記入） | 見出し・リンク・強調マーカー付きの Markdown 本文（保存済み抜粋なし） | マーカーが除去され、読めるテキストが返される |
-| UT-346 | models::post::tests::excerpt_strips_embed_shortcodes | models::post | 埋め込みショートコードがある場合の抜粋導出と保存済み抜粋 | 整形済みの商品／カテゴリトークンを含む本文と保存済み抜粋（対照として不正なトークンも含む） | 整形済みトークンは両方の経路から除去され（空白は再圧縮される）、不正なトークンはリテラルテキストとして残る |
-| UT-332 | models::post::tests::excerpt_truncates_with_ellipsis | models::post | （未記入） | 120 文字を超える本文テキスト | ちょうど 120 文字＋省略記号になる |
-| UT-333 | models::post::tests::liveness_needs_published_and_arrived_date | models::post | （未記入） | 下書き／公開＋未来日／公開＋日付なし／公開＋過去日 | 最後のものだけが公開中になる |
-| UT-334 | models::post::tests::state_labels_follow_the_derived_state | models::post | （未記入） | 各派生状態の記事が1件ずつ | ラベルは 下書き / 予約中 / 公開中 |
-| UT-335 | models::post::tests::stored_excerpt_wins_over_derivation | models::post | （未記入） | 保存済み抜粋と異なる本文を持つ記事 | 保存済み抜粋がそのまま返される |
+| UT-330 | models::post::tests::excerpt_derives_from_html_text | models::post | （未記入） | タグ付きの HTML 本文（保存済み抜粋なし） | Pass |
+| UT-331 | models::post::tests::excerpt_derives_from_markdown_text | models::post | （未記入） | 見出し・リンク・強調マーカー付きの Markdown 本文（保存済み抜粋なし） | Pass |
+| UT-346 | models::post::tests::excerpt_strips_embed_shortcodes | models::post | 埋め込みショートコードがある場合の抜粋導出と保存済み抜粋 | 整形済みの商品／カテゴリトークンを含む本文と保存済み抜粋（対照として不正なトークンも含む） | Pass |
+| UT-332 | models::post::tests::excerpt_truncates_with_ellipsis | models::post | （未記入） | 120 文字を超える本文テキスト | Pass |
+| UT-333 | models::post::tests::liveness_needs_published_and_arrived_date | models::post | （未記入） | 下書き／公開＋未来日／公開＋日付なし／公開＋過去日 | Pass |
+| UT-334 | models::post::tests::state_labels_follow_the_derived_state | models::post | （未記入） | 各派生状態の記事が1件ずつ | Pass |
+| UT-335 | models::post::tests::stored_excerpt_wins_over_derivation | models::post | （未記入） | 保存済み抜粋と異なる本文を持つ記事 | Pass |
 
 ### app / models::return_request
 
@@ -267,10 +275,10 @@
 
 | 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
 |---|---|---|---|---|---|
-| UT-336 | services::admin::post_service::tests::published_at_input_round_trips_through_jst | services::admin::post_service | （未記入） | UTC の瞬間をフォーム値に描画して解析し戻す | 同じ瞬間が戻る |
-| UT-337 | services::admin::post_service::tests::published_at_parses_jst_wall_time | services::admin::post_service | （未記入） | 秒あり・秒なしの datetime-local 値を JST の壁時計として読む | 一致する UTC の瞬間（JST = UTC+9） |
-| UT-338 | services::admin::post_service::tests::resolve_published_at_rules | services::admin::post_service | （未記入） | 日付なし公開（新規・既存の記事）、入力した日付、下書き保存 | 日付なし公開のときだけ現在時刻が刻まれ、入力した日付が常に優先され、下書きは入力した日付か無しを保持する |
-| UT-339 | services::admin::post_service::tests::slug_rule_matches_the_pages_bounds | services::admin::post_service | （未記入） | 2・3・61 文字のスラッグ | 3..=60 の範囲だけが通る |
+| UT-336 | services::admin::post_service::tests::published_at_input_round_trips_through_jst | services::admin::post_service | （未記入） | UTC の瞬間をフォーム値に描画して解析し戻す | Pass |
+| UT-337 | services::admin::post_service::tests::published_at_parses_jst_wall_time | services::admin::post_service | （未記入） | 秒あり・秒なしの datetime-local 値を JST の壁時計として読む | Pass |
+| UT-338 | services::admin::post_service::tests::resolve_published_at_rules | services::admin::post_service | （未記入） | 日付なし公開（新規・既存の記事）、入力した日付、下書き保存 | Pass |
+| UT-339 | services::admin::post_service::tests::slug_rule_matches_the_pages_bounds | services::admin::post_service | （未記入） | 2・3・61 文字のスラッグ | Pass |
 
 ### app / services::admin::product_service
 
@@ -390,10 +398,10 @@
 
 | 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
 |---|---|---|---|---|---|
-| UT-340 | services::blog_service::tests::feed_escapes_operator_text | services::blog_service | （未記入） | &、<、> を含む記事タイトルと抜粋 | フィードはエスケープされた実体を持ち、生のマークアップは決して含まない |
-| UT-341 | services::blog_service::tests::feed_renders_channel_and_items_with_absolute_links | services::blog_service | （未記入） | 公開中の記事1件とベース URL | チャンネルのタイトル／リンクと、アイテムの絶対リンク・guid・RFC 822 の pubDate を持つ RSS 2.0 |
-| UT-347 | services::blog_service::tests::render_body_marks_embeds_and_caches_no_form | services::blog_service | レンダリングキャッシュの埋め込み契約（CMS_SPEC §8） | 商品ショートコードとカテゴリショートコードを1つずつ含む Markdown 記事 | レンダリング済み（キャッシュ済み）HTML は両トークンのプレースホルダコメントを持ち、生のトークンテキスト・フォームマークアップ・CSRF 形式のフィールドを含まず、2回目の読み取りでは同一のキャッシュ文字列が返される |
-| UT-342 | services::blog_service::tests::rfc822_label_is_gmt_english | services::blog_service | （未記入） | 既知の UTC の瞬間（2026-11-28 12:00 UTC） | "Sat, 28 Nov 2026 12:00:00 GMT" |
+| UT-340 | services::blog_service::tests::feed_escapes_operator_text | services::blog_service | （未記入） | &、<、> を含む記事タイトルと抜粋 | Pass |
+| UT-341 | services::blog_service::tests::feed_renders_channel_and_items_with_absolute_links | services::blog_service | （未記入） | 公開中の記事1件とベース URL | Pass |
+| UT-347 | services::blog_service::tests::render_body_marks_embeds_and_caches_no_form | services::blog_service | レンダリングキャッシュの埋め込み契約（CMS_SPEC §8） | 商品ショートコードとカテゴリショートコードを1つずつ含む Markdown 記事 | Pass |
+| UT-342 | services::blog_service::tests::rfc822_label_is_gmt_english | services::blog_service | （未記入） | 既知の UTC の瞬間（2026-11-28 12:00 UTC） | Pass |
 
 ### app / services::cart_service
 
@@ -737,6 +745,31 @@
 | UT-298 | config::tests::parses_each_unit | parse_ttl | 変換 | 45s、30m、8h、14d がそれぞれ秒数に変換されること | Pass |
 | UT-299 | config::tests::rejects_anything_else | parse_ttl | 異常系 | 空、単位なし、未知の単位、0、負数、小数はすべて None になること | Pass |
 
+### app / tools
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-369 | tools::tests::every_tool_carries_a_description_and_schemas | tools | 共有 mcp-defs 一覧の全ツール | 各ツールが空でない説明、オブジェクトをルートとする入力スキーマ、出力スキーマを持つこと | Pass |
+| UT-370 | tools::tests::listing_has_the_thirteen_tools_in_router_order | tools | 共有一覧のツール名（一覧順） | ちょうど 13 個のツール名が HTTP ルーターの宣言順に並ぶこと | Pass |
+
+### app / proxy
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-371 | proxy::tests::a_dead_upstream_answers_a_clean_error | proxy | 接続を拒否されるエンドポイント（解放直後のポート）へのツール呼び出しのプロキシ | 上流に到達できない旨のクリーンな内部エラーが返り、パニックもハングもしないこと | Pass |
+| UT-372 | proxy::tests::carries_an_error_through_with_its_code_and_message | proxy | 上流の JSON-RPC エラーボディ（コード -32001 とそのメッセージ） | エラーが同じコードとメッセージのまま伝搬すること | Pass |
+| UT-373 | proxy::tests::picks_the_matching_message_out_of_an_event_stream | proxy | 2 件のレスポンスメッセージ（id 7 と 9）を含むイベントストリームで id 9 を要求した場合 | id 9 のメッセージの結果が返されること | Pass |
+| UT-374 | proxy::tests::proxies_a_call_and_forwards_the_api_key | proxy | API キーを設定し、スタブ HTTP 上流へプロキシするツール呼び出し | 上流の結果が構造化コンテンツを保ったまま返り、スタブがツール名と転送された Bearer キーを受信すること | Pass |
+| UT-375 | proxy::tests::reads_a_json_result_with_its_structured_content | proxy | structuredContent を含む JSON 結果エンベロープ | 構造化コンテンツが保持されたまま結果が読み戻されること | Pass |
+| UT-376 | proxy::tests::rejects_a_body_that_is_not_json_rpc | proxy | JSON-RPC レスポンスでないボディ（HTML ページ、result も error も持たないエンベロープ） | 両方とも読み取り不能として拒否されること | Pass |
+
+### app / tests
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-377 | tests::an_empty_environment_defaults_to_the_live_store_anonymously | tests | 値を何も与えずに構築したアダプター設定 | エンドポイントが本番ストアをデフォルトとし、API キーは未設定になること | Pass |
+| UT-378 | tests::configured_values_win_and_blank_values_count_as_unset | tests | 設定済みの値、次に空白の値から構築したアダプター設定 | 設定済みの値が優先され、空白の値は未設定として扱われデフォルトに戻ること | Pass |
+
 ### app / models::variant
 
 | 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
@@ -756,4 +789,5 @@
 | 2026-11-22 | 301 | 296 | 1 | 要確認: listed=301 executed=297 |
 | 2026-11-28 | 324 | 324 | 0 | 全件実施 |
 | 2026-11-28 | 329 | 329 | 0 | 全件実施 |
+| 2026-11-28 | 378 | 378 | 0 | 全件実施 |
 <!-- EXECUTION:END -->

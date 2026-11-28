@@ -4,6 +4,8 @@ members = [
     "server",
     "app",
     "configuration",
+    "mcp-defs",
+    "mcp-stdio",
 ]
 
 [workspace.package]
