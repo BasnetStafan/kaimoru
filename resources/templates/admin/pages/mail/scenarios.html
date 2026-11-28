@@ -1,0 +1,38 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}ステップメール{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">ステップメール</h1>
+<p class="admin-lead">会員登録や配送完了をきっかけに、あらかじめ用意したメールを順番に自動送信する仕組みです。送信はメールマガジンへの同意がある会員に限ります。</p>
+
+<section class="admin-section" aria-label="シナリオ一覧">
+    {% if rows.is_empty() %}
+    <p class="admin-empty">シナリオはまだありません</p>
+    {% else %}
+    <div class="admin-table-scroll"><table class="admin-table">
+        <thead>
+            <tr><th>シナリオ</th><th>きっかけ</th><th>ステップ</th><th>送信（件）</th><th>同意なしで停止（件）</th><th>失敗（件）</th><th>状態</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td>{{ row.name }}<br><span class="admin-note">{{ row.description }}</span></td>
+                <td>{{ row.trigger_label }}</td>
+                <td>{{ row.steps_label }}</td>
+                <td>{{ row.sent }}</td>
+                <td>{{ row.skipped }}</td>
+                <td>{{ row.failed }}</td>
+                <td>{% if row.enabled %}有効{% else %}無効{% endif %}</td>
+                <td>
+                    <form method="post" action="/admin/mail/scenarios/{{ row.id }}/toggle"{% if row.enabled %} class="scenario-disable-form"{% endif %}>
+                        <button type="submit" class="secondary-button">{% if row.enabled %}無効にする{% else %}有効にする{% endif %}</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table></div>
+    {% endif %}
+</section>
+{% endblock %}

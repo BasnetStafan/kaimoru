@@ -1,0 +1,93 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}{{ name }}{% endblock %}
+
+{% block adminpart %}
+<p class="admin-back"><a href="/admin/mail/templates">← メールテンプレート一覧に戻る</a></p>
+<h1 class="admin-h1">{{ name }}</h1>
+
+<p class="admin-note">
+    このメールは、対象の操作が行われたときに自動で送信されます。送信のタイミングや宛先は変わらず、文面だけを編集できます。
+    {% if customized %}
+    <span class="admin-badge nt-custom">カスタマイズ済み</span> 最終更新：{{ updated_label.as_ref().unwrap() }}
+    {% else %}
+    <span class="admin-badge">初期値のまま</span> システムの初期値で送信されています。保存すると、この店舗専用の文面になります。
+    {% endif %}
+</p>
+
+{% if let Some(message) = error %}
+<p class="form-error" role="alert">{{ message }}</p>
+{% endif %}
+
+<form method="post" action="/admin/mail/notifications/{{ key }}/edit" class="admin-form" data-unsaved-guard>
+<input type="hidden" name="form_ticket" value="{{ form_ticket }}">
+    <label>件名 <span class="badge-required">必須</span>
+        <input type="text" name="subject" value="{{ subject }}" maxlength="200" aria-required="true">
+        {% if let Some(message) = subject_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <label>本文 <span class="badge-required">必須</span>
+        <textarea name="body" rows="18" class="mail-body-input" aria-required="true">{{ body }}</textarea>
+        {% if let Some(message) = body_error %}
+        <span class="field-error">{{ message }}</span>
+        {% endif %}
+    </label>
+    <p class="admin-note">本文中の <code>{order_number}</code> のようなタグは、送信時に実際の値へ置き換わります。下のタグ一覧のボタンを押すと、本文のカーソル位置にタグを挿入できます。自動生成ブロックは位置を変えることはできますが、削除はできません。</p>
+    <div class="admin-form-actions">
+        <p class="admin-unsaved-note" data-unsaved-note hidden>未保存の変更があります</p>
+        <button type="submit" name="intent" value="save" class="primary-button">保存する</button>
+        <button type="submit" name="intent" value="preview" class="secondary-button">プレビュー</button>
+        <a class="secondary-button" href="/admin/mail/templates">キャンセル</a>
+    </div>
+</form>
+
+{% if let Some(preview) = preview %}
+<section class="mail-preview" aria-label="プレビュー">
+    <h2 class="admin-h2">プレビュー（サンプルデータで表示）</h2>
+    <div class="mail-preview-card">
+        <p class="mail-preview-subject">件名：{{ preview.subject }}</p>
+        <pre class="mail-preview-body">{{ preview.body }}</pre>
+    </div>
+    <p class="admin-note">プレビューは保存されません。実際の送信では、タグがその注文やお客様の実際の値に置き換わります。</p>
+</section>
+{% endif %}
+
+<section class="admin-section" aria-label="テスト送信">
+    <h2 class="admin-h2">テスト送信</h2>
+    <p class="admin-note">保存済みの文面を、サンプルデータで組み立てて、ログイン中の管理者（自分）のメールアドレスに送信します。編集中の未保存の内容は含まれません。</p>
+    <form method="post" action="/admin/mail/notifications/{{ key }}/test-send" class="notification-test-form">
+        <button type="submit" class="secondary-button">テストメールを送信する</button>
+    </form>
+</section>
+
+<section class="admin-section" aria-label="使えるタグ">
+    <h2 class="admin-h2">使えるタグ</h2>
+    <p class="admin-note">タグは送信時に自動で実際の値に置き換わります。値がない場合は空欄になります（署名だけは、未設定のときに店舗名が入ります）。</p>
+    {% for group in groups %}
+    <div class="tag-group">
+        <h3 class="tag-group-title">{{ group.label }}</h3>
+        <ul class="tag-list">
+            {% for tag in group.tags %}
+            <li class="tag-item">
+                <button type="button" class="tag-chip" data-tag-insert="{{ tag.name }}">{<span>{{ tag.name }}</span>}</button>
+                <span class="tag-label">{{ tag.label }}</span>
+                {% if tag.block %}<span class="admin-badge">ブロック</span>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endfor %}
+</section>
+
+{% if customized %}
+<section class="admin-section" aria-label="初期値に戻す">
+    <h2 class="admin-h2">初期値に戻す</h2>
+    <p class="admin-note">保存した文面を破棄し、システムの初期値で送信されるように戻します。この操作は取り消せません。</p>
+    <form method="post" action="/admin/mail/notifications/{{ key }}/reset" class="notification-reset-form">
+    <input type="hidden" name="form_ticket" value="{{ form_ticket }}">
+        <button type="submit" class="secondary-button danger">初期値に戻す</button>
+    </form>
+</section>
+{% endif %}
+{% endblock %}

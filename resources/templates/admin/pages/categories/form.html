@@ -1,0 +1,80 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}{{ heading }}{% endblock %}
+
+{% block adminpart %}
+<p class="admin-back"><a href="/admin/categories">← カテゴリー一覧に戻る</a></p>
+<h1 class="admin-h1">{{ heading }}</h1>
+
+<p class="admin-note">「有効」のカテゴリーだけが店舗のナビゲーションと商品登録の選択肢に表示されます。商品が登録されているカテゴリーは削除できないため、使わなくなったカテゴリーは「有効」のチェックを外して無効化してください。</p>
+
+<form method="post" action="{{ action }}" class="admin-form" data-unsaved-guard>
+<input type="hidden" name="form_ticket" value="{{ form_ticket }}">
+    <section class="admin-form-section">
+        <h2 class="admin-form-section-title">基本情報</h2>
+        <label>カテゴリー名 <span class="badge-required">必須</span>
+            <input type="text" name="name" value="{{ name }}" maxlength="50" placeholder="カテゴリー名を入力してください" aria-required="true">
+            <span class="admin-field-help">店舗のナビゲーションや商品ページに表示される名前です。</span>
+            {% if let Some(message) = name_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>スラッグ <span class="badge-required">必須</span>
+            <input type="text" name="slug" value="{{ slug }}" maxlength="50" placeholder="スラッグを入力してください" aria-required="true">
+            <span class="admin-field-help">URLや連携に使う半角英小文字・数字・ハイフンの識別子です。</span>
+            {% if let Some(message) = slug_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>説明 <span class="badge-optional">任意</span>
+            <textarea name="description" rows="3" maxlength="500" placeholder="説明を入力してください">{{ description }}</textarea>
+            <span class="admin-field-help">管理画面でのみ表示される説明です。</span>
+            {% if let Some(message) = description_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+    </section>
+    <section class="admin-form-section">
+        <h2 class="admin-form-section-title">表示設定</h2>
+        <label>親カテゴリー <span class="badge-optional">任意</span>
+<div class="admin-combobox" data-combobox>
+            <div class="admin-combobox-control">
+                <input type="text" data-combobox-input placeholder="検索するか、一覧から選んでください" autocomplete="off">
+                <button type="button" class="admin-combobox-toggle" data-combobox-toggle aria-label="親カテゴリーの一覧を開く"><span aria-hidden="true">▾</span></button>
+            </div>
+            <select name="parent_id" data-combobox-select>
+                <option value="">なし（トップレベル）</option>
+                {% for option in parent_options %}
+                <option value="{{ option.id }}"{% if option.selected %} selected{% endif %}>{{ option.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+            <span class="admin-field-help">階層を作る場合に親カテゴリーを選びます。店舗のナビゲーションは表示順どおりに表示されます。</span>
+            {% if let Some(message) = parent_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>表示順 <span class="badge-optional">任意</span>
+            <input type="number" name="display_order" value="{{ display_order }}" min="0" max="9999" placeholder="0">
+            <span class="admin-field-help">店舗のカテゴリー表示の並び順です。小さい順に表示されます（空欄は0）。</span>
+            {% if let Some(message) = display_order_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label class="admin-check">
+            <input type="checkbox" name="is_active" value="1"{% if is_active %} checked{% endif %}> 有効（店舗に表示する）
+        </label>
+    </section>
+    <div class="admin-form-actions">
+        <p class="admin-unsaved-note" data-unsaved-note hidden>未保存の変更があります</p>
+        <button type="submit" class="primary-button">保存する</button>
+        <a class="secondary-button" href="/admin/categories">キャンセル</a>
+    </div>
+</form>
+
+{% if let Some(delete_url) = delete_action %}
+<form method="post" action="{{ delete_url }}" class="category-delete-form">
+    <button type="submit" class="secondary-button danger">このカテゴリーを削除する</button>
+</form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}管理者管理{% endblock %}
+
+{% block adminpart %}
+<div class="admin-page-head">
+    <h1 class="admin-h1">管理者管理</h1>
+    <a class="primary-button admin-new-button" href="/admin/admins/new">管理者を登録</a>
+</div>
+
+<p class="admin-note">オーナーはすべての権限を持ち、管理者の登録・変更ができます。スタッフには、使える範囲（権限）を割り当てます。無効にした管理者は、次回のアクセスから直ちにサインインできなくなります。</p>
+
+{% if rows.is_empty() %}
+<p class="admin-empty">管理者はまだいません</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>表示名</th><th>メールアドレス</th><th>役割</th><th>権限</th><th>状態</th><th>最終ログイン</th><th>作成日</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td><a href="/admin/admins/{{ row.id }}/edit">{{ row.display_name }}</a></td>
+            <td>{{ row.email }}</td>
+            <td>{{ row.role_label() }}</td>
+            <td>{{ row.permissions_label() }}</td>
+            <td>{{ row.status_label() }}</td>
+            <td>{{ row.last_login_display() }}</td>
+            <td>{{ row.created_display() }}</td>
+            <td><a href="/admin/admins/{{ row.id }}/edit">編集</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+{% endblock %}

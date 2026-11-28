@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>納品書 | {{ shop_name }}</title>
+<link rel="stylesheet" href="/static/css/admin.css?v={{ asset_fingerprint }}">
+</head>
+<body class="packing-body">
+{% for slip in slips %}
+<main class="packing-slip">
+    <header class="packing-head">
+        <h1>納品書</h1>
+        <p>発行日：{{ issued_label }}</p>
+    </header>
+
+    <p class="packing-recipient">{{ slip.recipient_label() }}</p>
+    <p class="packing-address">{{ slip.address_label() }}<br>電話番号：{{ slip.order.phone }}</p>
+
+    <p class="packing-order">注文番号：{{ slip.order.order_number() }}（注文日：{{ slip.order.placed_display() }}）</p>
+    <p class="packing-delivery">お届け希望：{{ slip.order.delivery_request_display() }}</p>
+
+    <table class="packing-lines">
+        <thead>
+            <tr><th>品目</th><th>単価（税込）</th><th>数量</th><th>金額</th></tr>
+        </thead>
+        <tbody>
+            {% for line in slip.lines %}
+            <tr>
+                <td>{{ line.product_name }}{% if !line.variant_label.is_empty() %}（{{ line.variant_label }}）{% endif %}</td>
+                <td>{{ line.formatted_unit_price() }}</td>
+                <td>{{ line.quantity }}</td>
+                <td>{{ line.formatted_line_total() }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <dl class="packing-totals">
+        <div><dt>商品合計</dt><dd>{{ slip.order.formatted_subtotal() }}</dd></div>
+        {% if slip.order.discount_yen > 0 %}
+        <div><dt>クーポン割引</dt><dd>−{{ slip.order.formatted_discount() }}</dd></div>
+        {% endif %}
+        <div><dt>送料</dt><dd>{{ slip.order.formatted_shipping() }}</dd></div>
+        {% if slip.order.cod_fee_yen > 0 %}
+        <div><dt>代引き手数料</dt><dd>{{ slip.order.formatted_cod_fee() }}</dd></div>
+        {% endif %}
+        <div class="packing-grand"><dt>合計</dt><dd>{{ slip.order.formatted_total() }}</dd></div>
+    </dl>
+
+    {% if !slip.tax_breakdown.is_empty() %}
+    <div class="packing-tax">
+        <p>税率ごとの内訳</p>
+        <dl class="packing-totals">
+            {% for row in slip.tax_breakdown %}
+            <div><dt>{{ row.tax_class_name }}（{{ row.rate_percent }}%）対象</dt><dd>{{ row.formatted_base() }}</dd></div>
+            <div><dt>うち消費税</dt><dd>{{ row.formatted_tax() }}</dd></div>
+            {% endfor %}
+            <div><dt>内消費税合計</dt><dd>{{ slip.formatted_tax_total() }}</dd></div>
+        </dl>
+    </div>
+    {% endif %}
+
+    {% if slip.order.cod_fee_yen > 0 %}
+    <p class="packing-cod">代金引換：お届け時に{{ slip.order.formatted_total() }}をご用意ください。</p>
+    {% endif %}
+
+    <footer class="packing-foot">
+        <p>{{ shop_name }}</p>
+        {% if !registration_number.is_empty() %}<p>登録番号：{{ registration_number }}</p>{% endif %}
+    </footer>
+</main>
+{% endfor %}
+
+<div class="packing-actions">
+    <button type="button" class="primary-button" data-print>印刷する</button>
+    <p>印刷画面ではこのボタンは表示されません。ブラウザの印刷機能（Ctrl+P / ⌘P）でも印刷できます。</p>
+</div>
+<script src="/static/js/packing_slips.js?v={{ asset_fingerprint }}"></script>
+</body>
+</html>

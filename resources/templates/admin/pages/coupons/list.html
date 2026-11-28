@@ -1,0 +1,38 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}クーポン{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">クーポン</h1>
+<p class="admin-note">発行済みクーポンの利用状況です。クーポン定義の作成・編集はクーポン定義のページで行えます。</p>
+
+{% if coupons.is_empty() %}
+<p class="admin-empty">発行済みのクーポンがありません</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>コード</th><th>内容</th><th>保有者</th><th>発行日</th><th>状態</th><th>使用した注文</th></tr>
+    </thead>
+    <tbody>
+        {% for row in coupons %}
+        <tr>
+            <td>{{ row.code }}</td>
+            <td>{{ row.description }}</td>
+            <td>{{ row.holder }}</td>
+            <td>{{ row.issued }}</td>
+            <td>{{ row.state_label }}</td>
+            <td>
+                {% if let Some(oid) = row.used_order_id %}
+                <a href="/admin/orders/{{ oid }}">{{ row.used_order_number }}</a>
+                {% else %}
+                -
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+
+{% include "admin/parts/pagination.html" %}
+{% endblock %}
