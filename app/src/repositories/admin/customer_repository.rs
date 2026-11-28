@@ -125,6 +125,9 @@ fn to_customer(r: AdminCustomerWithTotal) -> AdminCustomer {
         total_spent_yen: r.total_spent_yen,
         last_order_at: r.last_order_at,
         withdrawn_at: r.withdrawn_at,
+        r_score: None,
+        f_score: None,
+        m_score: None,
     }
 }
 

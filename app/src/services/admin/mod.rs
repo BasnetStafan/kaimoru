@@ -26,6 +26,7 @@ pub mod product_service;
 pub mod reconciliation_service;
 pub mod return_service;
 pub mod review_service;
+pub mod rfm_service;
 pub mod segment_service;
 pub mod shipment_service;
 pub mod shipping_csv_service;

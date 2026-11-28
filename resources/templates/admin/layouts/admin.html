@@ -54,6 +54,7 @@
             {% if layout.can_store %}
             <a href="/admin/customers"{% if nav == "customers" %} class="active" aria-current="page"{% endif %}>会員管理</a>
             <a href="/admin/segments"{% if nav == "segments" %} class="active" aria-current="page"{% endif %}>顧客セグメント</a>
+            <a href="/admin/rfm"{% if nav == "rfm" %} class="active" aria-current="page"{% endif %}>RFM分析</a>
             <a href="/admin/audit"{% if nav == "audit" %} class="active" aria-current="page"{% endif %}>監査ログ</a>
             {% endif %}
             {% if layout.can_settings %}

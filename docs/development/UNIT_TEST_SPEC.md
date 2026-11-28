@@ -26,7 +26,7 @@
 
 ## ケース一覧
 
-<!-- MAX_UT_ID: 311 -->
+<!-- MAX_UT_ID: 316 -->
 <!-- INVENTORY:BEGIN -->
 
 ### app / api::mcp::tools
@@ -239,6 +239,16 @@
 | UT-094 | services::admin::product_service::tests::stored_name_sanitises_a_traversal_filename | 保存ファイル名生成 | 異常系・パストラバーサル対策 | 「evil-」で始まり、/ も \ も含まないこと | Pass |
 | UT-095 | services::admin::product_service::tests::stored_name_uses_the_detected_extension_not_the_clients | 保存ファイル名生成 | 検証 | クライアント申告でなく検出した拡張子 .png が使われ、.jpeg を含まないこと | Pass |
 | UT-096 | services::admin::product_service::tests::upload_paths_must_stay_inside_the_uploads_store | is_upload_path | 異常系 | uploads 外、.. を含むパス、外部 URL、不存在ファイルはすべて false になること | Pass |
+
+### app / services::admin::rfm_service
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-312 | services::admin::rfm_service::tests::distinct_population_spreads_across_bands | services::admin::rfm_service | （未記入） | （未記入） | 未実施 |
+| UT-313 | services::admin::rfm_service::tests::named_segments_first_match | services::admin::rfm_service | （未記入） | （未記入） | 未実施 |
+| UT-314 | services::admin::rfm_service::tests::segment_counts_cover_every_member_once | services::admin::rfm_service | （未記入） | （未記入） | 未実施 |
+| UT-315 | services::admin::rfm_service::tests::single_member_is_band_five_everywhere | services::admin::rfm_service | （未記入） | （未記入） | 未実施 |
+| UT-316 | services::admin::rfm_service::tests::ties_always_share_a_band | services::admin::rfm_service | （未記入） | （未記入） | 未実施 |
 
 ### app / services::admin::shipping_csv_service
 

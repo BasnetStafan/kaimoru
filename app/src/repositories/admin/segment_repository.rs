@@ -8,6 +8,12 @@
 //! the member's newest non-cancelled order; a member with
 //! no orders never matches a last-order condition (there is
 //! no last order to compare).
+//!
+//! RFM band conditions (RFM spec section 6) compare the
+//! member's live quintile bands from the shared band CTE
+//! (rfm_repository::bands_cte — the same banding the RFM
+//! page shows); an unscored member (no counted orders)
+//! never matches a band condition.
 
 use sqlx::PgPool;
 
@@ -30,13 +36,20 @@ pub struct CustomerSegment {
     pub last_order_before: Option<chrono::NaiveDate>,
     /// Last order must be on/after this date, when set.
     pub last_order_after: Option<chrono::NaiveDate>,
+    /// Minimum RFM recency band (1-5), when set.
+    pub min_r_score: Option<i32>,
+    /// Minimum RFM frequency band (1-5), when set.
+    pub min_f_score: Option<i32>,
+    /// Minimum RFM monetary band (1-5), when set.
+    pub min_m_score: Option<i32>,
 }
 
 /// Every segment, newest first.
 pub async fn list_segments(pool: &PgPool) -> Result<Vec<CustomerSegment>, AppError> {
     sqlx::query_as::<_, CustomerSegment>(
         "SELECT id, name, tag, min_total_spend_yen, min_order_count, \
-                last_order_before, last_order_after \
+                last_order_before, last_order_after, \
+                min_r_score, min_f_score, min_m_score \
          FROM customer_segments ORDER BY id DESC",
     )
     .fetch_all(pool)
@@ -48,7 +61,8 @@ pub async fn list_segments(pool: &PgPool) -> Result<Vec<CustomerSegment>, AppErr
 pub async fn find_segment(pool: &PgPool, id: i64) -> Result<Option<CustomerSegment>, AppError> {
     sqlx::query_as::<_, CustomerSegment>(
         "SELECT id, name, tag, min_total_spend_yen, min_order_count, \
-                last_order_before, last_order_after \
+                last_order_before, last_order_after, \
+                min_r_score, min_f_score, min_m_score \
          FROM customer_segments WHERE id = $1",
     )
     .bind(id)
@@ -65,8 +79,9 @@ pub async fn insert_segment(
     sqlx::query_scalar(
         "INSERT INTO customer_segments \
             (name, tag, min_total_spend_yen, min_order_count, \
-             last_order_before, last_order_after) \
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+             last_order_before, last_order_after, \
+             min_r_score, min_f_score, min_m_score) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id",
     )
     .bind(&segment.name)
     .bind(&segment.tag)
@@ -74,6 +89,9 @@ pub async fn insert_segment(
     .bind(segment.min_order_count)
     .bind(segment.last_order_before)
     .bind(segment.last_order_after)
+    .bind(segment.min_r_score)
+    .bind(segment.min_f_score)
+    .bind(segment.min_m_score)
     .fetch_one(&mut **tx)
     .await
     .map_err(|e| AppError::db("insert segment", e))
@@ -95,7 +113,9 @@ pub async fn delete_segment(
 /// The membership predicate, shared by the count and the id
 /// list so the preview and the campaign can never disagree.
 /// Placeholders: $1 tag, $2 min spend, $3 min orders,
-/// $4 last-order-before, $5 last-order-after.
+/// $4 last-order-before, $5 last-order-after, $6 min R band,
+/// $7 min F band, $8 min M band. The band clauses read the
+/// `rb` alias: callers join the band CTE as `rfm_bands rb`.
 const MATCH_WHERE: &str = "u.withdrawn_at IS NULL \
     AND ($1 = '' OR EXISTS (SELECT 1 FROM customer_tags t \
          WHERE t.user_id = u.id AND t.tag = $1)) \
@@ -106,7 +126,10 @@ const MATCH_WHERE: &str = "u.withdrawn_at IS NULL \
     AND ($4::date IS NULL OR (SELECT (MAX(o.created_at) AT TIME ZONE 'Asia/Tokyo')::date \
          FROM orders o WHERE o.user_id = u.id AND o.status <> 'cancelled') <= $4) \
     AND ($5::date IS NULL OR (SELECT (MAX(o.created_at) AT TIME ZONE 'Asia/Tokyo')::date \
-         FROM orders o WHERE o.user_id = u.id AND o.status <> 'cancelled') >= $5)";
+         FROM orders o WHERE o.user_id = u.id AND o.status <> 'cancelled') >= $5) \
+    AND ($6::int IS NULL OR rb.r_band >= $6) \
+    AND ($7::int IS NULL OR rb.f_band >= $7) \
+    AND ($8::int IS NULL OR rb.m_band >= $8)";
 
 /// [`MATCH_WHERE`] in join form: the segment is the row
 /// `s` of an outer query instead of bound parameters, so
@@ -123,7 +146,10 @@ const MATCH_ON: &str = "u.withdrawn_at IS NULL \
     AND (s.last_order_before IS NULL OR (SELECT (MAX(o.created_at) AT TIME ZONE 'Asia/Tokyo')::date \
          FROM orders o WHERE o.user_id = u.id AND o.status <> 'cancelled') <= s.last_order_before) \
     AND (s.last_order_after IS NULL OR (SELECT (MAX(o.created_at) AT TIME ZONE 'Asia/Tokyo')::date \
-         FROM orders o WHERE o.user_id = u.id AND o.status <> 'cancelled') >= s.last_order_after)";
+         FROM orders o WHERE o.user_id = u.id AND o.status <> 'cancelled') >= s.last_order_after) \
+    AND (s.min_r_score IS NULL OR rb.r_band >= s.min_r_score) \
+    AND (s.min_f_score IS NULL OR rb.f_band >= s.min_f_score) \
+    AND (s.min_m_score IS NULL OR rb.m_band >= s.min_m_score)";
 
 /// Binds a segment's conditions onto a query in
 /// [`MATCH_WHERE`] order.
@@ -134,12 +160,19 @@ macro_rules! bind_segment {
             .bind($s.min_order_count)
             .bind($s.last_order_before)
             .bind($s.last_order_after)
+            .bind($s.min_r_score)
+            .bind($s.min_f_score)
+            .bind($s.min_m_score)
     };
 }
 
 /// How many members currently match.
 pub async fn count_matching(pool: &PgPool, segment: &CustomerSegment) -> Result<i64, AppError> {
-    let sql = format!("SELECT COUNT(*) FROM users u WHERE {MATCH_WHERE}");
+    let sql = format!(
+        "{} SELECT COUNT(*) FROM users u \
+         LEFT JOIN rfm_bands rb ON rb.user_id = u.id WHERE {MATCH_WHERE}",
+        crate::repositories::admin::rfm_repository::bands_cte()
+    );
     bind_segment!(sqlx::query_scalar::<_, i64>(&sql), segment)
         .fetch_one(pool)
         .await
@@ -163,11 +196,14 @@ struct SegmentCountRow {
 /// cost one round trip per saved segment.
 pub async fn list_with_counts(pool: &PgPool) -> Result<Vec<(CustomerSegment, i64)>, AppError> {
     let sql = format!(
-        "SELECT s.id, s.name, s.tag, s.min_total_spend_yen, s.min_order_count, \
-                s.last_order_before, s.last_order_after, COUNT(u.id) AS member_count \
+        "{} SELECT s.id, s.name, s.tag, s.min_total_spend_yen, s.min_order_count, \
+                s.last_order_before, s.last_order_after, \
+                s.min_r_score, s.min_f_score, s.min_m_score, \
+                COUNT(u.id) AS member_count \
          FROM customer_segments s \
-         LEFT JOIN users u ON {MATCH_ON} \
-         GROUP BY s.id ORDER BY s.id DESC"
+         LEFT JOIN (users u LEFT JOIN rfm_bands rb ON rb.user_id = u.id) ON {MATCH_ON} \
+         GROUP BY s.id ORDER BY s.id DESC",
+        crate::repositories::admin::rfm_repository::bands_cte()
     );
     let rows = sqlx::query_as::<_, SegmentCountRow>(&sql)
         .fetch_all(pool)
@@ -185,7 +221,11 @@ pub async fn matching_member_ids(
     pool: &PgPool,
     segment: &CustomerSegment,
 ) -> Result<Vec<i64>, AppError> {
-    let sql = format!("SELECT u.id FROM users u WHERE {MATCH_WHERE} ORDER BY u.id");
+    let sql = format!(
+        "{} SELECT u.id FROM users u \
+         LEFT JOIN rfm_bands rb ON rb.user_id = u.id WHERE {MATCH_WHERE} ORDER BY u.id",
+        crate::repositories::admin::rfm_repository::bands_cte()
+    );
     bind_segment!(sqlx::query_scalar::<_, i64>(&sql), segment)
         .fetch_all(pool)
         .await

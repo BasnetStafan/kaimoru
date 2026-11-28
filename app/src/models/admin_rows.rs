@@ -281,6 +281,14 @@ pub struct AdminCustomer {
     /// is then an anonymised tombstone (Account Deletion
     /// spec D7's marker).
     pub withdrawn_at: Option<DateTime<Utc>>,
+    /// RFM recency band (1-5), when the member is scored
+    /// (has a counted order). Filled by the service from
+    /// the live band map, never selected by the list query.
+    pub r_score: Option<i32>,
+    /// RFM frequency band (1-5), when scored.
+    pub f_score: Option<i32>,
+    /// RFM monetary band (1-5), when scored.
+    pub m_score: Option<i32>,
 }
 
 /// One member's full profile for the admin detail screen.
@@ -326,6 +334,15 @@ pub struct AdminCustomerDetail {
 }
 
 impl AdminCustomer {
+    /// The RFM bands as one label, `R4 F5 M3`, or `—`
+    /// when the member is unscored.
+    pub fn rfm_label(&self) -> String {
+        match (self.r_score, self.f_score, self.m_score) {
+            (Some(r), Some(f), Some(m)) => format!("R{r} F{f} M{m}"),
+            _ => "—".to_string(),
+        }
+    }
+
     /// The purchase total formatted for display.
     pub fn total_spent_display(&self) -> String {
         crate::pricing::display_price(self.total_spent_yen)

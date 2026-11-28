@@ -30,6 +30,7 @@ pub mod payments;
 pub mod products;
 pub mod returns;
 pub mod reviews;
+pub mod rfm;
 pub mod segments;
 pub mod shop_settings;
 pub mod tags;
@@ -67,6 +68,7 @@ pub fn router() -> Router<PgPool> {
         .merge(reviews::router())
         .merge(returns::router())
         .merge(segments::router())
+        .merge(rfm::router())
         .merge(notices::router())
         .merge(categories::router())
         .merge(content_pages::router())

@@ -23,6 +23,12 @@ pub struct SegmentInput {
     pub last_order_before: String,
     /// Last-order-on-or-after date text.
     pub last_order_after: String,
+    /// Min RFM recency band text (1-5).
+    pub min_r_score: String,
+    /// Min RFM frequency band text (1-5).
+    pub min_f_score: String,
+    /// Min RFM monetary band text (1-5).
+    pub min_m_score: String,
 }
 
 /// Validates the form into a definition. Every problem
@@ -78,6 +84,22 @@ pub fn validate(input: &SegmentInput) -> Result<CustomerSegment, Vec<(String, St
             }
         }
     };
+    let parse_band = |raw: &str, field: &str, errors: &mut Vec<(String, String)>| {
+        let raw = raw.trim();
+        if raw.is_empty() {
+            return None;
+        }
+        match raw.parse::<i32>() {
+            Ok(v) if (1..=5).contains(&v) => Some(v),
+            _ => {
+                errors.push((
+                    field.into(),
+                    "RFMスコアは1から5の整数で入力してください。".into(),
+                ));
+                None
+            }
+        }
+    };
     let min_total_spend_yen = parse_yen(
         &input.min_total_spend_yen,
         "min_total_spend_yen",
@@ -86,6 +108,9 @@ pub fn validate(input: &SegmentInput) -> Result<CustomerSegment, Vec<(String, St
     let min_order_count = parse_count(&input.min_order_count, "min_order_count", &mut errors);
     let last_order_before = parse_date(&input.last_order_before, "last_order_before", &mut errors);
     let last_order_after = parse_date(&input.last_order_after, "last_order_after", &mut errors);
+    let min_r_score = parse_band(&input.min_r_score, "min_r_score", &mut errors);
+    let min_f_score = parse_band(&input.min_f_score, "min_f_score", &mut errors);
+    let min_m_score = parse_band(&input.min_m_score, "min_m_score", &mut errors);
     if let (Some(before), Some(after)) = (last_order_before, last_order_after)
         && before < after
     {
@@ -103,6 +128,9 @@ pub fn validate(input: &SegmentInput) -> Result<CustomerSegment, Vec<(String, St
             min_order_count,
             last_order_before,
             last_order_after,
+            min_r_score,
+            min_f_score,
+            min_m_score,
         })
     } else {
         Err(errors)

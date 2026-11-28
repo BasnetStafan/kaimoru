@@ -38,6 +38,12 @@ pub struct SegmentListView {
     pub form_before: String,
     /// Form value echo: last order after.
     pub form_after: String,
+    /// Form value echo: min R band.
+    pub form_r: String,
+    /// Form value echo: min F band.
+    pub form_f: String,
+    /// Form value echo: min M band.
+    pub form_m: String,
     /// Validation errors, already joined for display.
     pub form_error: String,
 }
@@ -60,6 +66,15 @@ impl SegmentRow {
         }
         if let Some(d) = segment.last_order_after {
             parts.push(format!("最終注文 {} 以降", d.format("%Y/%m/%d")));
+        }
+        if let Some(v) = segment.min_r_score {
+            parts.push(format!("R {v}以上"));
+        }
+        if let Some(v) = segment.min_f_score {
+            parts.push(format!("F {v}以上"));
+        }
+        if let Some(v) = segment.min_m_score {
+            parts.push(format!("M {v}以上"));
         }
         let conditions_label = if parts.is_empty() {
             "すべて（条件なし）".to_string()

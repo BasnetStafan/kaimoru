@@ -69,12 +69,13 @@ fn gate_for(path: &str) -> Gate {
             return Gate::Any;
         }
     }
-    const TABLE: [(&str, Gate); 18] = [
+    const TABLE: [(&str, Gate); 19] = [
         ("/admin/admins", Gate::OwnerOnly),
         ("/admin/orders", Gate::Area(AREA_SALES)),
         ("/admin/analytics", Gate::Area(AREA_SALES)),
         ("/admin/returns", Gate::Area(AREA_SALES)),
         ("/admin/segments", Gate::Area(AREA_STORE)),
+        ("/admin/rfm", Gate::Area(AREA_STORE)),
         ("/admin/payments", Gate::Area(AREA_SALES)),
         ("/admin/inquiries", Gate::Area(AREA_SALES)),
         ("/admin/reviews", Gate::Area(AREA_SALES)),

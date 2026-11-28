@@ -31,7 +31,7 @@ async fn build_view(
     pool: &PgPool,
     admin: &crate::models::AdminIdentity,
     session: &Session,
-    form: (&str, &str, &str, &str, &str, &str),
+    form: (&str, &str, &str, &str, &str, &str, &str, &str, &str),
     form_error: String,
 ) -> Result<SegmentListView, crate::error::AppError> {
     let rows = segment_service::list_with_counts(pool)
@@ -49,6 +49,9 @@ async fn build_view(
         form_min_orders: form.3.to_string(),
         form_before: form.4.to_string(),
         form_after: form.5.to_string(),
+        form_r: form.6.to_string(),
+        form_f: form.7.to_string(),
+        form_m: form.8.to_string(),
         form_error,
     })
 }
@@ -63,7 +66,7 @@ pub async fn list(
         &pool,
         &admin,
         &session,
-        ("", "", "", "", "", ""),
+        ("", "", "", "", "", "", "", "", ""),
         String::new(),
     )
     .await
@@ -95,6 +98,9 @@ pub async fn create(
         min_order_count: get("min_order_count"),
         last_order_before: get("last_order_before"),
         last_order_after: get("last_order_after"),
+        min_r_score: get("min_r_score"),
+        min_f_score: get("min_f_score"),
+        min_m_score: get("min_m_score"),
     };
     let echo = (
         input.name.clone(),
@@ -103,6 +109,9 @@ pub async fn create(
         input.min_order_count.clone(),
         input.last_order_before.clone(),
         input.last_order_after.clone(),
+        input.min_r_score.clone(),
+        input.min_f_score.clone(),
+        input.min_m_score.clone(),
     );
     match segment_service::validate(&input) {
         Ok(segment) => match segment_service::create_segment(&pool, admin.id, &segment).await {
@@ -122,7 +131,9 @@ pub async fn create(
                 &pool,
                 &admin,
                 &session,
-                (&echo.0, &echo.1, &echo.2, &echo.3, &echo.4, &echo.5),
+                (
+                    &echo.0, &echo.1, &echo.2, &echo.3, &echo.4, &echo.5, &echo.6, &echo.7, &echo.8,
+                ),
                 joined,
             )
             .await

@@ -25,7 +25,20 @@ pub async fn list_customers(
     limit: i64,
     offset: i64,
 ) -> Result<(Vec<AdminCustomer>, i64), AppError> {
-    customer_repository::list_customers(pool, query, limit, offset).await
+    let (mut rows, total) = customer_repository::list_customers(pool, query, limit, offset).await?;
+    // The RFM bands ride along from the live band map: the
+    // list query pages over every member, scored or not, so
+    // the bands (a population-relative computation) arrive
+    // as a lookup, not a join.
+    let bands = crate::repositories::admin::rfm_repository::band_map(pool).await?;
+    for row in &mut rows {
+        if let Some(&(r, f, m)) = bands.get(&row.id) {
+            row.r_score = Some(r);
+            row.f_score = Some(f);
+            row.m_score = Some(m);
+        }
+    }
+    Ok((rows, total))
 }
 
 /// Returns one member's full profile for the detail screen.

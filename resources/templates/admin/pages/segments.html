@@ -4,7 +4,7 @@
 
 {% block adminpart %}
 <h1 class="admin-h1">顧客セグメント</h1>
-<p class="admin-note">条件に合う会員をまとめた定義です。メール配信（メールキャンペーン）の宛先に使えます。条件はすべて満たす会員が対象で、空欄の条件は絞り込みません。累計購入額と注文回数はキャンセル済み注文を除いて数えます。</p>
+<p class="admin-note">条件に合う会員をまとめた定義です。メール配信（メールキャンペーン）の宛先に使えます。条件はすべて満たす会員が対象で、空欄の条件は絞り込みません。累計購入額と注文回数はキャンセル済み注文を除いて数えます。RFMスコア（1〜5）はRFM分析のスコアで、注文のない会員はスコア条件に該当しません。</p>
 
 {% if !form_error.is_empty() %}<p class="admin-error">{{ form_error }}</p>{% endif %}
 <form method="post" action="/admin/segments" class="admin-form">
@@ -25,6 +25,15 @@
     </label>
     <label>最終注文日（この日以降）
         <input type="date" name="last_order_after" value="{{ form_after }}">
+    </label>
+    <label>Rスコアの下限（1〜5）
+        <input type="text" name="min_r_score" value="{{ form_r }}" inputmode="numeric" placeholder="例：4">
+    </label>
+    <label>Fスコアの下限（1〜5）
+        <input type="text" name="min_f_score" value="{{ form_f }}" inputmode="numeric" placeholder="例：4">
+    </label>
+    <label>Mスコアの下限（1〜5）
+        <input type="text" name="min_m_score" value="{{ form_m }}" inputmode="numeric" placeholder="例：4">
     </label>
     <button type="submit" class="primary-button">セグメントを作成</button>
 </form>

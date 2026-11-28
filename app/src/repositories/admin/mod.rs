@@ -13,6 +13,7 @@ pub mod order_repository;
 pub mod product_repository;
 pub mod return_repository;
 pub mod review_repository;
+pub mod rfm_repository;
 pub mod segment_repository;
 pub mod shipment_repository;
 pub mod totp_repository;
