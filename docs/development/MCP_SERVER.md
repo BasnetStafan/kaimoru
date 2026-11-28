@@ -381,10 +381,14 @@ then point the client at `http://127.0.0.1:3000/mcp`
 `"url": "http://127.0.0.1:3000/mcp"`).
 
 **Allowed hosts:** the transport refuses requests whose
-`Host` header is not on its allowlist (loopback by default)
-as a DNS-rebinding guard. A public deployment must extend
-the allowlist to the store's own host before enabling the
-flag there — until then `/mcp` answers 403 to non-loopback
+`Host` header is not on its allowlist as a DNS-rebinding
+guard. The allowlist is the loopback defaults (`localhost`,
+`127.0.0.1`, `::1`) plus the host named by `PUBLIC_BASE_URL`
+(bare, and with the scheme's default port spelled out),
+read when the service is built. A public deployment
+therefore needs only a correct `PUBLIC_BASE_URL` before
+enabling the flag; an unset or unparseable value fails
+closed and `/mcp` keeps answering 403 to non-loopback
 hosts even with the flag on.
 
 ## Security posture

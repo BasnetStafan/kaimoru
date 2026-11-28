@@ -303,8 +303,68 @@ pub fn service(pool: PgPool) -> StreamableHttpService<StoreMcpHandler, NeverSess
         Arc::new(NeverSessionManager::default()),
         StreamableHttpServerConfig::default()
             .with_legacy_session_mode(false)
-            .with_json_response(true),
+            .with_json_response(true)
+            .with_allowed_hosts(allowed_hosts()),
     )
+}
+
+/// The `Host` values the MCP transport accepts: the SDK's
+/// loopback defaults (local clients and SSH-tunnelled ones)
+/// plus the store's public host when `PUBLIC_BASE_URL` names
+/// one — a public deployment stays unreachable until its
+/// own host is on this list (the transport's DNS-rebinding
+/// guard). Fails closed: an unset or unparseable public base
+/// URL leaves the loopback-only list.
+fn allowed_hosts() -> Vec<String> {
+    let mut hosts = vec![
+        "localhost".to_string(),
+        "127.0.0.1".to_string(),
+        "::1".to_string(),
+    ];
+    if let Some(base) = crate::config::CONFIG.public_base_url() {
+        match public_host(&base) {
+            Some(host) => {
+                // A client may spell the scheme's default port
+                // out in its `Host` header; accept both forms.
+                let with_port = if host.contains(':') {
+                    None
+                } else if base.starts_with("https://") {
+                    Some(format!("{host}:443"))
+                } else {
+                    Some(format!("{host}:80"))
+                };
+                if !hosts.contains(&host) {
+                    hosts.push(host);
+                }
+                if let Some(with_port) = with_port
+                    && !hosts.contains(&with_port)
+                {
+                    hosts.push(with_port);
+                }
+            }
+            None => {
+                tracing::warn!(
+                    "PUBLIC_BASE_URL has no readable host; \
+                     the MCP host allowlist stays loopback-only"
+                );
+            }
+        }
+    }
+    hosts
+}
+
+/// Extracts the authority (`host` or `host:port`) from a
+/// base URL, dropping any scheme, userinfo and path.
+/// Returns `None` when no authority is present.
+fn public_host(base: &str) -> Option<String> {
+    let after_scheme = base.split("://").nth(1)?;
+    let authority = after_scheme.split('/').next()?;
+    let authority = authority.rsplit('@').next()?;
+    if authority.is_empty() {
+        None
+    } else {
+        Some(authority.to_string())
+    }
 }
 
 /// The one answer a store-side failure gives a client.
@@ -933,4 +993,37 @@ fn json_resource<T: serde::Serialize>(uri: &str, value: &T) -> ReadResourceRespo
         meta: None,
     }])
     .into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::public_host;
+
+    #[test]
+    fn public_host_extracts_the_authority() {
+        assert_eq!(
+            public_host("https://shop.example.jp"),
+            Some("shop.example.jp".to_string())
+        );
+        assert_eq!(
+            public_host("https://shop.example.jp/some/path"),
+            Some("shop.example.jp".to_string())
+        );
+        assert_eq!(
+            public_host("http://127.0.0.1:3000"),
+            Some("127.0.0.1:3000".to_string())
+        );
+        assert_eq!(
+            public_host("https://user@shop.example.jp"),
+            Some("shop.example.jp".to_string())
+        );
+    }
+
+    #[test]
+    fn public_host_rejects_urls_without_an_authority() {
+        assert_eq!(public_host("shop.example.jp"), None);
+        assert_eq!(public_host("https://"), None);
+        assert_eq!(public_host("https:///path-only"), None);
+        assert_eq!(public_host(""), None);
+    }
 }
