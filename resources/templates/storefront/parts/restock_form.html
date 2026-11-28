@@ -1,0 +1,31 @@
+<div class="restock-card" id="restock-card">
+    <h3>再入荷のお知らせ</h3>
+    {% if restock.done %}
+        <p>登録しました。再入荷しましたら、{{ restock.email }} 宛にメールでお知らせします。</p>
+    {% else if restock.already %}
+        <p>この商品はすでに再入荷通知に登録されています。再入荷しましたら、{{ restock.email }} 宛にメールでお知らせします。</p>
+    {% else %}
+        <p>売り切れ中の商品が再入荷したら、メールでお知らせします（一度だけの通知です）。</p>
+        <form hx-post="/products/{{ restock.product_id }}/restock" hx-target="#restock-card" hx-swap="outerHTML" class="restock-form">
+            {% if let Some(single) = restock.single_variant_id %}
+                <input type="hidden" name="variant_id" value="{{ single }}">
+            {% else %}
+                <label>
+                    種類 <span class="badge-required">必須</span>
+                    <select name="variant_id" aria-required="true">
+                        {% for option in restock.options %}
+                            <option value="{{ option.variant_id }}">{{ option.label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            {% endif %}
+            <label>
+                メールアドレス <span class="badge-required">必須</span>
+                <input type="email" name="email" value="{{ restock.email }}" aria-required="true" autocomplete="email">
+                {% if let Some(e) = restock.errors.email %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+            {% if let Some(e) = restock.errors.form %}<p class="form-error" role="alert">{{ e }}</p>{% endif %}
+            <button type="submit" class="secondary-button">再入荷を通知する</button>
+        </form>
+    {% endif %}
+</div>

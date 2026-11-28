@@ -1,0 +1,32 @@
+{# Quick-add modal fragment (spec section 6, D6): the card's
+   選択する button loads this into the layout's modal shell.
+   Product summary, the shared variation picker and the same
+   add-to-cart form the detail page posts. #}
+<div class="quick-add-content" data-buy-area>
+    <img class="quick-add-image" src="{{ product.thumb_image_path() }}" data-fallback-src="{{ product.image_path }}" alt="{{ product.card_image_alt() }}" loading="lazy" decoding="async">
+    <div class="quick-add-main">
+        <h3 class="quick-add-name">{{ product.name }}</h3>
+        <p class="price">{% if product.sale_active() %}<span class="regular-price">{{ product.formatted_regular_price() }}</span> {% endif %}<span data-price-display>{{ product.formatted_price() }}</span><span class="tax-note">(税込)</span></p>
+        {% if let Some(note) = product.tax_class_note() %}<p class="card-tax-note">{{ note }}</p>{% endif %}
+        <p class="stock-label {% if product.track_stock && !product.allow_backorder && label_stock() == 0 %}out{% else if product.track_stock && !product.is_preorder && label_stock() > 0 && label_stock() <= product.low_stock_threshold() %}low{% endif %}" data-variant-stock-label>
+            <span class="stock-dot"></span><span data-variant-stock-text>{{ stock_label() }}</span>
+        </p>
+        {% include "storefront/parts/variant_picker.html" %}
+        {% if product.stock == 0 %}
+            <button type="button" class="add-cart-button" disabled>売り切れ</button>
+        {% else %}
+            <form hx-post="/cart/items" hx-swap="none" class="detail-add-form" data-quick-add-form>
+                <input type="hidden" name="product_id" value="{{ product.id }}">
+                {% if picker.has_picker() %}
+                    <input type="hidden" name="variant_id" value="{{ picker.initial_variant_id() }}" data-variant-input>
+                {% endif %}
+                <div class="qty-stepper">
+                    <button type="button" class="stepper-button" data-step="-1">−</button>
+                    <input type="number" name="quantity" value="1" min="1" max="{% if picker.has_picker() %}{{ picker.initial_stock() }}{% else %}{{ product.stock }}{% endif %}" class="qty-input">
+                    <button type="button" class="stepper-button" data-step="1">＋</button>
+                </div>
+                <button type="submit" class="add-cart-button" data-add-button>カートに入れる</button>
+            </form>
+        {% endif %}
+    </div>
+</div>

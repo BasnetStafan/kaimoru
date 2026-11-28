@@ -1,0 +1,113 @@
+{% if let Some(notice) = main.notice %}
+    <p class="cart-notice" role="status">{{ notice }}</p>
+{% endif %}
+{% if main.lines.is_empty() %}
+    <div class="cart-empty empty-state">
+        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/><path d="M2 3h3l2.6 12.2a1.5 1.5 0 0 0 1.5 1.2h7.9a1.5 1.5 0 0 0 1.5-1.2L20.5 7H6"/></svg>
+        <p class="cart-empty-title empty-state-title">カートに商品がありません</p>
+        <p class="form-note">お買い物をお楽しみください。</p>
+        <p><a href="/" class="primary-button">トップページへ戻る</a></p>
+    </div>
+{% else %}
+    <div class="cart-layout">
+        <ul class="cart-lines">
+            {% for line in main.lines %}
+                <li class="cart-line{% if !line.purchasable() %} cart-line-out{% endif %}">
+                    <a href="/products/{{ line.product_id }}">{% if line.image_path.is_empty() %}<span class="cart-thumb cart-thumb-none" aria-hidden="true"></span>{% else %}<img src="{{ line.image_path }}" alt="{{ line.name }}" class="cart-thumb" />{% endif %}</a>
+                    <div class="cart-line-info">
+                        <p class="cart-line-name"><a href="/products/{{ line.product_id }}">{{ line.name }}</a>{% if line.added_by_agent %} <span class="badge state">エージェント追加</span>{% endif %}</p>
+                        {% if !line.variant_label.is_empty() %}
+                            <p class="cart-line-variant">{{ line.variant_label }}</p>
+                        {% endif %}
+                        <p class="cart-line-price">{{ line.formatted_unit_price() }}(税込)</p>
+                        <p class="cart-line-tax">{{ line.tax_class_name }}{% if line.tax_rate_percent > 0 %}（{{ line.tax_rate_percent }}%）対象{% endif %}</p>
+                        {% if line.off_sale() %}
+                            <p class="field-error">販売停止中のため購入できません。削除してください。</p>
+                        {% else if !line.purchasable() %}
+                            <p class="field-error">在庫切れのため購入できません。削除してください。</p>
+                        {% endif %}
+                        <form hx-post="/cart/items/remove" hx-target="#cart-main" hx-swap="innerHTML" class="cart-line-remove">
+                            <input type="hidden" name="variant_id" value="{{ line.variant_id }}">
+                            <button type="submit" class="text-button">削除</button>
+                        </form>
+                    </div>
+                    <div class="cart-line-side">
+                        <div class="cart-line-qty">
+                            <form hx-post="/cart/items/update" hx-target="#cart-main" hx-swap="innerHTML">
+                                <input type="hidden" name="variant_id" value="{{ line.variant_id }}">
+                                <input type="hidden" name="quantity" value="{{ line.quantity - 1 }}">
+                                <button type="submit" class="stepper-button" {% if line.quantity <= 1 || !line.purchasable() %}disabled{% endif %} aria-label="数量を減らす">−</button>
+                            </form>
+                            <span class="qty-value">{{ line.quantity }}</span>
+                            <form hx-post="/cart/items/update" hx-target="#cart-main" hx-swap="innerHTML">
+                                <input type="hidden" name="variant_id" value="{{ line.variant_id }}">
+                                <input type="hidden" name="quantity" value="{{ line.quantity + 1 }}">
+                                <button type="submit" class="stepper-button" {% if !line.can_increment() %}disabled{% endif %} aria-label="数量を増やす">＋</button>
+                            </form>
+                        </div>
+                        <p class="cart-line-total">{{ line.formatted_line_total() }}</p>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+
+        {% if main.is_guest %}
+        <p class="cart-guest-note">ゲストのカートはこの端末・ブラウザでのみ保持されます。<a href="/login">ログイン</a>すると、カートの中身はアカウントに保存されます。</p>
+        {% endif %}
+        <aside class="cart-summary">
+            <h2 class="summary-title">注文内容</h2>
+            {% if main.totals.subtotal_yen > 0 %}
+                <div class="ship-progress">
+                    {% if main.totals.free_shipping_remaining_yen > 0 %}
+                        <p class="ship-message">あと<strong>{{ main.formatted_remaining() }}</strong>で送料無料になります</p>
+                        <div class="ship-bar"><span style="width: {{ main.shipping_percent() }}%"></span></div>
+                    {% else %}
+                        <p class="ship-message ship-free">送料無料が適用されています</p>
+                        <div class="ship-bar"><span style="width: 100%"></span></div>
+                    {% endif %}
+                </div>
+            {% endif %}
+            <dl class="totals-list">
+                <div><dt>商品合計</dt><dd>{{ main.formatted_subtotal() }}</dd></div>
+                <div><dt>送料</dt><dd>{{ main.formatted_shipping() }}{% if main.totals.shipping_yen == 0 %}（無料）{% endif %}</dd></div>
+                {% if main.totals.cod_fee_yen > 0 %}<div><dt>代引き手数料</dt><dd>{{ main.formatted_cod_fee() }}</dd></div>{% endif %}
+                <div class="totals-grand"><dt>合計</dt><dd>{{ main.formatted_total() }}<span class="tax-note">（内消費税 {{ main.formatted_tax_total() }}）</span></dd></div>
+            </dl>
+            {% if !main.totals.tax_breakdown.is_empty() %}
+            <div class="tax-breakdown">
+                <p class="tax-breakdown-title">税率ごとの内訳</p>
+                <dl class="totals-list">
+                    {% for row in main.totals.tax_breakdown %}
+                    <div><dt>{{ row.tax_class_name }}（{{ row.rate_percent }}%）対象</dt><dd>{{ row.formatted_base() }}</dd></div>
+                    <div><dt>うち消費税</dt><dd>{{ row.formatted_tax() }}</dd></div>
+                    {% endfor %}
+                    <div><dt>内消費税合計</dt><dd>{{ main.formatted_tax_total() }}</dd></div>
+                </dl>
+            </div>
+            {% endif %}
+            {% if let Some(line) = main.delivery_window_line() %}<p class="form-note">{{ line }}</p>{% endif %}
+            <p class="form-note">クーポンはレジで適用できます。</p>
+            <div class="cart-actions">
+                {% if main.has_purchasable() %}
+                    <a href="/checkout" class="primary-button">レジに進む</a>
+                {% else %}
+                    <button type="button" class="primary-button" disabled>レジに進む</button>
+                {% endif %}
+                <a href="/" class="secondary-button">買い物を続ける</a>
+            </div>
+            {% if !main.has_purchasable() %}
+                <p class="form-note">購入可能な商品がないため、レジに進めません。</p>
+            {% endif %}
+        </aside>
+    </div>
+    {% let settlement = &main.settlement %}
+    {% include "storefront/parts/agent_settlement.html" %}
+    <div class="cart-bar">
+        <p class="cart-bar-total"><span class="cart-bar-label">合計</span>{{ main.formatted_total() }}</p>
+        {% if main.has_purchasable() %}
+            <a href="/checkout" class="primary-button cart-bar-button">レジに進む</a>
+        {% else %}
+            <button type="button" class="primary-button cart-bar-button" disabled>レジに進む</button>
+        {% endif %}
+    </div>
+{% endif %}
