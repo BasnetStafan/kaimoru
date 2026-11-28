@@ -1,0 +1,98 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}注文管理{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">注文管理</h1>
+
+<nav class="admin-tabs" aria-label="ステータス">
+    {% for chip in chips %}
+    <a href="{{ chip.url }}"{% if chip.active %} class="active" aria-current="page"{% endif %}>{{ chip.label }}（{{ chip.count }}）</a>
+    {% endfor %}
+</nav>
+
+<form method="get" action="/admin/orders" class="admin-filters">
+    {% if status != "all" %}
+    <input type="hidden" name="status" value="{{ status }}">
+    {% endif %}
+    <label class="admin-filter-search">注文番号
+        <input type="search" name="q" value="{{ q }}" placeholder="AS-20261102-0001">
+    </label>
+    <label>お客様名
+        <input type="search" name="customer" value="{{ customer }}" placeholder="山田 太郎">
+    </label>
+    <label>注文日（開始）
+        <input type="date" name="from" value="{{ from }}">
+    </label>
+    <label>注文日（終了）
+        <input type="date" name="to" value="{{ to }}">
+    </label>
+    <label>支払い状況
+        <select name="payment">
+            <option value=""{% if payment.is_empty() %} selected{% endif %}>すべて</option>
+            <option value="awaiting"{% if payment == "awaiting" %} selected{% endif %}>入金待ち</option>
+            <option value="paid"{% if payment == "paid" %} selected{% endif %}>支払い済み</option>
+            <option value="refunded"{% if payment == "refunded" %} selected{% endif %}>返金済み・一部返金</option>
+            <option value="failed"{% if payment == "failed" %} selected{% endif %}>支払い失敗・期限切れ</option>
+        </select>
+    </label>
+    <button type="submit" class="secondary-button">絞り込む</button>
+</form>
+
+{% if orders.is_empty() %}
+<p class="admin-empty">条件に一致する注文はありません</p>
+{% else %}
+<form method="post" action="/admin/orders/bulk-status/preview">
+    <input type="hidden" name="return_url" value="{{ return_url }}">
+    <div class="admin-bulk-bar">
+        <label><input type="checkbox" data-select-all="order_id"> すべて選択</label>
+        <label>一括変更
+            <select name="target">
+                <option value="preparing">準備中</option>
+                <option value="shipped">発送済み</option>
+                <option value="delivered">配達完了</option>
+            </select>
+        </label>
+        <button type="submit" class="secondary-button">確認画面へ</button>
+        <label>送り状CSV
+            <select name="label_carrier">
+                {% for c in label_carriers %}
+                <option value="{{ c.code }}">{{ c.label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button type="submit" class="secondary-button" formaction="/admin/orders/label-csv">送り状CSVを出力</button>
+        <button type="submit" class="secondary-button" formmethod="get" formaction="/admin/orders/packing-slips">納品書を印刷</button>
+    </div>
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th></th><th>注文番号</th><th>注文日時</th><th>会員</th><th>商品点数</th><th>合計</th><th>支払い状況</th><th>配送ステータス</th></tr>
+    </thead>
+    <tbody>
+        {% for row in orders %}
+        <tr{% if row.cancelled %} class="order-row-cancelled"{% endif %}>
+            <td>{% if !row.cancelled %}<input type="checkbox" name="order_id" value="{{ row.id }}" aria-label="注文を選択">{% endif %}</td>
+            <td><a href="/admin/orders/{{ row.id }}">{{ row.number }}</a>{% if row.agent_placed %} <span class="admin-badge agent">エージェント</span>{% endif %}</td>
+            <td>{{ row.placed }}</td>
+            <td>{% if let Some(mid) = row.member_id %}<a href="/admin/customers/{{ mid }}">{{ row.buyer }}</a>{% else %}{{ row.buyer }}{% endif %}</td>
+            <td class="num">{{ row.item_count }}点</td>
+            <td class="num">{{ row.total }}</td>
+            <td><span class="admin-badge {{ row.payment_badge_class }}">{{ row.payment_label }}</span></td>
+            <td><span class="admin-badge status-{{ row.status }}">{{ row.status_label }}</span></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+</form>
+
+<form method="post" action="/admin/orders/tracking-import" enctype="multipart/form-data" class="admin-filters">
+    <label>伝票番号CSV
+        <input type="file" name="file" accept=".csv">
+    </label>
+    <button type="submit" class="secondary-button">伝票番号を取り込む</button>
+    <span>形式：注文番号,配送会社,送り状番号（1行目は見出し）。取り込んだ注文は発送済みになり、発送メールが順次送信されます。未選択で送り状CSVを出力すると、発送できる未発送の注文すべてが対象です。</span>
+</form>
+{% endif %}
+
+{% include "admin/parts/pagination.html" %}
+{% endblock %}

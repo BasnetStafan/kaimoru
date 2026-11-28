@@ -1,0 +1,77 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}監査ログ{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">監査ログ</h1>
+<p class="admin-note">操作ログは追記専用です。削除・編集はできません。</p>
+<p><a class="secondary-button" href="{{ export_url }}">CSVで出力</a></p>
+
+<form method="get" action="/admin/audit" class="admin-filters">
+    <label>対象
+<div class="admin-combobox" data-combobox>
+            <div class="admin-combobox-control">
+                <input type="text" data-combobox-input placeholder="検索して選ぶ" autocomplete="off">
+                <button type="button" class="admin-combobox-toggle" data-combobox-toggle aria-label="対象の一覧を開く"><span aria-hidden="true">▾</span></button>
+            </div>
+            <select name="target" data-combobox-select>
+            {% for t in targets %}
+            <option value="{{ t.value }}"{% if t.selected %} selected{% endif %}>{{ t.label }}</option>
+            {% endfor %}
+        </select>
+        </div>
+    </label>
+    <label>操作
+<div class="admin-combobox" data-combobox>
+            <div class="admin-combobox-control">
+                <input type="text" data-combobox-input placeholder="検索して選ぶ" autocomplete="off">
+                <button type="button" class="admin-combobox-toggle" data-combobox-toggle aria-label="操作の一覧を開く"><span aria-hidden="true">▾</span></button>
+            </div>
+            <select name="action" data-combobox-select>
+            {% for a in actions %}
+            <option value="{{ a.value }}"{% if a.selected %} selected{% endif %}>{{ a.label }}</option>
+            {% endfor %}
+        </select>
+        </div>
+    </label>
+    <label>期間（開始日）
+        <input type="date" name="from" value="{{ from_value }}">
+    </label>
+    <label>期間（終了日）
+        <input type="date" name="to" value="{{ to_value }}">
+    </label>
+    <button type="submit" class="secondary-button">絞り込む</button>
+</form>
+
+{% if logs.is_empty() %}
+{% if filtered %}
+<p class="admin-empty">条件に一致する操作ログはありません</p>
+{% else %}
+<p class="admin-empty">操作ログはまだありません</p>
+{% endif %}
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>日時</th><th>管理者</th><th>操作</th><th>対象</th></tr>
+    </thead>
+    <tbody>
+        {% for row in logs %}
+        <tr>
+            <td>{{ row.at }}</td>
+            <td>{{ row.admin_name }}</td>
+            <td>{{ row.action_label }}</td>
+            <td>
+                {% if let Some(href) = row.target_href %}
+                <a href="{{ href }}">{{ row.target_text }}</a>
+                {% else %}
+                {{ row.target_text }}
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+
+{% include "admin/parts/pagination.html" %}
+{% endblock %}

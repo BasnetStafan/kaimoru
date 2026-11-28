@@ -1,0 +1,38 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | 注文キャンセルの確認{% endblock %}
+
+{% block homepart %}
+    <section class="order-detail">
+        {% include "storefront/parts/breadcrumb.html" %}
+
+        <h1>注文キャンセルの確認</h1>
+
+        <div class="order-card">
+            <h2>注文をキャンセルしますか</h2>
+            <p>注文番号:{{ order.order_number() }}<br>
+            お支払い合計:{{ order.formatted_total() }}</p>
+            <ul class="order-lines">
+                {% for line in lines %}
+                    <li>
+                        <div class="order-line-main">
+                            <span>{{ line.product_name }}</span>
+                            {% if !line.variant_label.is_empty() %}
+                                <p class="order-line-variant">{{ line.variant_label }}</p>
+                            {% endif %}
+                            <p class="order-line-price">{{ line.formatted_unit_price() }} × {{ line.quantity }}点</p>
+                        </div>
+                        <span class="order-line-total">{{ line.formatted_line_total() }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+            <p>{{ consequence }}</p>
+            {% if let Some(line) = coupon_line %}<p>{{ line }}</p>{% endif %}
+            {% if let Some(line) = contact_line %}<p>{{ line }}</p>{% endif %}
+            <form method="post" action="/mypage/orders/{{ order.id }}/cancel">
+                <button type="submit" class="danger-button">注文をキャンセルする</button>
+                <a href="/mypage/orders/{{ order.id }}" class="secondary-button">戻る</a>
+            </form>
+        </div>
+    </section>
+{% endblock %}

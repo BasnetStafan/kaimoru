@@ -1,0 +1,61 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | お問い合わせ{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        <h1>お問い合わせ</h1>
+        <p>商品やご注文についてのお問い合わせは、こちらのフォームからお送りください。</p>
+        {% if let Some(note) = support_note %}
+            <p>{{ note }}</p>
+        {% endif %}
+        <p>通常、2営業日以内にご入力いただいたメールアドレス宛にご返信いたします。</p>
+
+        {% if let Some(message) = form_error %}
+            <p class="form-error">{{ message }}</p>
+        {% endif %}
+
+        <form method="post" action="/contact" class="auth-form">
+            <label>
+                お名前 <span class="badge-required">必須</span>
+                <input type="text" name="name" value="{{ values.name }}" aria-required="true" autocomplete="name">
+                {% if let Some(e) = errors.name %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+
+            <label>
+                メールアドレス <span class="badge-required">必須</span>
+                <input type="email" name="email" value="{{ values.email }}" aria-required="true" autocomplete="email">
+                {% if let Some(e) = errors.email %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+
+            <label>
+                お問い合わせ種別 <span class="badge-required">必須</span>
+                <select name="category" aria-required="true">
+                    <option value="">選択してください</option>
+                    {% for c in self.categories() %}
+                        <option value="{{ c.code }}"{% if values.category == c.code %} selected{% endif %}>{{ c.label }}</option>
+                    {% endfor %}
+                </select>
+                {% if let Some(e) = errors.category %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+
+            <label>
+                ご注文番号 <span class="badge-optional">任意</span>
+                <input type="text" name="order_number" value="{{ values.order_number }}" placeholder="例：AS-20261103-0123">
+                {% if let Some(e) = errors.order_number %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+
+            <label>
+                お問い合わせ内容 <span class="badge-required">必須</span>
+                <textarea name="body" rows="8" aria-required="true">{{ values.body }}</textarea>
+                {% if let Some(e) = errors.body %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+
+            <p class="hp-field" aria-hidden="true">
+                <label>ウェブサイト<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+            </p>
+
+            <button type="submit" class="primary-button">送信する</button>
+        </form>
+    </section>
+{% endblock %}

@@ -1,0 +1,2568 @@
+/* Admin-scoped tokens. Shared theme tokens live in style.css :root
+   (the admin layout loads style.css before this file). */
+:root {
+    --side: #2A3833;
+    --side-2: #33423C;
+    --gold: #D9C07A;
+    --gold-dark: #8A6D1A;
+}
+
+/* Back office (admin) styles. Loaded after style.css, so the
+   store's variables (--paper, --ink, --accent, --line) and the
+   shared form/button classes are inherited; everything here is
+   namespaced .admin- so the two surfaces never collide. */
+
+.admin-body {
+    background: var(--paper);
+    color: var(--ink);
+}
+
+.admin-shell {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* ---- Sidebar ---- */
+.admin-sidebar {
+    width: 220px;
+    flex: 0 0 220px;
+    background: #1f2a26;
+    color: #e8ece9;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+}
+
+.admin-brand {
+    color: var(--surface);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 0 20px 16px;
+    text-decoration: none;
+    display: block;
+}
+
+.admin-brand span {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 400;
+    letter-spacing: 0.2em;
+    color: #9fb3aa;
+    margin-top: 2px;
+}
+
+.admin-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 10px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.admin-nav a {
+    color: #cfd8d3;
+    text-decoration: none;
+    padding: 9px 10px;
+    border-radius: var(--r-sm);
+    font-size: 0.95rem;
+}
+
+.admin-nav a:hover {
+    background: var(--side);
+    color: var(--surface);
+}
+
+.admin-nav a.active {
+    background: var(--accent);
+    color: var(--surface);
+}
+
+.admin-side-foot {
+    margin-top: auto;
+    padding: 16px 20px 0;
+    border-top: 1px solid var(--side-2);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.admin-user {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #cfd8d3;
+}
+
+.admin-logout-button {
+    background: none;
+    border: 1px solid #4a5a53;
+    color: #e8ece9;
+    border-radius: var(--r-sm);
+    padding: 6px 12px;
+    cursor: pointer;
+    font: inherit;
+}
+
+.admin-logout-button:hover {
+    background: var(--side);
+}
+
+.admin-storelink {
+    color: #9fb3aa;
+    font-size: 0.85rem;
+}
+
+/* ---- Main column ---- */
+.admin-main {
+    flex: 1;
+    min-width: 0;
+    padding: 28px 32px 48px;
+}
+
+.admin-h1 {
+    font-size: 1.5rem;
+    margin: 0 0 8px;
+}
+
+.admin-h2 {
+    font-size: 1.1rem;
+    margin: 0 0 12px;
+}
+
+.admin-today {
+    color: var(--muted);
+    margin: 0 0 20px;
+}
+
+.admin-page-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.admin-new-button {
+    text-decoration: none;
+}
+
+.admin-back {
+    margin: 0 0 8px;
+}
+
+.admin-section {
+    margin-top: 32px;
+}
+
+.admin-note,
+.admin-muted {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.admin-empty {
+    color: var(--muted);
+    padding: 20px 0;
+}
+
+.admin-more {
+    margin-top: 10px;
+}
+
+.admin-flash {
+    background: var(--accent-tint);
+    border: 1px solid var(--accent);
+    color: #0b4f4a;
+    border-radius: var(--r-md);
+    padding: 10px 14px;
+    margin: 0 0 20px;
+}
+
+/* ---- Stat cards ---- */
+.admin-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.admin-stat-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 16px 18px;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+a.admin-stat-card:hover {
+    border-color: var(--accent);
+}
+
+.admin-stat-label {
+    margin: 0 0 6px;
+    font-size: 0.88rem;
+    color: var(--muted);
+}
+
+.admin-stat-value {
+    margin: 0;
+    font-size: 1.7rem;
+    font-weight: 700;
+}
+
+.admin-stat-unit {
+    font-size: 1rem;
+    font-weight: 400;
+    margin-left: 4px;
+}
+
+/* ---- Tables ---- */
+/* List tables sit in a horizontal scroll container so a
+   wide table scrolls itself instead of pushing the whole
+   page sideways on narrow screens (Cycle-1 review C1-04). */
+.admin-table-scroll {
+    overflow-x: auto;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+}
+
+.admin-table th,
+.admin-table td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.93rem;
+    vertical-align: middle;
+}
+
+.admin-table th {
+    background: #f3f0ea;
+    font-weight: 600;
+    /* Header labels stay on one line; the scroll container
+       absorbs the width instead of a header wrapping mid-word. */
+    white-space: nowrap;
+}
+
+.admin-table tr:last-child td {
+    border-bottom: none;
+}
+
+.admin-table td.num,
+.admin-table th.num {
+    text-align: right;
+}
+
+.admin-thumb {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    display: block;
+}
+
+/* The imageless product's list cell keeps the thumbnail's
+   footprint as an empty frame: an imageless draft is a valid
+   state, not a broken image. */
+.admin-thumb-none {
+    display: block;
+    width: 44px;
+    height: 44px;
+    border: 1px dashed var(--line);
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
+.admin-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: var(--r-pill);
+    font-size: 0.8rem;
+    background: #eef2f0;
+    border: 1px solid var(--line);
+}
+
+.admin-badge.status-public,
+.admin-badge.status-delivered {
+    background: var(--accent-tint);
+    border-color: var(--accent);
+}
+
+.admin-badge.agent {
+    background: var(--accent-tint);
+    border-color: var(--accent);
+    color: var(--teal-dark);
+}
+
+.admin-badge.status-draft {
+    background: #fdf3e0;
+}
+
+.admin-badge.status-archived,
+.admin-badge.status-cancelled {
+    background: #f3e9e9;
+    color: #7a4a4a;
+}
+
+.admin-badge.notice-visible {
+    background: var(--accent-tint);
+    border-color: var(--accent);
+}
+
+.admin-badge.notice-scheduled {
+    background: #fdf3e0;
+}
+
+.admin-badge.notice-hidden {
+    background: #f3e9e9;
+    color: #7a4a4a;
+}
+
+/* The notices list truncates the body to one line; the full
+   text lives in the editor (Records Spec 4.4). */
+.admin-notice-body {
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---- Chart ---- */
+.admin-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    height: 180px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 16px 16px 10px;
+}
+
+.admin-bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    gap: 6px;
+    min-width: 0;
+}
+
+.admin-bar {
+    width: 60%;
+    max-width: 52px;
+    background: #7fb5ad;
+    border-radius: 6px 6px 0 0;
+    min-height: 0;
+}
+
+.admin-bar.today {
+    background: var(--accent);
+}
+
+.admin-bar-amount {
+    font-size: 0.72rem;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.admin-bar-label {
+    font-size: 0.78rem;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+/* ---- Filters, tabs, pagination ---- */
+.admin-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: end;
+    margin: 16px 0 20px;
+}
+
+.admin-filters label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.88rem;
+}
+
+.admin-filters input,
+.admin-filters select {
+    padding: 9px 11px;
+    min-height: 40px;
+    box-sizing: border-box;
+    border: 1px solid #c9c2b6;
+    border-radius: var(--r-sm);
+    font: inherit;
+    background: var(--surface);
+}
+
+.admin-filter-search input {
+    min-width: 220px;
+}
+
+.admin-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid var(--line);
+    margin-top: 12px;
+    /* A long tab strip scrolls itself on narrow screens
+       instead of pushing the page sideways (Cycle-1
+       review C1-04). */
+    overflow-x: auto;
+}
+
+.admin-tabs a {
+    white-space: nowrap;
+    padding: 8px 14px;
+    text-decoration: none;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+}
+
+.admin-tabs a.active {
+    color: var(--ink);
+    border-bottom-color: var(--accent);
+    font-weight: 600;
+}
+
+/* On desktop widths the strip wraps onto a second row instead
+   of clipping its last tab inside the scroll container; the
+   contained scroll stays on narrow screens (C1-04). */
+@media (min-width: 861px) {
+    .admin-tabs {
+        flex-wrap: wrap;
+        overflow-x: visible;
+    }
+}
+
+.admin-pagination {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+}
+
+.admin-page-link {
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: var(--surface);
+    text-decoration: none;
+    color: inherit;
+}
+
+.admin-page-link.current {
+    background: var(--accent);
+    color: var(--surface);
+    border-color: var(--accent);
+}
+
+.admin-page-count {
+    color: var(--muted);
+    font-size: 0.88rem;
+    margin-left: 8px;
+}
+
+/* ---- Forms ---- */
+.admin-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 680px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 22px;
+    margin-top: 16px;
+}
+
+.admin-form label {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.93rem;
+    font-weight: 600;
+}
+
+/* In a field label the control, helper text and error each take
+   their own row under the label-and-badge line. Checkbox and
+   radio inputs are not listed: they keep their compact size on
+   the caption's line (see .admin-check). */
+.admin-form label > input[type="text"],
+.admin-form label > input[type="number"],
+.admin-form label > input[type="date"],
+.admin-form label > input[type="datetime-local"],
+.admin-form label > input[type="time"],
+.admin-form label > input[type="search"],
+.admin-form label > input[type="email"],
+.admin-form label > input[type="password"],
+.admin-form label > input[type="tel"],
+.admin-form label > input[type="url"],
+.admin-form label > select,
+.admin-form label > textarea,
+.admin-form label > .field-error,
+.admin-form label > .form-note,
+.admin-form label > .admin-field-help,
+.admin-login-form label > input[type="email"],
+.admin-login-form label > input[type="password"] {
+    flex: 1 1 100%;
+}
+
+/* Required and optional badges sit on the label's own line: as
+   flex items they keep the pill size of the shared definition
+   in style.css instead of stretching across the label, and the
+   label's gap, not the badge's own margin, sets the separation
+   from the label text. Legends are not flex rows, so badges
+   there keep the shared margin. */
+.admin-form label > .badge-required,
+.admin-form label > .badge-optional,
+.admin-login-form label > .badge-required,
+.admin-login-form label > .badge-optional,
+.admin-status-form label > .badge-required,
+.admin-status-form label > .badge-optional,
+.admin-refund-form label > .badge-required,
+.admin-refund-form label > .badge-optional {
+    flex: none;
+    align-self: center;
+    margin-left: 0;
+}
+
+.admin-form input[type="text"],
+.admin-form input[type="number"],
+.admin-form input[type="date"],
+.admin-form input[type="datetime-local"],
+.admin-form input[type="time"],
+.admin-form input[type="search"],
+.admin-form input[type="email"],
+.admin-form input[type="password"],
+.admin-form input[type="tel"],
+.admin-form input[type="url"],
+.admin-form select,
+.admin-form textarea {
+    padding: 10px 12px;
+    min-height: 42px;
+    box-sizing: border-box;
+    border: 1px solid #c9c2b6;
+    border-radius: var(--r-sm);
+    font: inherit;
+    font-weight: 400;
+    line-height: 1.4;
+    background: var(--surface);
+    max-width: 100%;
+}
+
+/* Coupon form conditional fields: a row the current type
+   or scope does not use leaves the layout entirely (the
+   .admin-form label display would otherwise override the
+   hidden attribute). */
+.admin-form [hidden],
+.admin-status-form [hidden] {
+    display: none !important;
+}
+
+/* Searchable combobox: a text input paired with the form's
+   own select. The operator can type to filter, or open the
+   list and pick; the select keeps the posted name/value and
+   stays visible until the script enhances the wrapper. */
+.admin-form label > .admin-combobox {
+    flex: 1 1 100%;
+}
+
+.admin-filters .admin-combobox {
+    width: 240px;
+    max-width: 100%;
+}
+
+.admin-filters .admin-combobox-toggle {
+    min-height: 40px;
+}
+
+.admin-combobox {
+    position: relative;
+}
+
+.admin-combobox-control {
+    display: flex;
+    gap: 8px;
+}
+
+.admin-combobox-control > input[type="text"] {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.admin-combobox-toggle {
+    flex: 0 0 42px;
+    min-height: 42px;
+    border: 1px solid #c9c2b6;
+    border-radius: var(--r-sm);
+    background: var(--surface);
+    color: var(--ink);
+    cursor: pointer;
+    font: inherit;
+}
+
+.admin-combobox-toggle:hover {
+    border-color: var(--accent);
+}
+
+.admin-combobox.is-enhanced > select {
+    display: none;
+}
+
+.admin-combobox-list {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 60;
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    background: var(--surface);
+    border: 1px solid #c9c2b6;
+    border-radius: var(--r-sm);
+    box-shadow: 0 12px 28px rgba(31, 42, 38, 0.18);
+    max-height: 264px;
+    overflow-y: auto;
+}
+
+.admin-combobox-option {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: 0;
+    border-radius: var(--r-sm);
+    padding: 9px 10px;
+    font: inherit;
+    font-weight: 400;
+    color: var(--ink);
+    cursor: pointer;
+}
+
+.admin-combobox-option:hover,
+.admin-combobox-option.is-active {
+    background: #eef3f0;
+}
+
+.admin-combobox-option:disabled {
+    color: var(--muted);
+    background: none;
+    cursor: default;
+}
+
+.admin-combobox-option[aria-selected="true"] {
+    background: #e3ede6;
+    font-weight: 700;
+}
+
+.admin-combobox-empty {
+    padding: 9px 10px;
+    color: var(--muted);
+    font-weight: 400;
+}
+
+/* The content editor's body field in HTML format: markup
+   reads as code in a monospace face. */
+.admin-form textarea.body-source-html {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.admin-form input:disabled,
+.admin-form select:disabled,
+.admin-form textarea:disabled,
+.admin-form input[readonly],
+.admin-form textarea[readonly] {
+    background: #f3f0ea;
+    color: var(--muted);
+}
+
+.admin-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.admin-check {
+    flex-direction: row !important;
+    align-items: center;
+    gap: 8px !important;
+}
+
+.admin-fieldset {
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 14px 16px;
+    margin: 0;
+}
+
+.admin-fieldset legend {
+    font-size: 0.93rem;
+    font-weight: 600;
+    padding: 0 6px;
+}
+
+.admin-tag-search,
+.admin-tag-empty {
+    grid-column: 1 / -1;
+}
+
+.admin-tag-empty {
+    color: var(--muted);
+    margin: 0;
+}
+
+.admin-tag-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+}
+
+.admin-image-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.admin-image-item {
+    position: relative;
+    width: 120px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 6px;
+    background: var(--surface);
+}
+
+.admin-image-item[draggable="true"] {
+    cursor: grab;
+}
+
+.admin-image-item.is-dragging {
+    opacity: 0.5;
+}
+
+.admin-image-item img {
+    width: 100%;
+    height: 84px;
+    object-fit: contain;
+    display: block;
+}
+
+/* The main badge rides on position alone: the first item in
+   the list is the main image, so CSS shows its badge and hides
+   the rest — a reorder restyles itself. */
+.admin-image-main-badge {
+    display: none;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 1px 8px;
+    border-radius: var(--r-pill);
+    background: var(--accent);
+    color: var(--surface);
+    font-size: 0.7rem;
+}
+
+.admin-image-item:first-child .admin-image-main-badge {
+    display: inline-block;
+}
+
+.admin-image-item-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+}
+
+.admin-image-empty {
+    color: var(--muted);
+}
+
+.admin-image-dropzone.is-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.admin-image-preview img {
+    max-width: 200px;
+    max-height: 200px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--surface);
+}
+
+.admin-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.admin-bulk-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    background: #eef4f2;
+    border: 1px solid var(--accent);
+    border-radius: var(--r-md);
+    padding: 10px 14px;
+    margin-bottom: 14px;
+}
+
+.admin-readonly-note {
+    background: #fdf3e0;
+    border: 1px solid #e3cf9e;
+    border-radius: var(--r-md);
+    padding: 12px 16px;
+    max-width: 680px;
+    margin-top: 16px;
+}
+
+.admin-archive-form {
+    margin-top: 24px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.admin-archive-note,
+.admin-cancel-note {
+    color: var(--muted);
+    font-size: 0.88rem;
+}
+
+button.danger,
+.secondary-button.danger {
+    border-color: var(--danger);
+    color: #93352f;
+}
+
+/* ---- Order detail ---- */
+.admin-order-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 16px 18px;
+}
+
+.admin-order-number {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.admin-order-placed,
+.admin-order-buyer {
+    margin: 0;
+    color: var(--muted);
+}
+
+.admin-dl {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 8px 16px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 18px;
+    margin: 0;
+    max-width: 680px;
+}
+
+.admin-dl dt {
+    color: var(--muted);
+}
+
+.admin-dl dd {
+    margin: 0;
+}
+
+.admin-totals {
+    max-width: 420px;
+    margin: 16px 0 0 auto;
+}
+
+.admin-totals > div {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.admin-totals .grand {
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.admin-status-form {
+    display: flex;
+    gap: 12px;
+    align-items: end;
+    flex-wrap: wrap;
+}
+
+.admin-status-form label {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.9rem;
+}
+
+.admin-status-form select {
+    padding: 9px 11px;
+    min-height: 40px;
+    box-sizing: border-box;
+    border: 1px solid #c9c2b6;
+    border-radius: var(--r-sm);
+    font: inherit;
+    background: var(--surface);
+}
+
+.admin-cancel-form {
+    margin-top: 18px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* ---- Bare pages (login, fallback 404) ---- */
+.admin-bare {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.admin-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    padding: 28px;
+    width: 100%;
+    max-width: 400px;
+}
+
+.admin-login-brand {
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin: 0 0 4px;
+}
+
+.admin-login-brand span {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 400;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.admin-login-title {
+    font-size: 1.3rem;
+    margin: 12px 0 16px;
+}
+
+.admin-review-comment {
+    max-width: 420px;
+    word-break: break-word;
+}
+
+/* Line breaks survive in the review comment itself — scoped to the
+   comment text so the cell's other content (badge, reply form) does
+   not inherit preserved template whitespace. */
+.admin-review-text {
+    white-space: pre-wrap;
+}
+
+/* Star bars reuse the storefront's .stars-display markup and
+   CSS (style.css) unchanged — one widget, two surfaces. */
+.admin-rating-num {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-left: 6px;
+}
+
+.admin-notfound {
+    padding: 24px 0;
+}
+
+/* Stack the admin shell on narrow screens. */
+@media (max-width: 860px) {
+    .admin-shell {
+        flex-direction: column;
+    }
+
+    .admin-sidebar {
+        width: 100%;
+        flex: none;
+        height: auto;
+        position: static;
+    }
+
+    .admin-main {
+        padding: 20px 16px 40px;
+    }
+
+    .admin-form {
+        padding: 18px 16px;
+    }
+
+    .admin-form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-dl {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Cancelled order rows recede: the キャンセル badge carries
+   the meaning, the muting is reinforcement (Orders Spec 3.5). */
+.admin-table tr.order-row-cancelled {
+    opacity: 0.55;
+}
+
+/* The edit page's ストアで見る block (AD-7). */
+.admin-storefront-link {
+    margin: 0 0 16px;
+}
+
+/* ---- Detail and settings blocks ----
+   The order detail's payment list mirrors the totals list
+   above it (same right-hand column, same row rhythm); panels
+   give the action and summary sections the same white-card
+   treatment the rest of the detail pages already use. */
+.admin-detail-list {
+    max-width: 420px;
+    margin: 16px 0 0 auto;
+}
+
+.admin-detail-list > div {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.admin-detail-list dd {
+    margin: 0;
+}
+
+.admin-panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 18px;
+}
+
+.admin-summary p {
+    margin: 0;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.admin-summary p:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+/* The notice editor's delete form is a below-card action row,
+   spaced like the product editor's archive form. */
+.notice-delete-form {
+    margin-top: 24px;
+}
+
+/* Prose notes keep the form column's measure instead of
+   running the full width of the main column. */
+.admin-note {
+    max-width: 680px;
+}
+
+/* Inline literals in prose notes (template variables, product
+   blocks) read as code and never split across lines. */
+.admin-note code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    white-space: nowrap;
+}
+
+/* The inert storefront link on draft/archived products
+   (AD-7) reads as disabled, not as plain text. */
+.admin-storefront-link span[aria-disabled="true"] {
+    color: var(--muted);
+}
+
+/* Product variants editor (free-form axes): axis blocks with
+   option chips, and the per-combination stock grid the script
+   renders from the axes above it. */
+.variant-axis {
+    border: 1px solid #D8D2C4;
+    border-radius: var(--r-sm);
+    padding: 10px 12px;
+    margin-bottom: 10px;
+}
+.variant-axis-head {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.variant-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+.variant-option {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    background: var(--tint);
+    border-radius: var(--r-pill);
+    padding: 2px 6px;
+}
+.variant-add-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 8px 0;
+}
+.variant-grid-title {
+    margin: 14px 0 6px;
+    font-size: 1rem;
+}
+
+/* Preformatted plain text (inquiry bodies, sent replies). */
+.admin-pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* ---- Product form ----
+   Sectioned layout for the product editor only: the rules are
+   scoped to #admin-product-form or to classes this page alone
+   uses, so the other admin forms keep their current look. The
+   wider measure fits the image picker beside its preview. */
+#admin-product-form {
+    max-width: 1060px;
+}
+
+#admin-product-form .admin-form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: #FBFAF7;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 20px;
+}
+
+#admin-product-form .admin-form-section-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--accent);
+}
+
+/* The editor's own fieldsets (variants, image) read as section
+   panels like the sections above; a fieldset nested inside a
+   section (tags) keeps the plainer sub-group look. */
+#admin-product-form .admin-fieldset {
+    background: #FBFAF7;
+    padding: 18px 20px;
+}
+
+#admin-product-form .admin-fieldset legend {
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+#admin-product-form .admin-form-section .admin-fieldset {
+    background: var(--surface);
+}
+
+#admin-product-form .admin-form-section .admin-fieldset legend {
+    font-size: 0.93rem;
+    font-weight: 400;
+}
+
+/* Image picker and preview side by side on wide screens,
+   stacked on narrow ones. */
+#admin-product-form .admin-image-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 20px;
+    align-items: start;
+}
+
+#admin-product-form .admin-image-main {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+#admin-product-form .admin-image-preview {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 14px;
+    position: sticky;
+    top: 20px;
+}
+
+#admin-product-form .admin-image-preview p {
+    margin: 0 0 10px;
+    font-size: 0.88rem;
+    color: var(--muted);
+}
+
+#admin-product-form .admin-image-preview img {
+    max-width: 100%;
+    max-height: 320px;
+    display: block;
+    margin: 0 auto;
+}
+
+@media (max-width: 860px) {
+    #admin-product-form .admin-image-layout {
+        grid-template-columns: 1fr;
+    }
+
+    #admin-product-form .admin-image-preview {
+        position: static;
+    }
+}
+
+/* Upload dropzone: the file input stays focusable but
+   invisible; the label around it is the visible target. */
+.admin-image-dropzone {
+    flex-direction: column !important;
+    position: relative;
+    align-items: center;
+    text-align: center;
+    padding: 22px 16px;
+    background: var(--surface);
+    border: 2px dashed #c9c2b6;
+    border-radius: var(--r-lg);
+    cursor: pointer;
+}
+
+.admin-image-dropzone:hover,
+.admin-image-dropzone.is-dragover {
+    border-color: var(--accent);
+    background: var(--accent-tint);
+}
+
+.admin-image-dropzone:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.admin-image-upload-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.admin-image-dropzone-title {
+    font-weight: 600;
+}
+
+.admin-image-dropzone-text {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+.admin-image-dropzone-note {
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.admin-image-upload-status {
+    margin: 10px 0 0;
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+.admin-image-upload .field-error {
+    margin-top: 8px;
+}
+
+/* Keep the save action reachable on this long form. */
+#admin-product-form .admin-form-actions {
+    position: sticky;
+    bottom: 0;
+    background: var(--surface);
+    padding: 12px 0 2px;
+    border-top: 1px solid var(--line);
+}
+
+/* ---- Form system ----
+   One control language for every admin form, generalised from
+   the product editor: the base metrics live with the .admin-form
+   and .admin-filters rules above; this section carries the
+   states and the pieces individual pages used to improvise.
+   New pages should compose these classes, not restyle controls. */
+
+/* Hover deepens the border; focus swaps it for the accent with
+   a soft ring, so the active field reads without the browser's
+   default outline. */
+.admin-form input[type="text"]:hover:not(:disabled):not([readonly]),
+.admin-form input[type="number"]:hover:not(:disabled):not([readonly]),
+.admin-form input[type="date"]:hover:not(:disabled):not([readonly]),
+.admin-form input[type="datetime-local"]:hover:not(:disabled):not([readonly]),
+.admin-form input[type="time"]:hover:not(:disabled):not([readonly]),
+.admin-form input[type="search"]:hover:not(:disabled):not([readonly]),
+.admin-form input[type="email"]:hover:not(:disabled):not([readonly]),
+.admin-form input[type="password"]:hover:not(:disabled):not([readonly]),
+.admin-form input[type="tel"]:hover:not(:disabled):not([readonly]),
+.admin-form input[type="url"]:hover:not(:disabled):not([readonly]),
+.admin-form select:hover:not(:disabled),
+.admin-form textarea:hover:not(:disabled):not([readonly]),
+.admin-filters input:hover,
+.admin-filters select:hover,
+.admin-status-form select:hover,
+.admin-status-form input[type="text"]:hover {
+    border-color: #a79d8a;
+}
+
+.admin-form input[type="text"]:focus,
+.admin-form input[type="number"]:focus,
+.admin-form input[type="date"]:focus,
+.admin-form input[type="datetime-local"]:focus,
+.admin-form input[type="time"]:focus,
+.admin-form input[type="search"]:focus,
+.admin-form input[type="email"]:focus,
+.admin-form input[type="password"]:focus,
+.admin-form input[type="tel"]:focus,
+.admin-form input[type="url"]:focus,
+.admin-form select:focus,
+.admin-form textarea:focus,
+.admin-filters input:focus,
+.admin-filters select:focus,
+.admin-status-form select:focus,
+.admin-status-form input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring);
+    outline: none;
+}
+
+/* A field whose label carries an error message gets the error
+   border to match; the message text itself stays .field-error. */
+.admin-form label:has(.field-error) input[type="text"],
+.admin-form label:has(.field-error) input[type="number"],
+.admin-form label:has(.field-error) input[type="date"],
+.admin-form label:has(.field-error) input[type="datetime-local"],
+.admin-form label:has(.field-error) input[type="time"],
+.admin-form label:has(.field-error) input[type="search"],
+.admin-form label:has(.field-error) input[type="email"],
+.admin-form label:has(.field-error) input[type="password"],
+.admin-form label:has(.field-error) input[type="tel"],
+.admin-form label:has(.field-error) input[type="url"],
+.admin-form label:has(.field-error) select,
+.admin-form label:has(.field-error) textarea {
+    border-color: var(--danger);
+}
+
+.admin-form label:has(.field-error) input[type="text"]:focus,
+.admin-form label:has(.field-error) input[type="number"]:focus,
+.admin-form label:has(.field-error) input[type="date"]:focus,
+.admin-form label:has(.field-error) input[type="datetime-local"]:focus,
+.admin-form label:has(.field-error) input[type="time"]:focus,
+.admin-form label:has(.field-error) input[type="search"]:focus,
+.admin-form label:has(.field-error) input[type="email"]:focus,
+.admin-form label:has(.field-error) input[type="password"]:focus,
+.admin-form label:has(.field-error) input[type="tel"]:focus,
+.admin-form label:has(.field-error) input[type="url"]:focus,
+.admin-form label:has(.field-error) select:focus,
+.admin-form label:has(.field-error) textarea:focus {
+    box-shadow: 0 0 0 3px var(--danger-line);
+}
+
+/* Checkboxes and radios share one size and the accent colour,
+   in forms and in the product list's bulk-selection column. */
+.admin-form input[type="checkbox"],
+.admin-form input[type="radio"],
+.admin-table input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    flex: none;
+    accent-color: var(--accent);
+}
+
+/* Option labels (a checkbox's own caption, a tag choice)
+   are values, not field labels: they keep the
+   regular weight the semibold field labels now carry. */
+.admin-form .admin-check,
+.admin-form .admin-tag-grid label,
+.admin-form .admin-image-dropzone {
+    font-weight: 400;
+}
+
+/* Error and helper text inside a semibold label stays regular
+   weight. The helper style also gives admin pages the
+   .form-note look the storefront defines in its own sheet:
+   admin pages never load that sheet, so notes went unstyled. */
+.admin-form .field-error,
+.admin-login-form .field-error {
+    font-weight: 400;
+}
+
+.admin-form .form-note,
+.admin-field-help {
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 400;
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* A heading inside a form is a section title, ruled with the
+   accent like the product editor's sections. */
+.admin-form .admin-h2 {
+    font-size: 1.05rem;
+    margin: 12px 0 -2px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent);
+}
+
+.admin-form .admin-h2:first-child {
+    margin-top: 0;
+}
+
+.admin-h3 {
+    font-size: 1rem;
+    margin: 22px 0 10px;
+}
+
+/* Section panels for any form, not only the product editor:
+   the product page keeps its own scoped tuning on top. */
+.admin-form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: #FBFAF7;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 20px;
+}
+
+.admin-form-section-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--accent);
+}
+
+/* A submit button placed directly in a form (no actions row)
+   hugs the left edge instead of stretching the card's width. */
+.admin-form > .primary-button,
+.admin-form > .secondary-button {
+    align-self: flex-start;
+}
+
+.admin-form textarea {
+    line-height: 1.55;
+    resize: vertical;
+}
+
+.admin-body input::placeholder,
+.admin-body textarea::placeholder {
+    color: #9a958a;
+}
+
+/* Keyboard focus stays visible on links and buttons too. */
+.admin-body a:focus-visible,
+.admin-body button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* The login form borrows the storefront's .auth-form; align
+   its controls with the admin metrics so the one form outside
+   the shell matches the forms inside it. */
+.admin-login-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.admin-login-form label {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.93rem;
+    font-weight: 600;
+    margin: 0 0 16px;
+}
+
+.admin-login-form input[type="email"],
+.admin-login-form input[type="password"] {
+    margin-top: 0;
+    padding: 10px 12px;
+    min-height: 42px;
+    box-sizing: border-box;
+    border: 1px solid #c9c2b6;
+    border-radius: var(--r-sm);
+    font-size: 1rem;
+    font-weight: 400;
+    background: var(--surface);
+}
+
+.admin-login-form input[type="email"]:hover,
+.admin-login-form input[type="password"]:hover {
+    border-color: #a79d8a;
+}
+
+.admin-login-form input[type="email"]:focus,
+.admin-login-form input[type="password"]:focus {
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring);
+    outline: none;
+}
+
+/* The order status form's text input (tracking number) shares
+   the select's metrics instead of the browser default. */
+.admin-status-form input[type="text"] {
+    padding: 9px 11px;
+    min-height: 40px;
+    box-sizing: border-box;
+    border: 1px solid #c9c2b6;
+    border-radius: var(--r-sm);
+    font: inherit;
+    background: var(--surface);
+}
+
+/* The refund form on the order detail is a small inline form
+   of the same family: label over control, actions aligned to
+   the control baseline, the note on its own row. */
+.admin-refund-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: end;
+    margin-top: 14px;
+}
+
+.admin-refund-form label {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.admin-refund-form input[type="text"] {
+    padding: 9px 11px;
+    min-height: 40px;
+    box-sizing: border-box;
+    border: 1px solid #c9c2b6;
+    border-radius: var(--r-sm);
+    font: inherit;
+    font-weight: 400;
+    background: var(--surface);
+}
+
+.admin-refund-form input[type="text"]:hover {
+    border-color: #a79d8a;
+}
+
+.admin-refund-form input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring);
+    outline: none;
+}
+
+.admin-refund-form .admin-note {
+    flex-basis: 100%;
+    margin: 0;
+}
+
+/* Narrow screens: filter and status controls take the row
+   instead of squeezing side by side. */
+@media (max-width: 640px) {
+    .admin-filters label {
+        flex: 1 1 150px;
+    }
+
+    .admin-filters input,
+    .admin-filters select {
+        width: 100%;
+    }
+
+    .admin-status-form label {
+        flex: 1 1 160px;
+    }
+
+    .admin-status-form select,
+    .admin-status-form input[type="text"] {
+        width: 100%;
+    }
+
+    .admin-form-section {
+        padding: 16px;
+    }
+}
+
+/* Tag chips on the product form (category/tag integration):
+   the selected tags as pills over the tag_ids checkboxes.
+   Built entirely on the .admin-badge pill tokens — the accent
+   border/background pair of the active status pills and the
+   999px pill radius; no new colours or metrics. */
+.tag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.tag-chip-selected {
+    background: var(--accent-tint);
+    border-color: var(--accent);
+}
+
+.tag-chip-remove {
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: 6px;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.tag-add-button {
+    border-radius: var(--r-pill);
+    margin-bottom: 8px;
+}
+
+.admin-tag-grid[hidden] {
+    display: none;
+}
+
+
+/* Content pages list (CMS C-2): the status pill. Colours are
+   the theme's own — accent for live, the optional badge's
+   stone for draft. */
+.content-status {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: var(--r-pill);
+    font-size: 12px;
+    color: var(--surface);
+    white-space: nowrap;
+}
+
+.content-status-published {
+    background: var(--accent);
+}
+
+.content-status-draft {
+    background: #9A958A;
+}
+
+.content-status-scheduled {
+    background: #B7791F;
+}
+
+.admin-filter-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin: 0 0 1rem;
+}
+
+.admin-filter-tabs a {
+    padding: 0.35rem 0.8rem;
+    border: 1px solid var(--admin-border);
+    border-radius: 999px;
+    color: var(--admin-text);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.admin-filter-tabs a.active {
+    background: var(--admin-text);
+    color: var(--admin-surface);
+}
+
+.post-cover-preview {
+    max-width: 320px;
+    max-height: 200px;
+    border-radius: 6px;
+}
+
+/* Product form upgrade: collapsible sections, the wider
+   combination grid, and per-image alt inputs. The section box
+   keeps the established .admin-form-section styling; only the
+   summary behaviour is new. */
+#admin-product-form details.admin-form-section > summary.admin-form-section-title {
+    cursor: pointer;
+    list-style-position: outside;
+}
+/* The combination grid is a table: one header row carries
+   the captions and every combination is a single aligned
+   row, so a column of stocks or prices reads down the page
+   and bulk edits stop hunting for fields. The wrapper
+   scrolls sideways on narrow screens instead of wrapping
+   the columns out of alignment. */
+.variant-group {
+    border-radius: 10px;
+    padding: 14px 16px 16px;
+    margin-bottom: 16px;
+}
+
+.variant-group-0 {
+    background: #eef3ea;
+}
+
+.variant-group-1 {
+    background: #eaf0f6;
+}
+
+.variant-group-2 {
+    background: #f7eee1;
+}
+
+.variant-group-3 {
+    background: #f2eaf5;
+}
+
+.variant-group-4 {
+    background: #e8f3f1;
+}
+
+.variant-group-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0 0 12px;
+}
+
+.variant-group-axis {
+    color: #6d675c;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.variant-group-value {
+    color: #33302a;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.variant-group-count {
+    color: #6d675c;
+    font-size: 0.8rem;
+}
+
+.variant-card {
+    background: #fff;
+    border: 1px solid rgba(51, 48, 42, 0.14);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+}
+
+.variant-card:last-child {
+    margin-bottom: 0;
+}
+
+.variant-card-head {
+    color: #33302a;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.variant-card-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+    gap: 10px 14px;
+}
+
+.variant-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.variant-field-name {
+    color: #6d675c;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.variant-field input[type="text"],
+.variant-field input[type="date"],
+.variant-field select {
+    width: 100%;
+}
+.admin-image-alt {
+    width: 100%;
+    margin-top: 6px;
+    font-size: 0.82rem;
+}
+
+
+/* Top page hero image picker and live preview (UI programme
+   S2): the picker row under the hero fields, and the preview
+   band — the storefront hero's shape at editor scale, so the
+   operator sees the band before saving. */
+.hero-image-thumb {
+    width: 96px;
+    height: 44px;
+    flex: none;
+    object-fit: cover;
+    border: 1px solid #c9c2b6;
+    border-radius: var(--r-sm);
+}
+
+.hero-preview {
+    margin: 16px 0 8px;
+}
+
+.hero-preview-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.hero-preview-title {
+    font-weight: 600;
+}
+
+.hero-preview-widths {
+    display: flex;
+    gap: 6px;
+}
+
+.hero-preview-widths button {
+    background-color: var(--surface);
+    color: var(--accent);
+    border: 1px solid #c9c2b6;
+    border-radius: var(--r-pill);
+    font-size: 13px;
+    padding: 5px 12px;
+    cursor: pointer;
+}
+
+.hero-preview-widths button.is-active {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    color: var(--surface);
+}
+
+.hero-preview-frame {
+    border: 1px solid #c9c2b6;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+.hero-preview-frame.is-sp {
+    max-width: 375px;
+}
+
+.hero-preview-band {
+    background-color: var(--paper);
+    color: var(--ink);
+    padding: 24px 20px;
+}
+
+.hero-preview-stage {
+    position: relative;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.hero-preview-stage img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 21 / 9;
+    object-fit: cover;
+}
+
+.hero-preview-overlay {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 40px 16px 14px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
+}
+
+.hero-preview-overlay h1 {
+    color: #fff;
+    font-size: 20px;
+    margin: 0 0 4px;
+}
+
+.hero-preview-overlay p {
+    color: rgba(255, 255, 255, 0.92);
+    margin: 0;
+}
+
+.hero-preview-band h1 {
+    font-size: 24px;
+    margin: 0 0 8px;
+}
+
+.hero-preview-band p {
+    margin: 0;
+}
+
+.hero-image-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.hero-image-link-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.hero-image-link-row input {
+    flex: 1;
+}
+
+
+/* Sidebar groups and collapse (UI programme S3): the nav is
+   grouped by task under small headings, and the whole sidebar
+   can be hidden for a wider work area — the floating button
+   at the page corner brings it back. */
+.admin-nav-heading {
+    margin: 14px 10px 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #8fa398;
+}
+
+/* Sidebar menu search: the filter box sits above the nav and
+   stays put while the nav scrolls. .is-search-hidden is the
+   class the search script toggles on links and headings. */
+.admin-nav-search {
+    margin: 0 10px 12px;
+}
+
+.admin-nav-search-input {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--side);
+    color: #e8ece9;
+    border: 1px solid var(--side-2);
+    border-radius: var(--r-sm);
+    padding: 7px 10px;
+    font: inherit;
+    font-size: 0.85rem;
+}
+
+.admin-nav-search-input::placeholder {
+    color: #8fa398;
+}
+
+.admin-nav-search-input:focus {
+    border-color: var(--accent);
+    outline: none;
+}
+
+.admin-nav .is-search-hidden {
+    display: none;
+}
+
+.admin-nav-empty {
+    margin: 8px 10px;
+    font-size: 0.85rem;
+    color: #8fa398;
+}
+
+.admin-nav-toggle {
+    margin: 0 10px 12px;
+    background: var(--side);
+    color: #cfd8d3;
+    border: 1px solid var(--side-2);
+    border-radius: var(--r-sm);
+    padding: 7px 10px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.85rem;
+    text-align: left;
+}
+
+.admin-nav-toggle:hover {
+    background: var(--side-2);
+    color: var(--surface);
+}
+
+.admin-sidebar.is-collapsed {
+    display: none;
+}
+
+.admin-nav-open {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 40;
+    background: #1f2a26;
+    color: #e8ece9;
+    border: 1px solid var(--side-2);
+    border-radius: var(--r-sm);
+    padding: 8px 14px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.9rem;
+}
+
+.admin-nav-open:hover {
+    background: var(--side);
+}
+
+
+/* Payment badge tones (UI programme S3): the fulfilment badge
+   keeps the status-* scale; payment gets its own so the two
+   columns read apart at a glance. */
+.admin-badge.pay-paid {
+    background: var(--accent-tint);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.admin-badge.pay-awaiting {
+    background: #fdf3e0;
+    border-color: var(--gold);
+    color: var(--gold-dark);
+}
+
+.admin-badge.pay-refunded {
+    background: #ece9f3;
+    border-color: #a49cc4;
+    color: #5b5480;
+}
+
+.admin-badge.pay-failed {
+    background: #f3e9e9;
+    border-color: #c4a3a3;
+    color: #8c4a4a;
+}
+
+.admin-badge.pay-muted {
+    background: #eef1f0;
+    border-color: #d5dbd8;
+    color: #5c6660;
+}
+
+
+/* List triage and identification aids (UI programme S3). */
+.admin-badge.inq-open {
+    background: #fdf3e0;
+    border-color: var(--gold);
+    color: var(--gold-dark);
+}
+
+.admin-badge.inq-closed {
+    background: var(--accent-tint);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.admin-badge.inq-stale {
+    background: #f9e2e0;
+    border-color: #c0564f;
+    color: #8c2f28;
+}
+
+.admin-badge.notice-duplicate {
+    background: #fdf3e0;
+    border-color: var(--gold);
+    color: var(--gold-dark);
+}
+
+.admin-badge.unused {
+    background: #eef1f0;
+    border-color: #d5dbd8;
+    color: #5c6660;
+}
+
+.admin-preview-notices {
+    margin: 0 0 8px;
+    padding-left: 20px;
+}
+
+.admin-preview-notices li {
+    margin-bottom: 4px;
+}
+
+
+/* Editor aids (UI programme S4): the unsaved-changes note by
+   the save button, and breathing room between the top page
+   editor's fieldset sections. */
+.admin-unsaved-note {
+    margin: 0;
+    align-self: center;
+    background: #fdf3e0;
+    border: 1px solid var(--gold);
+    border-radius: var(--r-sm);
+    color: var(--gold-dark);
+    padding: 8px 12px;
+    font-size: 0.88rem;
+}
+
+.admin-fieldset-section {
+    margin-bottom: 20px;
+}
+
+/* Notification mail editor: the customised-state badge,
+   the preview card and the tag dictionary. Built on the
+   shared admin tokens, like the rest of this file. */
+.admin-badge.nt-custom {
+    background: var(--accent-tint);
+    border-color: var(--accent);
+    color: var(--teal-dark);
+}
+
+.mail-body-input {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.mail-preview {
+    margin-top: 28px;
+}
+
+.mail-preview-card {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    padding: 16px 20px;
+    max-width: 720px;
+}
+
+.mail-preview-subject {
+    font-weight: 700;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 8px;
+    margin: 0 0 12px;
+}
+
+.mail-preview-body {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 0.92rem;
+    line-height: 1.7;
+}
+
+.tag-group {
+    margin-bottom: 16px;
+}
+
+.tag-group-title {
+    font-size: 0.95rem;
+    margin: 0 0 8px;
+}
+
+.tag-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+}
+
+.tag-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.tag-chip {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+    padding: 3px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    background: #eef2f0;
+    cursor: pointer;
+}
+
+.tag-chip:hover {
+    border-color: var(--accent);
+    background: var(--accent-tint);
+}
+
+.tag-label {
+    font-size: 0.9rem;
+    opacity: 0.75;
+}
+
+/* Top page pin editors: the pinned rows read as a quiet
+   list; the picker and its add button sit on one line. */
+.pin-list {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+}
+
+.pin-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--line, #e3e3e3);
+}
+
+.pin-name {
+    flex: 1;
+}
+
+.pin-status {
+    color: var(--muted, #777);
+    font-size: 12px;
+}
+
+.pin-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.pin-add {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.pin-add .admin-combobox {
+    flex: 1;
+}
+
+/* Packing slips （納品書 bulk print): a standalone print page,
+   one slip per printed sheet. */
+.packing-body {
+    background: #fff;
+    margin: 0;
+}
+.packing-slip {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 24px;
+    page-break-after: always;
+}
+.packing-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 2px solid #111;
+}
+.packing-recipient {
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+.packing-lines {
+    width: 100%;
+    border-collapse: collapse;
+}
+.packing-lines th, .packing-lines td {
+    border: 1px solid #999;
+    padding: 6px 8px;
+    text-align: left;
+}
+.packing-totals > div {
+    display: flex;
+    justify-content: space-between;
+    max-width: 320px;
+    margin-left: auto;
+}
+.packing-grand {
+    font-weight: bold;
+    border-top: 1px solid #111;
+}
+.packing-actions {
+    text-align: center;
+    padding: 16px;
+}
+@media print {
+    .packing-actions {
+        display: none;
+    }
+    .packing-slip {
+        padding: 0;
+    }
+}
+
+/* C5: one shipped/open parcel inside the order detail's
+   split-shipment section — the admin panel recipe at box
+   scale, so consecutive parcels read as separate units. */
+.shipment-box {
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    padding: 12px 14px;
+    margin: 0 0 12px;
+}
+
+/* B6: the shop-reply form inside the moderation list. The form is
+   set off from the review comment by the same hairline the saved-
+   reply display uses, its label takes the admin label weight, and
+   the textarea takes the .admin-form control metrics (border,
+   radius, padding, inherited font) with the shared focus swap —
+   never the browser-default box. */
+.admin-reply-form {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+}
+
+.admin-reply-form label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.admin-reply-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #c9c2b6;
+    border-radius: var(--r-sm);
+    font: inherit;
+    font-weight: 400;
+    line-height: 1.5;
+    background: var(--surface);
+}
+
+.admin-reply-form textarea:focus {
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring);
+    outline: none;
+}
+
+.admin-reply-form button {
+    margin-top: 8px;
+}
+
+/* The reply form is collapsed behind a summary toggle (Basnet's
+   call, 2026-11-10): the moderation list stays scannable, and a
+   saved reply still reads in place above the toggle. The toggle
+   follows the product form's <details> pattern; the current-reply
+   block reuses the form's hairline set-off. */
+.admin-reply-current {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+}
+
+.admin-reply-details {
+    margin-top: 10px;
+}
+
+.admin-reply-details > summary.admin-reply-summary {
+    cursor: pointer;
+    list-style: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.admin-reply-details > summary.admin-reply-summary::-webkit-details-marker {
+    display: none;
+}
+
+.admin-reply-details > summary.admin-reply-summary::before {
+    content: "▸";
+    margin-right: 6px;
+}
+
+.admin-reply-details[open] > summary.admin-reply-summary::before {
+    content: "▾";
+}
+
+/* The moderation buttons in the last column never wrap mid-word. */
+.admin-review-actions { white-space: nowrap; }
+
+/* C1: customer tags on the detail page. */
+.admin-tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.admin-tag-chip { display: inline-flex; align-items: center; gap: 4px; background: #eef2f0; border: 1px solid var(--line); border-radius: var(--r-pill); padding: 2px 6px 2px 10px; }
+.admin-tag-chip button { border: none; background: none; cursor: pointer; font-size: 14px; line-height: 1; }
+
+/* Bare-control sweep (visual pass, 2026-11-22): a few admin forms
+   sit outside .admin-form / .admin-filters, so their controls fell
+   back to browser defaults next to themed buttons. They get the
+   same treatment here — the shared border, radius, height and
+   focus ring — without changing any markup contract. */
+.admin-bulk-bar select,
+.admin-inline-form select,
+.admin-inline-form input[type="text"],
+.admin-bulk-confirm-form select {
+    padding: 9px 11px;
+    min-height: 40px;
+    box-sizing: border-box;
+    border: 1px solid #c9c2b6;
+    border-radius: var(--r-sm);
+    font: inherit;
+    background: var(--surface);
+}
+
+.admin-memo-form {
+    margin-top: 14px;
+}
+
+.admin-memo-form label {
+    display: block;
+    font-size: 0.93rem;
+    font-weight: 600;
+}
+
+.admin-memo-form textarea {
+    display: block;
+    width: 100%;
+    max-width: 680px;
+    margin-top: 6px;
+    padding: 10px 12px;
+    box-sizing: border-box;
+    border: 1px solid #c9c2b6;
+    border-radius: var(--r-sm);
+    font: inherit;
+    font-weight: 400;
+    line-height: 1.4;
+    background: var(--surface);
+}
+
+.admin-memo-form button {
+    margin-top: 10px;
+}
+
+.admin-tag-add {
+    display: flex;
+    align-items: end;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.admin-tag-add label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.93rem;
+    font-weight: 600;
+}
+
+.admin-tag-add input[type="text"] {
+    padding: 10px 12px;
+    min-height: 42px;
+    min-width: min(260px, 70vw);
+    box-sizing: border-box;
+    border: 1px solid #c9c2b6;
+    border-radius: var(--r-sm);
+    font: inherit;
+    font-weight: 400;
+    background: var(--surface);
+}
+
+.admin-inline-form {
+    display: flex;
+    align-items: end;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.admin-inline-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.admin-split-form input[type="number"] {
+    width: 96px;
+    padding: 8px 10px;
+    box-sizing: border-box;
+    border: 1px solid #c9c2b6;
+    border-radius: var(--r-sm);
+    font: inherit;
+    background: var(--surface);
+}
+
+.admin-split-form button {
+    margin-top: 12px;
+}
+
+.admin-bulk-confirm-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 320px;
+    margin: 14px 0 6px;
+    font-size: 0.93rem;
+    font-weight: 600;
+}
+
+.admin-bulk-bar select:focus,
+.admin-inline-form select:focus,
+.admin-inline-form input[type="text"]:focus,
+.admin-bulk-confirm-form select:focus,
+.admin-memo-form textarea:focus,
+.admin-tag-add input[type="text"]:focus,
+.admin-split-form input[type="number"]:focus {
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring);
+    outline: none;
+}
+
+/* The pages hub's action cells: links stay on one line
+   instead of wrapping mid-word. */
+.hub-actions a {
+  white-space: nowrap;
+}

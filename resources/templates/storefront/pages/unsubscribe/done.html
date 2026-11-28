@@ -1,0 +1,16 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | メールマガジンの配信停止{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        <h1>配信を停止しました</h1>
+        {% if already %}
+        <p>このメールアドレスは、すでにメールマガジンの配信を停止しています。</p>
+        {% else %}
+        <p>メールマガジンの配信を停止しました。ご利用ありがとうございました。</p>
+        {% endif %}
+        <p>ご注文の確認や商品の発送など、お取引に関するメールは引き続き届きます。再度受け取る場合は、マイページの会員情報編集から設定できます。</p>
+        <p><a href="/" class="secondary-button">トップページへ戻る</a></p>
+    </section>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}ページ{% endblock %}
+
+{% block adminpart %}
+<div class="admin-page-head">
+    {% if active_tab == "landing" %}
+    <h1 class="admin-h1">ランディングページ</h1>
+    <a class="primary-button admin-new-button" href="/admin/content/pages/new?layout=landing">ランディングページを登録</a>
+    {% else if active_tab == "standard" %}
+    <h1 class="admin-h1">通常ページ</h1>
+    <a class="primary-button admin-new-button" href="/admin/content/pages/new">ページを登録</a>
+    {% else %}
+    <h1 class="admin-h1">コンテンツ</h1>
+    <a class="primary-button admin-new-button" href="/admin/content/pages/new">ページを登録</a>
+    {% endif %}
+</div>
+
+<nav class="admin-filter-tabs" aria-label="ページの種別">
+    <a href="/admin/posts">ブログ記事</a>
+    <a href="/admin/content/pages?layout=landing"{% if active_tab == "landing" %} class="active" aria-current="page"{% endif %}>ランディングページ</a>
+    <a href="/admin/content/pages?layout=standard"{% if active_tab == "standard" %} class="active" aria-current="page"{% endif %}>通常ページ</a>
+</nav>
+
+{% if active_tab == "landing" %}
+<p class="admin-note">広告などの受け皿にするページです。「/lp/スラッグ」で、メニューや検索のない最小限の画面で表示されます。本文に商品カードを埋め込めます。サイトマップには、ページごとに含めるかどうかを選べます（新規登録時は含めません）。</p>
+{% else %}
+<p class="admin-note">送料・お支払いの案内、利用規約、プライバシーポリシーなどのページと、自由に追加するページを編集します。固定ページは店舗に必要なページのため、削除はできません。</p>
+{% endif %}
+
+{% if rows.is_empty() %}
+<p class="admin-empty">ページはまだありません</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>タイトル</th><th>URL</th><th>種別</th><th>ステータス</th><th>最終更新</th><th>編集者</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td><a href="{{ row.edit_url }}">{{ row.title }}</a></td>
+            <td>{{ row.url_path }}</td>
+            <td>{{ row.type_label }}</td>
+            <td>{% if row.published %}<span class="content-status content-status-published">公開</span>{% else %}<span class="content-status content-status-draft">下書き</span>{% endif %}</td>
+            <td>{{ row.updated_label }}</td>
+            <td>{% if let Some(name) = row.editor_name %}{{ name }}{% else %}-{% endif %}</td>
+            <td>{% if row.is_system %}<span class="admin-note">削除できません</span>{% else %}<a href="{{ row.edit_url }}">編集</a>{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+{% endblock %}

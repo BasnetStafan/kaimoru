@@ -1,0 +1,89 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}メール配信{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">メール配信</h1>
+
+<section class="admin-cards" aria-label="配信状況">
+    <div class="admin-stat-card">
+        <p class="admin-stat-label">購読者数</p>
+        <p class="admin-stat-value">{{ subscribers }}<span class="admin-stat-unit">名</span></p>
+    </div>
+    <div class="admin-stat-card">
+        <p class="admin-stat-label">今月の配信数</p>
+        <p class="admin-stat-value">{{ sent_this_month }}<span class="admin-stat-unit">通</span></p>
+    </div>
+    <div class="admin-stat-card">
+        <p class="admin-stat-label">配信失敗（累計）</p>
+        <p class="admin-stat-value">{{ failed }}<span class="admin-stat-unit">通</span></p>
+    </div>
+</section>
+
+<section class="admin-section" aria-label="最近のキャンペーン">
+    <h2 class="admin-h2">最近のキャンペーン</h2>
+    {% if recent.is_empty() %}
+    <p class="admin-empty">キャンペーンはまだありません</p>
+    {% else %}
+    <div class="admin-table-scroll"><table class="admin-table">
+        <thead>
+            <tr><th>名前</th><th>状態</th><th>配信予定</th><th>配信完了</th><th>配信結果</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for row in recent %}
+            <tr>
+                <td><a href="/admin/mail/campaigns/{{ row.id }}/edit">{{ row.name }}</a></td>
+                <td>{{ row.status_label }}</td>
+                <td>{% if let Some(label) = row.scheduled_label %}{{ label }}{% else %}—{% endif %}</td>
+                <td>{% if let Some(label) = row.sent_label %}{{ label }}{% else %}—{% endif %}</td>
+                <td>{{ row.stats.sent }} / {{ row.stats.total }} 通</td>
+                <td><a href="/admin/mail/campaigns/{{ row.id }}/confirm">確認</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table></div>
+    {% endif %}
+    <p><a class="primary-button" href="/admin/mail/campaigns/new">キャンペーンを登録</a></p>
+</section>
+
+<section class="admin-section" aria-label="配信予約中のキャンペーン">
+    <h2 class="admin-h2">配信予約中</h2>
+    {% if scheduled.is_empty() %}
+    <p class="admin-empty">配信予約中のキャンペーンはありません</p>
+    {% else %}
+    <div class="admin-table-scroll"><table class="admin-table">
+        <thead>
+            <tr><th>名前</th><th>配信予定</th><th>宛先</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for row in scheduled %}
+            <tr>
+                <td><a href="/admin/mail/campaigns/{{ row.id }}/edit">{{ row.name }}</a></td>
+                <td>{% if let Some(label) = row.scheduled_label %}{{ label }}{% else %}まもなく配信{% endif %}</td>
+                <td>{{ row.stats.total }} 名</td>
+                <td><a href="/admin/mail/campaigns/{{ row.id }}/confirm">確認</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table></div>
+    {% endif %}
+</section>
+
+<section class="admin-section" aria-label="自動送信メール">
+    <h2 class="admin-h2">自動送信メール（トランザクショナル）</h2>
+    <p class="admin-note">お取引に必要なメールは、メールマガジンの購読状態に関係なく送信されます。文面はメールテンプレートの画面で編集できます（お問い合わせへの返信を除きます）。</p>
+    <div class="admin-table-scroll"><table class="admin-table">
+        <thead>
+            <tr><th>メール</th><th>種別</th></tr>
+        </thead>
+        <tbody>
+            {% for mail in transactional %}
+            <tr>
+                <td>{{ mail.1 }}</td>
+                <td>自動送信</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table></div>
+</section>
+{% endblock %}

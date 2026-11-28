@@ -1,0 +1,14 @@
+<div class="chat-presets" id="chat-presets" role="group" aria-label="重視するポイント">
+    <form method="post" action="/agent/preset" class="chat-chip-form" hx-post="/agent/preset" hx-target="#chat-presets" hx-swap="outerHTML">
+        <input type="hidden" name="preset" value="balanced">
+        <button type="submit" class="chat-chip{% if preset == "balanced" %} chat-chip-active{% endif %}">バランス</button>
+    </form>
+    <form method="post" action="/agent/preset" class="chat-chip-form" hx-post="/agent/preset" hx-target="#chat-presets" hx-swap="outerHTML">
+        <input type="hidden" name="preset" value="cheapest">
+        <button type="submit" class="chat-chip{% if preset == "cheapest" %} chat-chip-active{% endif %}">価格重視</button>
+    </form>
+    <form method="post" action="/agent/preset" class="chat-chip-form" hx-post="/agent/preset" hx-target="#chat-presets" hx-swap="outerHTML">
+        <input type="hidden" name="preset" value="best_rated">
+        <button type="submit" class="chat-chip{% if preset == "best_rated" %} chat-chip-active{% endif %}">評価重視</button>
+    </form>
+</div>

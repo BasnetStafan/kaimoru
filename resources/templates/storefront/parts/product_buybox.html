@@ -1,0 +1,22 @@
+{% include "storefront/parts/variant_picker.html" %}
+<div class="buybox-favorite">{% let product_id = product.id %}{% let labelled = true %}{% let member = is_member %}{% include "storefront/parts/favorite_toggle.html" %}</div>
+{% if product.track_stock && !product.allow_backorder && product.stock == 0 %}
+    <button type="button" class="add-cart-button" disabled>売り切れ</button>
+{% else %}
+    {# The answer is not swapped in: only its out-of-band fragments
+       (the confirmation toast and the header badge) are used. The
+       button hides (CSS, layout kept) while the request runs and
+       returns with the answer, so the buy area never moves. #}
+    <form hx-post="/cart/items" hx-swap="none" class="detail-add-form">
+        <input type="hidden" name="product_id" value="{{ product.id }}">
+        {% if picker.has_picker() %}
+            <input type="hidden" name="variant_id" value="{{ picker.initial_variant_id() }}" data-variant-input>
+        {% endif %}
+        <div class="qty-stepper">
+            <button type="button" class="stepper-button" data-step="-1" aria-label="数量を減らす">−</button>
+            <input type="number" name="quantity" aria-label="数量" value="1" min="1" max="{% if !product.track_stock || product.allow_backorder %}999{% else if picker.has_picker() %}{{ picker.initial_stock() }}{% else %}{{ product.stock }}{% endif %}" class="qty-input">
+            <button type="button" class="stepper-button" data-step="1" aria-label="数量を増やす">＋</button>
+        </div>
+        <button type="submit" class="add-cart-button" data-add-button>カートに入れる</button>
+    </form>
+{% endif %}

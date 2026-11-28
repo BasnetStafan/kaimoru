@@ -1,0 +1,12 @@
+{# The shared payment block: included by pages holding a
+   `payment` field (a PaymentBlockView). Method, status, amount,
+   and for a konbini payment the store, deadline and the hosted
+   instructions page. #}
+<dl class="confirm-list payment-block">
+    <div><dt>お支払い方法</dt><dd>{{ payment.method_label }}</dd></div>
+    <div><dt>お支払い状況</dt><dd>{{ payment.status_label }}</dd></div>
+    <div><dt>お支払い金額</dt><dd>{{ payment.formatted_amount }}</dd></div>
+    {% if let Some(store) = payment.store %}<div><dt>お支払い店舗</dt><dd>{{ store }}</dd></div>{% endif %}
+    {% if let Some(deadline) = payment.deadline %}<div><dt>お支払い期限</dt><dd>{{ deadline }}</dd></div>{% endif %}
+    {% if let Some(url) = payment.instructions_url %}<div><dt>お支払い方法の確認</dt><dd><a href="{{ url }}" target="_blank" rel="noopener">支払い番号とお支払い方法を確認する</a></dd></div>{% endif %}
+</dl>

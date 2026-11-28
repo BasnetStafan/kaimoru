@@ -1,0 +1,1653 @@
+{
+  "tools": [
+    {
+      "description": "Add units of a product to one of your carts. Pass variant_id when the product has combinations (see get_product). Stock is re-validated on every call; the answer is the cart read back after the add.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "cart_id": {
+            "description": "The cart handle, from `create_cart`.",
+            "type": "string"
+          },
+          "product_id": {
+            "description": "The product id, from a search or list result.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "quantity": {
+            "description": "Units to add (1 to 999999).",
+            "format": "int32",
+            "type": "integer"
+          },
+          "variant_id": {
+            "description": "The combination to add; required when the product\nhas combinations, omitted for a plain product.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "cart_id",
+          "product_id",
+          "quantity"
+        ],
+        "type": "object"
+      },
+      "name": "add_cart_item",
+      "outputSchema": {
+        "$defs": {
+          "ApiCartLine": {
+            "description": "One cart line as exposed to agents.",
+            "properties": {
+              "line_total_yen": {
+                "description": "Line total in integer yen.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "name": {
+                "description": "Product name.",
+                "type": "string"
+              },
+              "product_id": {
+                "description": "Product id.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "purchasable": {
+                "description": "Whether the line still counts toward the totals (a\nproduct taken off sale after carting does not).",
+                "type": "boolean"
+              },
+              "quantity": {
+                "description": "Units in the cart.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "unit_price_yen": {
+                "description": "Unit price in integer yen, tax included.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "variant_id": {
+                "description": "Variant id: the line's identity.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "variant_label": {
+                "description": "Combination label; empty for a plain product.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "variant_id",
+              "product_id",
+              "name",
+              "variant_label",
+              "quantity",
+              "unit_price_yen",
+              "line_total_yen",
+              "purchasable"
+            ],
+            "type": "object"
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "cart_id": {
+            "description": "The cart handle.",
+            "type": "string"
+          },
+          "item_count": {
+            "description": "Total units across all lines.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "lines": {
+            "description": "The cart's lines, in cart order.",
+            "items": {
+              "$ref": "#/$defs/ApiCartLine"
+            },
+            "type": "array"
+          },
+          "shipping_yen": {
+            "description": "Shipping fee in yen (free at the store's threshold).",
+            "format": "int64",
+            "type": "integer"
+          },
+          "subtotal_yen": {
+            "description": "Sum of purchasable line totals, in yen.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_yen": {
+            "description": "Grand total in yen: subtotal plus shipping.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cart_id",
+          "lines",
+          "item_count",
+          "subtotal_yen",
+          "shipping_yen",
+          "total_yen"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Create an empty cart and get its cart_id handle. Requires an API key with the cart:write scope. The cart belongs to that key: only the same key can read or change it.",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "create_cart",
+      "outputSchema": {
+        "$defs": {
+          "ApiCartLine": {
+            "description": "One cart line as exposed to agents.",
+            "properties": {
+              "line_total_yen": {
+                "description": "Line total in integer yen.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "name": {
+                "description": "Product name.",
+                "type": "string"
+              },
+              "product_id": {
+                "description": "Product id.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "purchasable": {
+                "description": "Whether the line still counts toward the totals (a\nproduct taken off sale after carting does not).",
+                "type": "boolean"
+              },
+              "quantity": {
+                "description": "Units in the cart.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "unit_price_yen": {
+                "description": "Unit price in integer yen, tax included.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "variant_id": {
+                "description": "Variant id: the line's identity.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "variant_label": {
+                "description": "Combination label; empty for a plain product.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "variant_id",
+              "product_id",
+              "name",
+              "variant_label",
+              "quantity",
+              "unit_price_yen",
+              "line_total_yen",
+              "purchasable"
+            ],
+            "type": "object"
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "cart_id": {
+            "description": "The cart handle.",
+            "type": "string"
+          },
+          "item_count": {
+            "description": "Total units across all lines.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "lines": {
+            "description": "The cart's lines, in cart order.",
+            "items": {
+              "$ref": "#/$defs/ApiCartLine"
+            },
+            "type": "array"
+          },
+          "shipping_yen": {
+            "description": "Shipping fee in yen (free at the store's threshold).",
+            "format": "int64",
+            "type": "integer"
+          },
+          "subtotal_yen": {
+            "description": "Sum of purchasable line totals, in yen.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_yen": {
+            "description": "Grand total in yen: subtotal plus shipping.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cart_id",
+          "lines",
+          "item_count",
+          "subtotal_yen",
+          "shipping_yen",
+          "total_yen"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Freeze one of your carts, with a delivery address, into an order draft and get its approval URL. Requires an API key with the orders:write scope. A person opens the URL, checks the frozen lines, address and totals, picks a payment method and pays in the browser — this tool never places the order itself, and any later change to the cart voids the draft. Repeating the call with the same idempotency_key returns the same draft, but the approval URL is shown only on the first, creating call.",
+      "inputSchema": {
+        "$defs": {
+          "DraftAddressParams": {
+            "description": "The delivery address inside [`CreateOrderDraftParams`].",
+            "properties": {
+              "address_line": {
+                "description": "Street address.",
+                "type": "string"
+              },
+              "building": {
+                "description": "Building, when given.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "city": {
+                "description": "City / ward.",
+                "type": "string"
+              },
+              "email": {
+                "description": "Contact email the order confirms to.",
+                "type": "string"
+              },
+              "family_name": {
+                "description": "Recipient family name.",
+                "type": "string"
+              },
+              "given_name": {
+                "description": "Recipient given name.",
+                "type": "string"
+              },
+              "phone": {
+                "description": "Phone number (hyphens optional).",
+                "type": "string"
+              },
+              "postal_code": {
+                "description": "Postal code (hyphens optional).",
+                "type": "string"
+              },
+              "prefecture": {
+                "description": "Prefecture.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "email",
+              "family_name",
+              "given_name",
+              "postal_code",
+              "prefecture",
+              "city",
+              "address_line",
+              "phone"
+            ],
+            "type": "object"
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "address": {
+            "$ref": "#/$defs/DraftAddressParams",
+            "description": "The delivery address the order will ship to."
+          },
+          "cart_id": {
+            "description": "The cart handle, from `create_cart`.",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "description": "A caller-chosen key: repeating a create with the\nsame key returns the same draft instead of drafting\ntwice. At most 128 characters.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cart_id",
+          "idempotency_key",
+          "address"
+        ],
+        "type": "object"
+      },
+      "name": "create_order_draft",
+      "outputSchema": {
+        "$defs": {
+          "McpDraftLine": {
+            "description": "One line of a draft, from its frozen snapshot: what\nthe approval page listed at creation (or, after the\npay click, in the final binding).",
+            "properties": {
+              "line_total_yen": {
+                "description": "Line total in integer yen.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "name": {
+                "description": "Product name at draft time.",
+                "type": "string"
+              },
+              "product_id": {
+                "description": "The line's product id.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "quantity": {
+                "description": "Units in the draft.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "unit_price_yen": {
+                "description": "Unit price in integer yen, tax included.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "variant_id": {
+                "description": "The line's variant id.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "variant_label": {
+                "description": "Combination label; empty for a plain product.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "variant_id",
+              "product_id",
+              "name",
+              "variant_label",
+              "unit_price_yen",
+              "quantity",
+              "line_total_yen"
+            ],
+            "type": "object"
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "approval_url": {
+            "description": "The browser approval URL (create answer only).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "draft_id": {
+            "description": "The draft's id.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "expires_at": {
+            "description": "When the approval window closes, RFC 3339.",
+            "type": "string"
+          },
+          "lines": {
+            "description": "The draft's lines, from its snapshot.",
+            "items": {
+              "$ref": "#/$defs/McpDraftLine"
+            },
+            "type": "array"
+          },
+          "order_id": {
+            "description": "The placed order's id, once the draft is consumed.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "shipping_yen": {
+            "description": "Shipping fee in yen.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "status": {
+            "description": "`pending`, `consumed`, `expired` or `void`.",
+            "type": "string"
+          },
+          "subtotal_yen": {
+            "description": "Sum of line totals in yen.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_yen": {
+            "description": "Grand total in yen.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "draft_id",
+          "status",
+          "order_id",
+          "approval_url",
+          "expires_at",
+          "lines",
+          "subtotal_yen",
+          "shipping_yen",
+          "total_yen"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Get one of your carts by cart_id: its lines and totals in integer yen, computed exactly as the store's cart page computes them.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "cart_id": {
+            "description": "The cart handle, from `create_cart`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cart_id"
+        ],
+        "type": "object"
+      },
+      "name": "get_cart",
+      "outputSchema": {
+        "$defs": {
+          "ApiCartLine": {
+            "description": "One cart line as exposed to agents.",
+            "properties": {
+              "line_total_yen": {
+                "description": "Line total in integer yen.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "name": {
+                "description": "Product name.",
+                "type": "string"
+              },
+              "product_id": {
+                "description": "Product id.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "purchasable": {
+                "description": "Whether the line still counts toward the totals (a\nproduct taken off sale after carting does not).",
+                "type": "boolean"
+              },
+              "quantity": {
+                "description": "Units in the cart.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "unit_price_yen": {
+                "description": "Unit price in integer yen, tax included.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "variant_id": {
+                "description": "Variant id: the line's identity.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "variant_label": {
+                "description": "Combination label; empty for a plain product.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "variant_id",
+              "product_id",
+              "name",
+              "variant_label",
+              "quantity",
+              "unit_price_yen",
+              "line_total_yen",
+              "purchasable"
+            ],
+            "type": "object"
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "cart_id": {
+            "description": "The cart handle.",
+            "type": "string"
+          },
+          "item_count": {
+            "description": "Total units across all lines.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "lines": {
+            "description": "The cart's lines, in cart order.",
+            "items": {
+              "$ref": "#/$defs/ApiCartLine"
+            },
+            "type": "array"
+          },
+          "shipping_yen": {
+            "description": "Shipping fee in yen (free at the store's threshold).",
+            "format": "int64",
+            "type": "integer"
+          },
+          "subtotal_yen": {
+            "description": "Sum of purchasable line totals, in yen.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_yen": {
+            "description": "Grand total in yen: subtotal plus shipping.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cart_id",
+          "lines",
+          "item_count",
+          "subtotal_yen",
+          "shipping_yen",
+          "total_yen"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Get a single-use checkout link for one of your carts. A person opens it in a browser within 30 minutes; the cart becomes theirs and they complete checkout and payment on the store site. This tool never places an order or takes payment details.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "cart_id": {
+            "description": "The cart handle, from `create_cart`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cart_id"
+        ],
+        "type": "object"
+      },
+      "name": "get_checkout_link",
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "cart_id": {
+            "description": "The cart handle the link hands off.",
+            "type": "string"
+          },
+          "checkout_url": {
+            "description": "The single-use claim URL to open in a browser.",
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "When the link stops working, as an RFC 3339 timestamp.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cart_id",
+          "checkout_url",
+          "expires_at"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Read one of your order drafts by id: its status (pending, consumed, expired or void), the frozen lines and totals from its snapshot, and the placed order's id once the draft is consumed. Requires an orders:read or orders:write key.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "draft_id": {
+            "description": "The draft id, from `create_order_draft`.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "draft_id"
+        ],
+        "type": "object"
+      },
+      "name": "get_order_draft",
+      "outputSchema": {
+        "$defs": {
+          "McpDraftLine": {
+            "description": "One line of a draft, from its frozen snapshot: what\nthe approval page listed at creation (or, after the\npay click, in the final binding).",
+            "properties": {
+              "line_total_yen": {
+                "description": "Line total in integer yen.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "name": {
+                "description": "Product name at draft time.",
+                "type": "string"
+              },
+              "product_id": {
+                "description": "The line's product id.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "quantity": {
+                "description": "Units in the draft.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "unit_price_yen": {
+                "description": "Unit price in integer yen, tax included.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "variant_id": {
+                "description": "The line's variant id.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "variant_label": {
+                "description": "Combination label; empty for a plain product.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "variant_id",
+              "product_id",
+              "name",
+              "variant_label",
+              "unit_price_yen",
+              "quantity",
+              "line_total_yen"
+            ],
+            "type": "object"
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "approval_url": {
+            "description": "The browser approval URL (create answer only).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "draft_id": {
+            "description": "The draft's id.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "expires_at": {
+            "description": "When the approval window closes, RFC 3339.",
+            "type": "string"
+          },
+          "lines": {
+            "description": "The draft's lines, from its snapshot.",
+            "items": {
+              "$ref": "#/$defs/McpDraftLine"
+            },
+            "type": "array"
+          },
+          "order_id": {
+            "description": "The placed order's id, once the draft is consumed.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "shipping_yen": {
+            "description": "Shipping fee in yen.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "status": {
+            "description": "`pending`, `consumed`, `expired` or `void`.",
+            "type": "string"
+          },
+          "subtotal_yen": {
+            "description": "Sum of line totals in yen.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_yen": {
+            "description": "Grand total in yen.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "draft_id",
+          "status",
+          "order_id",
+          "approval_url",
+          "expires_at",
+          "lines",
+          "subtotal_yen",
+          "shipping_yen",
+          "total_yen"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Read the status of an order one of your drafts placed: fulfilment status, grand total, and the shipment facts (carrier, tracking number, delivery time) once they exist. Orders placed any other way are not visible here. Requires an orders:read or orders:write key.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "order_id": {
+            "description": "The order id, from `get_order_draft` once its\ndraft is consumed.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "order_id"
+        ],
+        "type": "object"
+      },
+      "name": "get_order_status",
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "carrier": {
+            "description": "Delivery carrier code, once shipped with one named.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "description": "When the order was placed, RFC 3339.",
+            "type": "string"
+          },
+          "delivered_at": {
+            "description": "When the order was delivered, RFC 3339, when it\nhas been.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "order_id": {
+            "description": "The order's id.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "status": {
+            "description": "Fulfilment status: `received`, `preparing`,\n`shipped`, `delivered` or `cancelled`.",
+            "type": "string"
+          },
+          "total_yen": {
+            "description": "Grand total in integer yen.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "tracking_number": {
+            "description": "Carrier tracking number, once shipped with one.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "order_id",
+          "status",
+          "total_yen",
+          "created_at",
+          "delivered_at",
+          "carrier",
+          "tracking_number"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Get one public product by id, including its purchasable variants. Use an id from search_products results.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "id": {
+            "description": "The product id, from a search or list result.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "get_product",
+      "outputSchema": {
+        "$defs": {
+          "ApiCategory": {
+            "description": "The product's category as exposed to agents.",
+            "properties": {
+              "id": {
+                "description": "Category id; null when the product has none.",
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "name": {
+                "description": "Category name (the product's snapshot of it).",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "type": "object"
+          },
+          "ApiRating": {
+            "description": "The product's rating as exposed to agents: the live reviews\naggregate. `average` is null when the product has no\nreviews — the API reports the honest aggregate and never\ninvents one.",
+            "properties": {
+              "average": {
+                "description": "Average rating rounded to one decimal; null at 0 reviews.",
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "count": {
+                "description": "Number of reviews behind the average.",
+                "format": "int64",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "average",
+              "count"
+            ],
+            "type": "object"
+          },
+          "ApiTag": {
+            "description": "One tag on a product, as exposed to agents.",
+            "properties": {
+              "label": {
+                "description": "Japanese label shown to people.",
+                "type": "string"
+              },
+              "slug": {
+                "description": "Stable ASCII identifier (the agent's matching key).",
+                "type": "string"
+              }
+            },
+            "required": [
+              "slug",
+              "label"
+            ],
+            "type": "object"
+          },
+          "ApiVariant": {
+            "description": "One purchasable combination of a product, as exposed to\nagents: the cart keys on the variant id.",
+            "properties": {
+              "id": {
+                "description": "Variant id (the cart line identity).",
+                "format": "int64",
+                "type": "integer"
+              },
+              "label": {
+                "description": "Combination label, e.g. `サイズ: M / カラー: ブラック`;\nempty for the default variant of a plain product.",
+                "type": "string"
+              },
+              "price_yen": {
+                "description": "The combination's price in integer yen: its own price\nwhen it has one, else the product's effective price.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "purchasable": {
+                "description": "Whether this combination can be bought right now,\nunder the same rule as the product-level flag.",
+                "type": "boolean"
+              },
+              "stock": {
+                "description": "Units in stock for this combination.",
+                "format": "int32",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "price_yen",
+              "stock",
+              "purchasable"
+            ],
+            "type": "object"
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "allow_backorder": {
+            "description": "Whether the product can be ordered beyond its stock.",
+            "type": "boolean"
+          },
+          "category": {
+            "$ref": "#/$defs/ApiCategory",
+            "description": "The product's category."
+          },
+          "id": {
+            "description": "Product id.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "description": "Product name.",
+            "type": "string"
+          },
+          "path": {
+            "description": "Storefront path of the product page.",
+            "type": "string"
+          },
+          "price_yen": {
+            "description": "Current selling price in integer yen, tax included,\nafter any active sale — the price a buyer would pay.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "purchasable": {
+            "description": "Whether the product can be bought right now, under the\nsame rule the cart applies: untracked stock or backorder\nis always buyable; tracked stock needs a unit on hand.",
+            "type": "boolean"
+          },
+          "rating": {
+            "$ref": "#/$defs/ApiRating",
+            "description": "Live reviews aggregate for this product."
+          },
+          "stock": {
+            "description": "Stock summed over the product's enabled variants.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "tags": {
+            "description": "The product's tags from the controlled vocabulary.",
+            "items": {
+              "$ref": "#/$defs/ApiTag"
+            },
+            "type": "array"
+          },
+          "variants": {
+            "description": "The product's purchasable combinations. Present on the\ndetail response only — the list stays a summary — so an\nagent chooses a combination from the detail it already\nfetched before adding to a cart.",
+            "items": {
+              "$ref": "#/$defs/ApiVariant"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "path",
+          "price_yen",
+          "stock",
+          "allow_backorder",
+          "purchasable",
+          "rating",
+          "category",
+          "tags"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Get the store's identity and shopping basics: name, tagline, description, contact, the flat shipping fee and the free-shipping threshold in yen.",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "get_store_info",
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "contact_email": {
+            "description": "Public contact email; empty when the shop shows none.",
+            "type": "string"
+          },
+          "contact_url": {
+            "description": "Public contact page URL; empty when the shop shows none.",
+            "type": "string"
+          },
+          "currency": {
+            "description": "Currency every price on this surface uses.",
+            "type": "string"
+          },
+          "description": {
+            "description": "Shop description.",
+            "type": "string"
+          },
+          "free_shipping_threshold_yen": {
+            "description": "Product subtotal at or above which shipping is free,\nin integer yen.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "shipping_flat_yen": {
+            "description": "Flat shipping fee in integer yen, tax included.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "shop_name": {
+            "description": "Shop name.",
+            "type": "string"
+          },
+          "tagline": {
+            "description": "Short shop tagline.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shop_name",
+          "tagline",
+          "description",
+          "contact_email",
+          "contact_url",
+          "shipping_flat_yen",
+          "free_shipping_threshold_yen",
+          "currency"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "List the store's product categories (id, name, slug, parent) so searches can be filtered by category name.",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "list_categories",
+      "outputSchema": {
+        "$defs": {
+          "ApiCategoryEntry": {
+            "description": "One product category as exposed to machine clients.",
+            "properties": {
+              "id": {
+                "description": "Category id.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "name": {
+                "description": "Display name — the value search filters match on.",
+                "type": "string"
+              },
+              "parent_id": {
+                "description": "Parent category id; null at the top level.",
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "slug": {
+                "description": "Stable ASCII identifier.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "slug",
+              "parent_id"
+            ],
+            "type": "object"
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "categories": {
+            "description": "Every category, in display order.",
+            "items": {
+              "$ref": "#/$defs/ApiCategoryEntry"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "categories"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Remove one line from one of your carts, addressed by variant_id.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "cart_id": {
+            "description": "The cart handle, from `create_cart`.",
+            "type": "string"
+          },
+          "variant_id": {
+            "description": "The line's variant id.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cart_id",
+          "variant_id"
+        ],
+        "type": "object"
+      },
+      "name": "remove_cart_item",
+      "outputSchema": {
+        "$defs": {
+          "ApiCartLine": {
+            "description": "One cart line as exposed to agents.",
+            "properties": {
+              "line_total_yen": {
+                "description": "Line total in integer yen.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "name": {
+                "description": "Product name.",
+                "type": "string"
+              },
+              "product_id": {
+                "description": "Product id.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "purchasable": {
+                "description": "Whether the line still counts toward the totals (a\nproduct taken off sale after carting does not).",
+                "type": "boolean"
+              },
+              "quantity": {
+                "description": "Units in the cart.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "unit_price_yen": {
+                "description": "Unit price in integer yen, tax included.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "variant_id": {
+                "description": "Variant id: the line's identity.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "variant_label": {
+                "description": "Combination label; empty for a plain product.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "variant_id",
+              "product_id",
+              "name",
+              "variant_label",
+              "quantity",
+              "unit_price_yen",
+              "line_total_yen",
+              "purchasable"
+            ],
+            "type": "object"
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "cart_id": {
+            "description": "The cart handle.",
+            "type": "string"
+          },
+          "item_count": {
+            "description": "Total units across all lines.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "lines": {
+            "description": "The cart's lines, in cart order.",
+            "items": {
+              "$ref": "#/$defs/ApiCartLine"
+            },
+            "type": "array"
+          },
+          "shipping_yen": {
+            "description": "Shipping fee in yen (free at the store's threshold).",
+            "format": "int64",
+            "type": "integer"
+          },
+          "subtotal_yen": {
+            "description": "Sum of purchasable line totals, in yen.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_yen": {
+            "description": "Grand total in yen: subtotal plus shipping.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cart_id",
+          "lines",
+          "item_count",
+          "subtotal_yen",
+          "shipping_yen",
+          "total_yen"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search the store's public catalog by keyword, with optional category, price-range and stock filters and several sort orders. Returns one page of products with prices in integer yen (tax included), stock and ratings — exactly what the storefront shows.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "category": {
+            "description": "Category name, exactly as `list_categories` reports it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "in_stock_only": {
+            "description": "Keep only products with stock on hand.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "max_price_yen": {
+            "description": "Highest price to keep, in integer yen (inclusive).",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "min_price_yen": {
+            "description": "Lowest price to keep, in integer yen (inclusive).",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "page": {
+            "description": "1-based page number. Defaults to 1.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "query": {
+            "description": "Keyword text matched against product names and\ncategories (multi-term AND). Empty or omitted browses\nthe whole catalog.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sort": {
+            "description": "One of: recommended, newest, price_asc, price_desc,\nrating. Defaults to recommended.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "name": "search_products",
+      "outputSchema": {
+        "$defs": {
+          "ApiCategory": {
+            "description": "The product's category as exposed to agents.",
+            "properties": {
+              "id": {
+                "description": "Category id; null when the product has none.",
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "name": {
+                "description": "Category name (the product's snapshot of it).",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "type": "object"
+          },
+          "ApiProduct": {
+            "description": "One catalog product as exposed to agents.",
+            "properties": {
+              "allow_backorder": {
+                "description": "Whether the product can be ordered beyond its stock.",
+                "type": "boolean"
+              },
+              "category": {
+                "$ref": "#/$defs/ApiCategory",
+                "description": "The product's category."
+              },
+              "id": {
+                "description": "Product id.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "name": {
+                "description": "Product name.",
+                "type": "string"
+              },
+              "path": {
+                "description": "Storefront path of the product page.",
+                "type": "string"
+              },
+              "price_yen": {
+                "description": "Current selling price in integer yen, tax included,\nafter any active sale — the price a buyer would pay.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "purchasable": {
+                "description": "Whether the product can be bought right now, under the\nsame rule the cart applies: untracked stock or backorder\nis always buyable; tracked stock needs a unit on hand.",
+                "type": "boolean"
+              },
+              "rating": {
+                "$ref": "#/$defs/ApiRating",
+                "description": "Live reviews aggregate for this product."
+              },
+              "stock": {
+                "description": "Stock summed over the product's enabled variants.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "tags": {
+                "description": "The product's tags from the controlled vocabulary.",
+                "items": {
+                  "$ref": "#/$defs/ApiTag"
+                },
+                "type": "array"
+              },
+              "variants": {
+                "description": "The product's purchasable combinations. Present on the\ndetail response only — the list stays a summary — so an\nagent chooses a combination from the detail it already\nfetched before adding to a cart.",
+                "items": {
+                  "$ref": "#/$defs/ApiVariant"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "path",
+              "price_yen",
+              "stock",
+              "allow_backorder",
+              "purchasable",
+              "rating",
+              "category",
+              "tags"
+            ],
+            "type": "object"
+          },
+          "ApiRating": {
+            "description": "The product's rating as exposed to agents: the live reviews\naggregate. `average` is null when the product has no\nreviews — the API reports the honest aggregate and never\ninvents one.",
+            "properties": {
+              "average": {
+                "description": "Average rating rounded to one decimal; null at 0 reviews.",
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "count": {
+                "description": "Number of reviews behind the average.",
+                "format": "int64",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "average",
+              "count"
+            ],
+            "type": "object"
+          },
+          "ApiTag": {
+            "description": "One tag on a product, as exposed to agents.",
+            "properties": {
+              "label": {
+                "description": "Japanese label shown to people.",
+                "type": "string"
+              },
+              "slug": {
+                "description": "Stable ASCII identifier (the agent's matching key).",
+                "type": "string"
+              }
+            },
+            "required": [
+              "slug",
+              "label"
+            ],
+            "type": "object"
+          },
+          "ApiVariant": {
+            "description": "One purchasable combination of a product, as exposed to\nagents: the cart keys on the variant id.",
+            "properties": {
+              "id": {
+                "description": "Variant id (the cart line identity).",
+                "format": "int64",
+                "type": "integer"
+              },
+              "label": {
+                "description": "Combination label, e.g. `サイズ: M / カラー: ブラック`;\nempty for the default variant of a plain product.",
+                "type": "string"
+              },
+              "price_yen": {
+                "description": "The combination's price in integer yen: its own price\nwhen it has one, else the product's effective price.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "purchasable": {
+                "description": "Whether this combination can be bought right now,\nunder the same rule as the product-level flag.",
+                "type": "boolean"
+              },
+              "stock": {
+                "description": "Units in stock for this combination.",
+                "format": "int32",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "price_yen",
+              "stock",
+              "purchasable"
+            ],
+            "type": "object"
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "page": {
+            "description": "The 1-based page number this response serves.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "per_page": {
+            "description": "The page size in effect.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "products": {
+            "description": "The page's products, in result order.",
+            "items": {
+              "$ref": "#/$defs/ApiProduct"
+            },
+            "type": "array"
+          },
+          "total": {
+            "description": "Total matches for the same conditions.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_pages": {
+            "description": "Total number of pages at this page size.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "products",
+          "page",
+          "per_page",
+          "total",
+          "total_pages"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "description": "Set the quantity of one line in one of your carts, addressed by variant_id. The cart service caps the quantity at the stock on hand. Use remove_cart_item to remove a line.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "cart_id": {
+            "description": "The cart handle, from `create_cart`.",
+            "type": "string"
+          },
+          "quantity": {
+            "description": "The line's new quantity (at least 1; stock-capped\nby the cart service).",
+            "format": "int32",
+            "type": "integer"
+          },
+          "variant_id": {
+            "description": "The line's variant id.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cart_id",
+          "variant_id",
+          "quantity"
+        ],
+        "type": "object"
+      },
+      "name": "update_cart_item",
+      "outputSchema": {
+        "$defs": {
+          "ApiCartLine": {
+            "description": "One cart line as exposed to agents.",
+            "properties": {
+              "line_total_yen": {
+                "description": "Line total in integer yen.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "name": {
+                "description": "Product name.",
+                "type": "string"
+              },
+              "product_id": {
+                "description": "Product id.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "purchasable": {
+                "description": "Whether the line still counts toward the totals (a\nproduct taken off sale after carting does not).",
+                "type": "boolean"
+              },
+              "quantity": {
+                "description": "Units in the cart.",
+                "format": "int32",
+                "type": "integer"
+              },
+              "unit_price_yen": {
+                "description": "Unit price in integer yen, tax included.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "variant_id": {
+                "description": "Variant id: the line's identity.",
+                "format": "int64",
+                "type": "integer"
+              },
+              "variant_label": {
+                "description": "Combination label; empty for a plain product.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "variant_id",
+              "product_id",
+              "name",
+              "variant_label",
+              "quantity",
+              "unit_price_yen",
+              "line_total_yen",
+              "purchasable"
+            ],
+            "type": "object"
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "cart_id": {
+            "description": "The cart handle.",
+            "type": "string"
+          },
+          "item_count": {
+            "description": "Total units across all lines.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "lines": {
+            "description": "The cart's lines, in cart order.",
+            "items": {
+              "$ref": "#/$defs/ApiCartLine"
+            },
+            "type": "array"
+          },
+          "shipping_yen": {
+            "description": "Shipping fee in yen (free at the store's threshold).",
+            "format": "int64",
+            "type": "integer"
+          },
+          "subtotal_yen": {
+            "description": "Sum of purchasable line totals, in yen.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_yen": {
+            "description": "Grand total in yen: subtotal plus shipping.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cart_id",
+          "lines",
+          "item_count",
+          "subtotal_yen",
+          "shipping_yen",
+          "total_yen"
+        ],
+        "type": "object"
+      }
+    }
+  ]
+}

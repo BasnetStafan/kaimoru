@@ -1,0 +1,91 @@
+{% if !result.unmet_needs.is_empty() && !result.is_empty() %}
+    <p class="agent-note-warn">必ず欲しい条件のうち、タグに一致する商品が見つからなかったものがあります：{% for need in result.unmet_needs %}「{{ need }}」{% endfor %}条件を緩めて、近い商品を選んでいます。</p>
+{% endif %}
+{% if result.is_empty() %}
+    <div class="no-results">
+        <p>条件に合う商品が見つかりませんでした。予算や条件を変えてお試しください。</p>
+    </div>
+{% else %}
+    {% if !result.picks.is_empty() %}
+        <div class="product-grid">
+            {% for pick in result.picks %}
+                <section class="agent-pick">
+                    {% if let Some(card) = pick.card %}
+                        {% include "storefront/parts/product_card.html" %}
+                    {% else %}
+                        <p class="cart-line-name"><a href="/products/{{ pick.product_id }}">{{ pick.name }}</a></p>
+                    {% endif %}
+                    <div class="agent-pick-note">
+                        <div class="badges"><span class="badge state">総合スコア {{ pick.total_score }}点</span></div>
+                        {% if !pick.variant_label.is_empty() %}
+                            <p class="cart-line-variant">{{ pick.variant_label }}</p>
+                        {% endif %}
+                        <p class="cart-line-price">{{ pick.formatted_price }}(税込) × 1点</p>
+                        <details class="agent-score-detail"><summary>スコアの内訳</summary><p class="form-note"><span class="agent-score-factor">価格 {{ pick.price_score }}</span> / <span class="agent-score-factor">評価 {{ pick.rating_score }}</span> / <span class="agent-score-factor">条件 {{ pick.needs_score }}</span> / <span class="agent-score-factor">在庫 {{ pick.stock_score }}</span></p></details>
+                        {% for reason in pick.reasons %}
+                            <p class="agent-pick-reason">{{ reason }}</p>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endfor %}
+        </div>
+        <dl class="totals-list">
+            <div><dt>商品合計</dt><dd>{{ result.formatted_subtotal }}</dd></div>
+            <div><dt>送料</dt><dd>{{ result.formatted_shipping }}</dd></div>
+            <div class="totals-grand"><dt>合計（送料込み）</dt><dd>{{ result.formatted_total }}</dd></div>
+            <div><dt>予算</dt><dd>{{ result.formatted_budget }}</dd></div>
+            {% if result.show_remaining() %}
+                <div><dt>予算まであと</dt><dd>{{ result.formatted_remaining }}</dd></div>
+            {% endif %}
+        </dl>
+        <p><a href="/cart" class="primary-button">カートを確認する</a></p>
+        {% if result.show_apply_all %}
+            <form method="post" action="/agent/apply-all">
+                <button type="submit" class="primary-button">提案をすべてカートに入れる</button>
+            </form>
+        {% endif %}
+    {% endif %}
+    {% if !result.over_budget.is_empty() %}
+        <h3>予算オーバーのため追加しなかった商品</h3>
+        <div class="product-grid">
+            {% for entry in result.over_budget %}
+                <section class="agent-pick">
+                    {% if let Some(card) = entry.pick.card %}
+                        {% include "storefront/parts/product_card.html" %}
+                    {% else %}
+                        <p class="cart-line-name"><a href="/products/{{ entry.pick.product_id }}">{{ entry.pick.name }}</a></p>
+                    {% endif %}
+                    <div class="agent-pick-note">
+                        <div class="badges"><span class="badge state">総合スコア {{ entry.pick.total_score }}点</span></div>
+                        {% if !entry.pick.variant_label.is_empty() %}
+                            <p class="cart-line-variant">{{ entry.pick.variant_label }}</p>
+                        {% endif %}
+                        <p class="cart-line-price">{{ entry.pick.formatted_price }}(税込) × 1点</p>
+                        <details class="agent-score-detail"><summary>スコアの内訳</summary><p class="form-note"><span class="agent-score-factor">価格 {{ entry.pick.price_score }}</span> / <span class="agent-score-factor">評価 {{ entry.pick.rating_score }}</span> / <span class="agent-score-factor">条件 {{ entry.pick.needs_score }}</span> / <span class="agent-score-factor">在庫 {{ entry.pick.stock_score }}</span></p></details>
+                        {% for reason in entry.pick.reasons %}
+                            <p class="agent-pick-reason">{{ reason }}</p>
+                        {% endfor %}
+                        <p class="form-note">追加すると合計（送料込み）が {{ entry.formatted_projected_total }} になり、予算を {{ entry.formatted_overage }} 超過します。</p>
+                    </div>
+                </section>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% if !result.already_in_cart.is_empty() %}
+        <h3>すでにカートに入っている商品</h3>
+        <p class="form-note">次の商品は、すでにご自身でカートに入れていたため、そのままにしています。</p>
+        <ul class="cart-lines">
+            {% for pick in result.already_in_cart %}
+                <li class="cart-line">
+                    <div class="cart-line-info">
+                        <p class="cart-line-name"><a href="/products/{{ pick.product_id }}">{{ pick.name }}</a></p>
+                        {% if !pick.variant_label.is_empty() %}
+                            <p class="cart-line-variant">{{ pick.variant_label }}</p>
+                        {% endif %}
+                        <p class="cart-line-price">{{ pick.formatted_price }}(税込) × 1点</p>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endif %}

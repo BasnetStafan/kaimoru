@@ -1,0 +1,114 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | 注文内容の確認{% endblock %}
+
+{% block homepart %}
+    <section class="checkout-page">
+        <ol class="steps">
+            <li class="done"><span class="step-num">1</span>カート</li>
+            <li class="done"><span class="step-num">2</span>お客様情報</li>
+            <li class="done"><span class="step-num">3</span>お支払い方法</li>
+            <li class="active" aria-current="step"><span class="step-num">4</span>注文確認</li>
+            <li><span class="step-num">5</span>完了</li>
+        </ol>
+        <h1>入力内容の確認</h1>
+
+        <form method="post" action="/checkout/confirm" class="checkout-layout">
+            <div class="checkout-main">
+                <section class="checkout-card">
+                    <h2>注文内容</h2>
+                    <ul class="checkout-lines">
+                        {% for line in lines %}
+                            <li>
+                                <a href="/products/{{ line.product_id }}">{% if line.image_path.is_empty() %}<span class="order-line-thumb order-line-thumb-empty" aria-hidden="true"></span>{% else %}<img src="{{ line.image_path }}" alt="" class="order-line-thumb">{% endif %}</a>
+                                <span class="order-line-main"><a href="/products/{{ line.product_id }}">{{ line.name }}</a>{% if !line.variant_label.is_empty() %}（{{ line.variant_label }}）{% endif %} <span class="line-qty">×{{ line.quantity }}</span></span>
+                                <span>{{ line.formatted_line_total() }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </section>
+
+                <section class="checkout-card">
+                    <h2><span class="section-num">01</span>お届け先</h2>
+                    <dl class="confirm-list">
+                        <div><dt>お名前</dt><dd>{{ flow.family_name }} {{ flow.given_name }} 様</dd></div>
+                        <div><dt>住所</dt><dd>〒{{ flow.postal_code }} {{ flow.prefecture }}{{ flow.city }}{{ flow.address_line }}{% if !flow.building.is_empty() %} {{ flow.building }}{% endif %}</dd></div>
+                        <div><dt>電話番号</dt><dd>{{ flow.phone }}</dd></div>
+                        <div><dt>メールアドレス</dt><dd>{{ flow.email }}</dd></div>
+                    </dl>
+                </section>
+
+                <section class="checkout-card">
+                    <h2><span class="section-num">02</span>配送希望日時</h2>
+                    <dl class="confirm-list">
+                        <div><dt>お届け希望日時</dt><dd>{{ flow.delivery_request_display() }}</dd></div>
+                        {% for line in flow.gift_lines() %}
+                        <div><dt>ギフト</dt><dd>{{ line }}</dd></div>
+                        {% endfor %}
+                    </dl>
+                    {% if flow.payment_method.is_konbini() %}
+                        <p class="form-note">※ コンビニお支払いの場合、お支払いの確認後に発送いたします。そのため、ご希望のお届け日に添えない場合があります。</p>
+                    {% endif %}
+                </section>
+
+                <section class="checkout-card">
+                    <h2><span class="section-num">03</span>お支払い方法</h2>
+                    <p class="payment-name">{{ flow.payment_method.label() }}</p>
+                    {% if flow.payment_method.is_hosted() %}
+                        <p class="form-note">「{{ flow.payment_method.place_button_label() }}」を押すと、{{ gateway_name }}の決済画面へ移動します。{{ flow.payment_method.note(*fees, gateway_name) }}</p>
+                    {% else %}
+                        <p class="form-note">お支払いは商品お届け時に現金でお願いいたします。</p>
+                    {% endif %}
+                    <p class="form-note"><a href="/checkout/payment">お支払い方法を変更する</a></p>
+                </section>
+
+                {% if !applied_coupons.is_empty() %}
+                    <section class="checkout-card">
+                        <h2><span class="section-num">04</span>クーポン</h2>
+                        {% for applied in applied_coupons %}
+                        <p class="coupon-applied">{% if applied.automatic %}自動適用：{% endif %}{{ applied.code }}（−{{ applied.amount_display() }}）［{{ applied.class_label() }}］</p>
+                        {% endfor %}
+                    </section>
+                {% endif %}
+            </div>
+            <aside class="checkout-side">
+                <section class="checkout-card summary-card">
+                    <h2>お支払い金額（税込）</h2>
+                    <dl class="totals-list">
+                        <div><dt>商品合計</dt><dd>{{ formatted_subtotal() }}</dd></div>
+                        {% if totals.discount_yen > 0 %}
+                            <div><dt>割引</dt><dd>−{{ formatted_discount() }}</dd></div>
+                        {% endif %}
+                        <div><dt>送料</dt><dd>{{ formatted_shipping() }}{% if totals.shipping_yen == 0 %}（無料）{% endif %}</dd></div>
+                        {% if totals.shipping_discount_yen > 0 %}
+                            <div><dt>送料割引</dt><dd>−{{ formatted_shipping_discount() }}</dd></div>
+                        {% endif %}
+                        {% if totals.cod_fee_yen > 0 %}<div><dt>代引き手数料</dt><dd>{{ formatted_cod_fee() }}</dd></div>{% endif %}
+                        <div class="totals-grand"><dt>合計</dt><dd>{{ formatted_total() }}</dd></div>
+                        {% if points_used_yen > 0 %}
+                        <div><dt>ポイント利用</dt><dd>−{{ points_used_yen }} ポイント</dd></div>
+                        <div class="totals-grand"><dt>お支払い金額</dt><dd>{{ payable_display }}</dd></div>
+                        {% endif %}
+                    </dl>
+                    {% if !totals.tax_breakdown.is_empty() %}
+                    <div class="tax-breakdown">
+                        <p class="tax-breakdown-title">税率ごとの内訳</p>
+                        <dl class="totals-list">
+                            {% for row in totals.tax_breakdown %}
+                            <div><dt>{{ row.tax_class_name }}（{{ row.rate_percent }}%）対象</dt><dd>{{ row.formatted_base() }}</dd></div>
+                            <div><dt>うち消費税</dt><dd>{{ row.formatted_tax() }}</dd></div>
+                            {% endfor %}
+                            <div><dt>内消費税合計</dt><dd>{{ formatted_tax_total() }}</dd></div>
+                        </dl>
+                    </div>
+                    {% endif %}
+                    <div class="form-actions vertical">
+                        <button type="submit" class="primary-button">{{ flow.payment_method.place_button_label() }}</button>
+                        <a href="/checkout" class="secondary-button">修正する</a>
+                    </div>
+                </section>
+            </aside>
+
+        </form>
+    </section>
+{% endblock %}

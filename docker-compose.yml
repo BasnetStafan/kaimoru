@@ -1,0 +1,27 @@
+name: agentic-commerce
+services:
+  db:
+    image: postgres:16
+    container_name: agentic-db
+    environment:
+      POSTGRES_DB: agentic_commerce
+      POSTGRES_USER: agentic
+      # From .env (compose reads it for interpolation) so the database
+      # password lives in exactly one place. Init-only: an existing
+      # data volume keeps the password it was created with.
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - agentic_pgdata:/var/lib/postgresql/data
+  mail:
+    image: axllent/mailpit:latest
+    container_name: agentic-mail
+    # Local mail catcher for development. It receives the verification
+    # emails so they can be read in its web UI; nothing leaves the machine.
+    # SMTP: localhost:1025  Web UI: http://localhost:8025
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+volumes:
+  agentic_pgdata:

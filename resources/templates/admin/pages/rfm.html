@@ -1,0 +1,75 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}RFM分析{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">RFM分析</h1>
+<p class="admin-note">会員の購買行動を R（最終注文からの日数）・F（注文件数）・M（累計購入金額）で測り、対象会員の中での相対位置を1〜5のスコアにしています。同点は同スコアです。キャンセル済み注文は数えず、Mは返金を差し引いた金額です。退会済み会員とゲスト注文は対象外です。スコアは表示のたびに最新の注文から計算します。</p>
+<p class="admin-note">対象会員：{{ population }}人</p>
+
+<h2 class="admin-h2">セグメント別会員数</h2>
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>セグメント</th><th>会員数</th></tr>
+    </thead>
+    <tbody>
+        {% for s in segments %}
+        <tr><td>{{ s.label }}</td><td class="num">{{ s.count }}人</td></tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+
+<h2 class="admin-h2">購入金額ランキング</h2>
+{% if leaders.is_empty() %}
+<p class="admin-empty">対象会員がいません</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>順位</th><th>氏名</th><th>M（累計・返金差引後）</th><th>F（件数）</th><th>R（日数）</th><th>スコア R/F/M</th><th>セグメント</th></tr>
+    </thead>
+    <tbody>
+        {% for row in leaders %}
+        <tr>
+            <td class="num">{{ loop.index }}</td>
+            <td><a href="/admin/customers/{{ row.user_id }}">{{ row.name }}</a></td>
+            <td class="num">{{ row.m_display }}</td>
+            <td class="num">{{ row.f_count }}</td>
+            <td class="num">{{ row.r_days }}日</td>
+            <td class="num">{{ row.r_band }} / {{ row.f_band }} / {{ row.m_band }}</td>
+            <td>{{ row.segment_label }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+
+<h2 class="admin-h2">会員別スコア</h2>
+<p class="admin-filters">
+    <a href="/admin/rfm?sort=m" class="secondary-button{% if tab_m %} active{% endif %}">M順</a>
+    <a href="/admin/rfm?sort=f" class="secondary-button{% if tab_f %} active{% endif %}">F順</a>
+    <a href="/admin/rfm?sort=r" class="secondary-button{% if tab_r %} active{% endif %}">R順</a>
+</p>
+{% if rows.is_empty() %}
+<p class="admin-empty">対象会員がいません</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>氏名</th><th>メールアドレス</th><th>R（最終注文）</th><th>F（件数）</th><th>M（累計・返金差引後）</th><th>スコア R/F/M</th><th>セグメント</th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td><a href="/admin/customers/{{ row.user_id }}">{{ row.name }}</a></td>
+            <td>{{ row.email }}</td>
+            <td>{{ row.last_order_label }}（{{ row.r_days }}日）</td>
+            <td class="num">{{ row.f_count }}</td>
+            <td class="num">{{ row.m_display }}</td>
+            <td class="num">{{ row.r_band }} / {{ row.f_band }} / {{ row.m_band }}</td>
+            <td>{{ row.segment_label }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% include "admin/parts/pagination.html" %}
+{% endif %}
+{% endblock %}

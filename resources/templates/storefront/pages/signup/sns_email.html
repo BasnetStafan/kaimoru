@@ -1,0 +1,29 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | メールアドレスの入力{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        <h1>メールアドレスの入力</h1>
+        <ol class="steps">
+            <li class="active"><span class="step-num">1</span>メールアドレス</li>
+            <li><span class="step-num">2</span>認証コード</li>
+            <li><span class="step-num">3</span>会員情報</li>
+            <li><span class="step-num">4</span>確認</li>
+        </ol>
+
+        <p>{{ provider_name }}からメールアドレスが取得できませんでした。会員登録に使うメールアドレスを入力してください。</p>
+
+        <form method="post" action="/signup/sns/email" class="auth-form">
+            <label>
+                メールアドレス <span class="badge-required">必須</span>
+                <input type="email" name="email" value="{{ email }}" aria-required="true" autocomplete="email">
+            </label>
+            {% if let Some(message) = error %}
+                <p class="field-error">{{ message }}</p>
+            {% endif %}
+            <p class="form-note">入力したメールアドレスに、6桁の認証コードをお送りします。</p>
+            <button type="submit" class="primary-button">認証コードを送信する</button>
+        </form>
+    </section>
+{% endblock %}

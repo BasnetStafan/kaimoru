@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = [
+    "server",
+    "app",
+    "configuration",
+]
+
+[workspace.package]
+license = "MIT OR Apache-2.0"
+description = "Kaimoru - a Japan-complete, full-stack server-rendered e-commerce store in Rust (Axum/PostgreSQL), with KOMOJU and Stripe payments."

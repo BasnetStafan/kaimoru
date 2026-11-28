@@ -1,0 +1,43 @@
+<article class="product-card">
+    <a href="/products/{{ card.product.id }}"><img src="{{ card.product.thumb_image_path() }}" data-fallback-src="{{ card.product.image_path }}" alt="{{ card.product.card_image_alt() }}" / loading="lazy" decoding="async"></a>
+    <div class="card-favorite">{% let product_id = card.product.id %}{% let is_favorite = card.is_favorite %}{% let labelled = false %}{% let member = card.is_member %}{% include "storefront/parts/favorite_toggle.html" %}</div>
+    <div class="badges">
+        {% if card.product.track_stock && !card.product.allow_backorder && card.product.stock == 0 %}<span class="badge state">売り切れ</span>{% else if card.product.is_preorder %}<span class="badge state">予約受付中</span>{% else if card.product.allow_backorder && card.product.stock == 0 %}<span class="badge state">入荷次第発送</span>{% else if card.product.track_stock && card.product.stock <= card.product.low_stock_threshold() %}<span class="badge state">残りわずか</span>{% else if card.product.sale_active() %}<span class="badge promo">{{ card.product.sale_percent_off() }}%OFF</span>{% else if card.product.discount_percent > 0 %}<span class="badge promo">{{ card.product.discount_percent }}%OFF</span>{% else if card.product.is_new %}<span class="badge promo">NEW</span>{% endif %}
+    </div>
+    <h3><a href="/products/{{ card.product.id }}">{{ card.product.name }}</a></h3>
+    {% if card.rating.rating_count > 0 %}
+        <p class="rating"><span class="stars">★</span>{{ card.rating.average_text() }}（{{ card.rating.rating_count }}件）</p>
+    {% endif %}
+    <p class="price">{% if card.product.sale_active() %}<span class="regular-price">{{ card.product.formatted_regular_price() }}</span> {% endif %}{{ card.product.formatted_price() }}(税込)</p>
+    {% if let Some(note) = card.product.tax_class_note() %}<p class="card-tax-note">{{ note }}</p>{% endif %}
+    <div class="card-cart">
+        {% if card.action_is_in_cart() %}
+            <button type="button" class="add-cart-button" disabled>カートに追加済み</button>
+        {% endif %}
+        {% if let Some(variant_id) = card.add_anyway_variant() %}
+            <form method="post" action="/agent/add-anyway">
+                <input type="hidden" name="variant_id" value="{{ variant_id }}">
+                <button type="submit" class="add-cart-button">カートに入れる</button>
+            </form>
+        {% endif %}
+        {% if let Some(variant_id) = card.apply_pick_variant() %}
+            <form method="post" action="/agent/apply-pick">
+                <input type="hidden" name="variant_id" value="{{ variant_id }}">
+                <button type="submit" class="add-cart-button">カートに入れる</button>
+            </form>
+        {% endif %}
+        {% if card.action_is_storefront() %}
+            {% if card.product.track_stock && !card.product.allow_backorder && card.product.stock == 0 %}
+                <button type="button" class="add-cart-button" disabled>売り切れ</button>
+            {% else if card.product.has_variants %}
+                <a href="/products/{{ card.product.id }}" class="add-cart-button" hx-get="/products/{{ card.product.id }}/quick-add" hx-target="[data-quick-add-body]" hx-swap="innerHTML" data-quick-add-open>選択する</a>
+            {% else %}
+                <form hx-post="/cart/items" hx-swap="none">
+                    <input type="hidden" name="product_id" value="{{ card.product.id }}">
+                    <input type="hidden" name="quantity" value="1">
+                    <button type="submit" class="add-cart-button">カートに入れる</button>
+                </form>
+            {% endif %}
+        {% endif %}
+    </div>
+</article>

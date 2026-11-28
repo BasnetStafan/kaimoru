@@ -1,0 +1,33 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}メールキャンペーン{% endblock %}
+
+{% block adminpart %}
+<div class="admin-page-head">
+    <h1 class="admin-h1">メールキャンペーン</h1>
+    <a class="primary-button admin-new-button" href="/admin/mail/campaigns/new">キャンペーンを登録</a>
+</div>
+
+{% if rows.is_empty() %}
+<p class="admin-empty">キャンペーンはまだありません</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>名前</th><th>状態</th><th>配信予定</th><th>配信完了</th><th>配信結果</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td><a href="/admin/mail/campaigns/{{ row.id }}/edit">{{ row.name }}</a></td>
+            <td>{{ row.status_label }}</td>
+            <td>{% if let Some(label) = row.scheduled_label %}{{ label }}{% else %}—{% endif %}</td>
+            <td>{% if let Some(label) = row.sent_label %}{{ label }}{% else %}—{% endif %}</td>
+            <td>{{ row.stats.sent }} / {{ row.stats.total }} 通{% if row.stats.failed > 0 %}（失敗 {{ row.stats.failed }}）{% endif %}{% if row.stats.skipped > 0 %}（除外 {{ row.stats.skipped }}）{% endif %}</td>
+            <td><a href="/admin/mail/campaigns/{{ row.id }}/confirm">確認</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% include "admin/parts/pagination.html" %}
+{% endif %}
+{% endblock %}

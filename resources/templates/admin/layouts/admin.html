@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}管理画面{% endblock %} | AGENTIC STORE 管理</title>
+<link rel="icon" href="/static/images/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/css/style.css?v={{ layout.asset_fingerprint }}">
+<link rel="stylesheet" href="/static/css/admin.css?v={{ layout.asset_fingerprint }}">
+<script src="/static/js/admin.js?v={{ layout.asset_fingerprint }}" defer></script>
+</head>
+<body class="admin-body">
+<div class="admin-shell">
+    <aside class="admin-sidebar" data-admin-sidebar>
+        <a class="admin-brand" href="/admin">AGENTIC STORE<span>管理画面</span></a>
+        <button type="button" class="admin-nav-toggle" data-nav-toggle aria-expanded="true">メニューを閉じる</button>
+        <div class="admin-nav-search">
+            <input type="search" class="admin-nav-search-input" data-nav-search placeholder="メニューを検索" aria-label="管理メニューを検索">
+        </div>
+        <nav class="admin-nav" aria-label="管理メニュー">
+            <a href="/admin"{% if nav == "dashboard" %} class="active" aria-current="page"{% endif %}>ダッシュボード</a>
+            {% if layout.can_sales %}
+            <p class="admin-nav-heading">販売</p>
+            <a href="/admin/orders"{% if nav == "orders" %} class="active" aria-current="page"{% endif %}>注文管理</a>
+            <a href="/admin/returns"{% if nav == "returns" %} class="active" aria-current="page"{% endif %}>返品管理</a>
+            <a href="/admin/inquiries"{% if nav == "inquiries" %} class="active" aria-current="page"{% endif %}>お問い合わせ{% if layout.open_inquiries > 0 %}（{{ layout.open_inquiries }}）{% endif %}</a>
+            <a href="/admin/payments"{% if nav == "payments" %} class="active" aria-current="page"{% endif %}>決済照合</a>
+            <a href="/admin/analytics"{% if nav == "analytics" %} class="active" aria-current="page"{% endif %}>売上分析</a>
+            <a href="/admin/reviews"{% if nav == "reviews" %} class="active" aria-current="page"{% endif %}>レビュー管理</a>
+            {% endif %}
+            {% if layout.can_products %}
+            <p class="admin-nav-heading">商品</p>
+            <a href="/admin/products"{% if nav == "products" %} class="active" aria-current="page"{% endif %}>商品管理</a>
+            <a href="/admin/categories"{% if nav == "categories" %} class="active" aria-current="page"{% endif %}>カテゴリー管理</a>
+            <a href="/admin/tags"{% if nav == "tags" %} class="active" aria-current="page"{% endif %}>タグ管理</a>
+            <a href="/admin/notices"{% if nav == "notices" %} class="active" aria-current="page"{% endif %}>お知らせ管理</a>
+            {% endif %}
+            {% if layout.can_content %}
+            <p class="admin-nav-heading">コンテンツ</p>
+            <a href="/admin/content"{% if nav == "pages" || nav == "content" || nav == "posts" %} class="active" aria-current="page"{% endif %}>ページ</a>
+            <a href="/admin/content/home"{% if nav == "content_home" %} class="active" aria-current="page"{% endif %}>トップページ設定</a>
+            <a href="/admin/content/menus"{% if nav == "content_menus" %} class="active" aria-current="page"{% endif %}>メニュー設定</a>
+            <a href="/admin/post-categories"{% if nav == "post_categories" %} class="active" aria-current="page"{% endif %}>ブログカテゴリ</a>
+            <a href="/admin/coupons"{% if nav == "coupons" %} class="active" aria-current="page"{% endif %}>クーポン</a>
+            {% endif %}
+            {% if layout.can_mail %}
+            <p class="admin-nav-heading">メール配信</p>
+            <a href="/admin/mail"{% if nav == "mail" %} class="active" aria-current="page"{% endif %}>メール配信</a>
+            <a href="/admin/mail/templates"{% if nav == "mail_templates" %} class="active" aria-current="page"{% endif %}>メールテンプレート</a>
+            <a href="/admin/mail/campaigns"{% if nav == "mail_campaigns" %} class="active" aria-current="page"{% endif %}>メールキャンペーン</a>
+            <a href="/admin/mail/scenarios"{% if nav == "mail_scenarios" %} class="active" aria-current="page"{% endif %}>ステップメール</a>
+            {% endif %}
+            {% if layout.can_store || layout.can_settings || layout.is_owner %}
+            <p class="admin-nav-heading">店舗・設定</p>
+            {% if layout.can_store %}
+            <a href="/admin/customers"{% if nav == "customers" %} class="active" aria-current="page"{% endif %}>会員管理</a>
+            <a href="/admin/segments"{% if nav == "segments" %} class="active" aria-current="page"{% endif %}>顧客セグメント</a>
+            <a href="/admin/rfm"{% if nav == "rfm" %} class="active" aria-current="page"{% endif %}>RFM分析</a>
+            <a href="/admin/audit"{% if nav == "audit" %} class="active" aria-current="page"{% endif %}>監査ログ</a>
+            {% endif %}
+            {% if layout.can_settings %}
+            <a href="/admin/settings/shop"{% if nav == "shop_settings" %} class="active" aria-current="page"{% endif %}>店舗設定</a>
+            <a href="/admin/settings/tax"{% if nav == "tax_settings" %} class="active" aria-current="page"{% endif %}>消費税設定</a>
+            <a href="/admin/settings/holidays"{% if nav == "holidays" %} class="active" aria-current="page"{% endif %}>休業日</a>
+            <a href="/admin/settings/api-keys"{% if nav == "api_keys" %} class="active" aria-current="page"{% endif %}>APIキー</a>
+            {% endif %}
+            {% if layout.is_owner %}
+            <a href="/admin/admins"{% if nav == "admins" %} class="active" aria-current="page"{% endif %}>管理者管理</a>
+            {% endif %}
+            {% endif %}
+            <a href="/admin/password"{% if nav == "account_settings" %} class="active" aria-current="page"{% endif %}>アカウント設定</a>
+            <p class="admin-nav-empty" data-nav-empty hidden>該当するメニューがありません</p>
+        </nav>
+        <div class="admin-side-foot">
+            <p class="admin-user">{{ layout.admin_name }} さん</p>
+            <form method="post" action="/admin/logout" class="admin-logout-form">
+                <button type="submit" class="admin-logout-button">ログアウト</button>
+            </form>
+            <a class="admin-storelink" href="/" target="_blank" rel="noopener">ストアを見る</a>
+        </div>
+    </aside>
+    <button type="button" class="admin-nav-open" data-nav-toggle hidden>☰ メニューを開く</button>
+    <main class="admin-main">
+        {% if let Some(msg) = layout.flash %}
+        <p class="admin-flash" role="status">{{ msg }}</p>
+        {% endif %}
+        {% block adminpart %}{% endblock %}
+    </main>
+</div>
+</body>
+</html>

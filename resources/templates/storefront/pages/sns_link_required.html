@@ -1,0 +1,15 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | アカウントの連携について{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        <h1>アカウントの連携について</h1>
+
+        <p>このメールアドレスで登録されたアカウントがあります。パスワードでログインすると連携できます。</p>
+        <p>対象のアカウント:{{ email }}</p>
+
+        <p><a href="/login?next=/mypage/sns" class="primary-button">パスワードでログインする</a></p>
+        <p class="form-note">ログイン後、マイページの「SNS連携」から連携を完了してください。安全のため、SNSアカウントだけでは既存のアカウントに自動で連携されません。</p>
+    </section>
+{% endblock %}

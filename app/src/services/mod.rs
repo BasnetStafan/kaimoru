@@ -1,0 +1,57 @@
+//! Services for Kaimoru.
+//! Services hold the business rules and work with plain models only.
+//! They know nothing about HTTP or templates.
+
+pub mod admin;
+pub mod agent_approval_service;
+pub mod agent_chat_rules;
+pub mod agent_chat_service;
+pub mod agent_run_service;
+pub mod api_cart_service;
+pub mod api_catalog_service;
+pub mod api_key_service;
+pub mod blog_service;
+pub mod cart_reminder_service;
+pub mod cart_service;
+pub mod content_page_service;
+pub mod coupon_service;
+pub mod favorite_service;
+pub mod form_ticket_service;
+pub mod holiday_service;
+pub mod home_content_service;
+pub mod inquiry_service;
+pub mod komoju_client;
+pub mod low_stock_alert_service;
+pub mod mail_subscription_service;
+pub mod marketing_mail_service;
+pub mod mcp_cart_service;
+pub mod mcp_oauth_service;
+pub mod mcp_order_draft_service;
+pub mod mcp_principal;
+pub mod member_account_service;
+pub mod member_address_service;
+pub mod member_order_cancel_service;
+pub mod menu_service;
+pub mod notice_service;
+pub mod notification_template_service;
+pub mod order_service;
+pub mod password;
+pub mod payment_gateway;
+pub mod payment_service;
+pub mod point_service;
+pub mod postal_code_service;
+pub mod product_service;
+pub mod restock_service;
+pub mod review_service;
+pub mod scenario_service;
+pub mod search_service;
+pub mod shipping_mail_service;
+pub mod shop_settings_service;
+pub mod sitemap_service;
+pub mod sns_providers;
+pub mod sns_service;
+pub mod stripe_client;
+pub mod tax_service;
+pub mod totp;
+pub mod totp_service;
+pub mod withdraw_service;

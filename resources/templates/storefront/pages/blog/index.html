@@ -1,0 +1,50 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{% if let Some(name) = category_name %}{{ name }} | ブログ | {{ header.shop.shop_name }}{% else %}ブログ | {{ header.shop.shop_name }}{% endif %}{% endblock %}
+
+{% block homepart %}
+<section class="info-page blog-index">
+    {% if let Some(name) = category_name %}
+    <p class="blog-breadcrumb"><a href="/blog">ブログ</a> / {{ name }}</p>
+    <h1>{{ name }}</h1>
+    {% else %}
+    <h1>ブログ</h1>
+    {% endif %}
+
+    {% if cards.is_empty() %}
+    <p class="empty-note">記事はまだありません。</p>
+    {% else %}
+    <ul class="blog-card-list">
+        {% for card in cards %}
+        <li class="blog-card">
+            {% if let Some(path) = card.cover_image_path %}
+            <a class="blog-card-cover" href="{{ card.url }}"><img src="{{ path }}" alt=""></a>
+            {% endif %}
+            <div class="blog-card-body">
+                <p class="blog-card-meta">
+                    <time>{{ card.date_label }}</time>
+                    {% if let Some(name) = card.category_name %}{% if let Some(url) = card.category_url %}<a class="blog-category" href="{{ url }}">{{ name }}</a>{% endif %}{% endif %}
+                </p>
+                <h2 class="blog-card-title"><a href="{{ card.url }}">{{ card.title }}</a></h2>
+                {% if !card.excerpt.is_empty() %}
+                <p class="blog-card-excerpt">{{ card.excerpt }}</p>
+                {% endif %}
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+
+    {% if total_pages > 1 %}
+    <nav class="pager" aria-label="ページ">
+        {% if page > 1 %}
+        <a class="pager-link" href="{{ page_base }}page={{ page - 1 }}">前のページ</a>
+        {% endif %}
+        <span class="pager-status">{{ page }} / {{ total_pages }} ページ（全{{ total }}件）</span>
+        {% if page < total_pages %}
+        <a class="pager-link" href="{{ page_base }}page={{ page + 1 }}">次のページ</a>
+        {% endif %}
+    </nav>
+    {% endif %}
+    {% endif %}
+</section>
+{% endblock %}

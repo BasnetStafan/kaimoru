@@ -1,0 +1,40 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | SNS連携{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        {% include "storefront/parts/breadcrumb.html" %}
+        <h1>SNS連携</h1>
+
+        <p>SNSアカウントと連携すると、次回からそのアカウントでログインできるようになります。</p>
+
+        {% if let Some(pending) = link_pending %}
+            <div class="link-pending-banner">
+                <p>{{ pending.provider_name }}アカウントの連携が完了していません。連携すると、次回から{{ pending.provider_name }}でログインできます。</p>
+                <form method="post" action="/mypage/sns/link-pending">
+                    <button type="submit" class="primary-button">連携する</button>
+                </form>
+            </div>
+        {% endif %}
+
+        {% if rows.is_empty() %}
+            <p>現在利用できるSNS連携はありません。</p>
+        {% endif %}
+        {% for row in rows %}
+            <div class="sns-row">
+                <span class="sns-name">{{ row.display_name }}</span>
+                {% if row.linked %}
+                    <span class="sns-state">連携済み{% if let Some(email) = row.linked_email %}<br>{{ email }}{% endif %}</span>
+                    <form method="post" action="/mypage/sns/{{ row.provider }}/unlink" class="inline-form">
+                        <button type="submit" class="secondary-button danger">解除する</button>
+                    </form>
+                {% else %}
+                    <a class="secondary-button" href="/auth/{{ row.provider }}/start?link=1&next=/mypage/sns">連携する</a>
+                {% endif %}
+            </div>
+        {% endfor %}
+
+        <p class="form-note"><a href="/mypage">マイページへ戻る</a></p>
+    </section>
+{% endblock %}

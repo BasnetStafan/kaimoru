@@ -1,0 +1,23 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | リカバリーコード{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        {% include "storefront/parts/breadcrumb.html" %}
+        <h1>リカバリーコード</h1>
+
+        <p>新しいリカバリーコードを発行しました。認証アプリを使えないとき、このコードでログインできます。</p>
+        <p class="form-note">各コードは1回だけ使えます。以前のコードはすべて無効になりました。この画面を閉じると二度と表示されません。印刷するか、安全な場所に保管してください。</p>
+
+        <ul class="recovery-codes">
+            {% for code in codes %}
+                <li><code>{{ code }}</code></li>
+            {% endfor %}
+        </ul>
+
+        <p><button type="button" class="secondary-button" data-copy-recovery>すべてのコードをコピーする</button></p>
+
+        <p><a href="/mypage" class="primary-button">確認しました</a></p>
+    </section>
+{% endblock %}

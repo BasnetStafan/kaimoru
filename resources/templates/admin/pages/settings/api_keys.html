@@ -1,0 +1,58 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}APIキー{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">APIキー</h1>
+<p class="admin-note">外部のAIクライアント（MCP）がこのストアに接続するためのキーです。catalog:read はカタログの読み取り専用、cart:write はカートの作成・変更、orders:read は注文の照会、orders:write はカート操作に加えて注文案（ドラフト）の作成もできます。注文の確定とお支払いは、どのキーでもお客様ご自身のブラウザで行われます。キーの秘密部分は発行時に一度だけ表示され、サーバーにはハッシュ化して保存されます。</p>
+
+{% if let Some(token) = created_token %}
+<p class="admin-note">新しいキーを発行しました。このキーは一度だけ表示されます。安全な場所に保管してください。</p>
+<p><code>{{ token }}</code></p>
+{% endif %}
+
+{% if !form_error.is_empty() %}<p class="admin-error">{{ form_error }}</p>{% endif %}
+<form method="post" action="/admin/settings/api-keys" class="admin-form">
+    <label>名前 <span class="badge-required">必須</span>
+        <input type="text" name="name" value="{{ form_name }}" maxlength="100" placeholder="例：Claude（開発用）">
+    </label>
+    <label>スコープ
+        <select name="scope">
+            <option value="catalog:read"{% if form_scope == "catalog:read" %} selected{% endif %}>catalog:read（読み取り専用）</option>
+            <option value="cart:write"{% if form_scope == "cart:write" %} selected{% endif %}>cart:write（カート操作可）</option>
+            <option value="orders:read"{% if form_scope == "orders:read" %} selected{% endif %}>orders:read（注文照会）</option>
+            <option value="orders:write"{% if form_scope == "orders:write" %} selected{% endif %}>orders:write（注文作成可）</option>
+        </select>
+    </label>
+    <button type="submit" class="primary-button">キーを発行</button>
+</form>
+
+{% if rows.is_empty() %}
+<p class="admin-empty">APIキーはまだありません</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>名前</th><th>プレフィックス</th><th>スコープ</th><th>発行日時</th><th>最終利用</th><th>状態</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td>{{ row.name }}</td>
+            <td><code>{{ row.prefix }}</code></td>
+            <td>{{ row.scope }}</td>
+            <td>{{ row.created_label }}</td>
+            <td>{{ row.last_used_label }}</td>
+            <td>{{ row.status_label }}</td>
+            <td>
+                {% if row.active %}
+                <form method="post" action="/admin/settings/api-keys/{{ row.id }}/revoke" class="api-key-revoke-form">
+                    <button type="submit" class="secondary-button danger">無効化</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+{% endblock %}

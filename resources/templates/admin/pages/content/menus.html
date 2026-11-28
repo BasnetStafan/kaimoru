@@ -1,0 +1,192 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}メニュー設定{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">メニュー設定</h1>
+<p class="admin-note">サイト上部のヘッダーと下部のフッターに表示されるリンクを設定します。保存すると、次にページが表示されたときから反映されます。入力した文字はそのまま表示されます（HTMLタグは使えません）。</p>
+
+<form method="post" action="/admin/content/menus" class="admin-form" data-unsaved-guard>
+  <input type="hidden" name="form_ticket" value="{{ form_ticket }}">
+    <h2 class="admin-h2">{{ header.label }}</h2>
+    <p class="admin-note">ヘッダーメニューは、表示するリンクが1件以上あるときだけヘッダーの下部に表示されます。カートやログインなどのリンクはここでは変更できません。</p>
+    {% if let Some(message) = header.error %}
+    <p class="field-error">{{ message }}</p>
+    {% endif %}
+    {% for row in header.rows %}
+    <div class="admin-form-row">
+        <label>ラベル <span class="badge-required">必須</span>
+            <input type="text" name="items[header][{{ row.index }}][label]" value="{{ row.label }}" maxlength="30" aria-required="true">
+            {% if let Some(message) = row.label_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>URL <span class="badge-required">必須</span>
+            <input type="text" name="items[header][{{ row.index }}][url]" value="{{ row.url }}" placeholder="/guide" aria-required="true">
+            {% if let Some(message) = row.url_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>並び順 <span class="badge-required">必須</span>
+            <input type="number" name="items[header][{{ row.index }}][sort]" value="{{ row.sort_order }}" aria-required="true">
+            {% if let Some(message) = row.sort_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+    </div>
+    <input type="hidden" name="items[header][{{ row.index }}][id]" value="{{ row.id }}">
+    <label class="admin-check">
+        <input type="checkbox" name="items[header][{{ row.index }}][visible]"{% if row.visible %} checked{% endif %}> 表示する
+    </label>
+    <label class="admin-check">
+        <input type="checkbox" name="items[header][{{ row.index }}][delete]"{% if row.delete %} checked{% endif %}> このリンクを削除する
+    </label>
+    {% endfor %}
+    <h3 class="admin-h3">新しいリンク</h3>
+    <p class="admin-note">入力した行だけが追加されます。</p>
+    <div data-menu-blank-rows="header">
+    {% for row in header.blank_rows %}
+    <div data-menu-blank-row>
+    <div class="admin-form-row">
+        <label>ラベル <span class="badge-optional">任意</span>
+            <input type="text" name="items[header][{{ row.index }}][label]" value="{{ row.label }}" maxlength="30">
+            {% if let Some(message) = row.label_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>URL <span class="badge-optional">任意</span>
+            <input type="text" name="items[header][{{ row.index }}][url]" value="{{ row.url }}" placeholder="/guide">
+            {% if let Some(message) = row.url_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>並び順 <span class="badge-optional">任意</span>
+            <input type="number" name="items[header][{{ row.index }}][sort]" value="{{ row.sort_order }}">
+            {% if let Some(message) = row.sort_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+    </div>
+    <input type="hidden" name="items[header][{{ row.index }}][id]" value="{{ row.id }}">
+    <label class="admin-check">
+        <input type="checkbox" name="items[header][{{ row.index }}][visible]"{% if row.visible %} checked{% endif %}> 表示する
+    </label>
+    </div>
+    {% endfor %}
+    </div>
+    <template data-menu-blank-template="header">
+    <div data-menu-blank-row>
+    <div class="admin-form-row">
+        <label>ラベル <span class="badge-optional">任意</span>
+            <input type="text" name="items[header][__INDEX__][label]" value="" maxlength="30">
+        </label>
+        <label>URL <span class="badge-optional">任意</span>
+            <input type="text" name="items[header][__INDEX__][url]" value="" placeholder="/guide">
+        </label>
+        <label>並び順 <span class="badge-optional">任意</span>
+            <input type="number" name="items[header][__INDEX__][sort]" value="__SORT__">
+        </label>
+    </div>
+    <input type="hidden" name="items[header][__INDEX__][id]" value="">
+    <label class="admin-check">
+        <input type="checkbox" name="items[header][__INDEX__][visible]" checked> 表示する
+    </label>
+    <button type="button" class="secondary-button" data-menu-row-remove>この行を削除</button>
+    </div>
+    </template>
+    <p><button type="button" class="secondary-button" data-menu-add="header">リンクを追加</button></p>
+
+    <h2 class="admin-h2">{{ footer.label }}</h2>
+    {% if let Some(message) = footer.error %}
+    <p class="field-error">{{ message }}</p>
+    {% endif %}
+    {% for row in footer.rows %}
+    <div class="admin-form-row">
+        <label>ラベル <span class="badge-required">必須</span>
+            <input type="text" name="items[footer][{{ row.index }}][label]" value="{{ row.label }}" maxlength="30" aria-required="true">
+            {% if let Some(message) = row.label_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>URL <span class="badge-required">必須</span>
+            <input type="text" name="items[footer][{{ row.index }}][url]" value="{{ row.url }}" placeholder="/guide" aria-required="true">
+            {% if let Some(message) = row.url_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>並び順 <span class="badge-required">必須</span>
+            <input type="number" name="items[footer][{{ row.index }}][sort]" value="{{ row.sort_order }}" aria-required="true">
+            {% if let Some(message) = row.sort_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+    </div>
+    <input type="hidden" name="items[footer][{{ row.index }}][id]" value="{{ row.id }}">
+    <label class="admin-check">
+        <input type="checkbox" name="items[footer][{{ row.index }}][visible]"{% if row.visible %} checked{% endif %}> 表示する
+    </label>
+    <label class="admin-check">
+        <input type="checkbox" name="items[footer][{{ row.index }}][delete]"{% if row.delete %} checked{% endif %}> このリンクを削除する
+    </label>
+    {% endfor %}
+    <h3 class="admin-h3">新しいリンク</h3>
+    <p class="admin-note">入力した行だけが追加されます。</p>
+    <div data-menu-blank-rows="footer">
+    {% for row in footer.blank_rows %}
+    <div data-menu-blank-row>
+    <div class="admin-form-row">
+        <label>ラベル <span class="badge-optional">任意</span>
+            <input type="text" name="items[footer][{{ row.index }}][label]" value="{{ row.label }}" maxlength="30">
+            {% if let Some(message) = row.label_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>URL <span class="badge-optional">任意</span>
+            <input type="text" name="items[footer][{{ row.index }}][url]" value="{{ row.url }}" placeholder="/guide">
+            {% if let Some(message) = row.url_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+        <label>並び順 <span class="badge-optional">任意</span>
+            <input type="number" name="items[footer][{{ row.index }}][sort]" value="{{ row.sort_order }}">
+            {% if let Some(message) = row.sort_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
+    </div>
+    <input type="hidden" name="items[footer][{{ row.index }}][id]" value="{{ row.id }}">
+    <label class="admin-check">
+        <input type="checkbox" name="items[footer][{{ row.index }}][visible]"{% if row.visible %} checked{% endif %}> 表示する
+    </label>
+    </div>
+    {% endfor %}
+    </div>
+    <template data-menu-blank-template="footer">
+    <div data-menu-blank-row>
+    <div class="admin-form-row">
+        <label>ラベル <span class="badge-optional">任意</span>
+            <input type="text" name="items[footer][__INDEX__][label]" value="" maxlength="30">
+        </label>
+        <label>URL <span class="badge-optional">任意</span>
+            <input type="text" name="items[footer][__INDEX__][url]" value="" placeholder="/guide">
+        </label>
+        <label>並び順 <span class="badge-optional">任意</span>
+            <input type="number" name="items[footer][__INDEX__][sort]" value="__SORT__">
+        </label>
+    </div>
+    <input type="hidden" name="items[footer][__INDEX__][id]" value="">
+    <label class="admin-check">
+        <input type="checkbox" name="items[footer][__INDEX__][visible]" checked> 表示する
+    </label>
+    <button type="button" class="secondary-button" data-menu-row-remove>この行を削除</button>
+    </div>
+    </template>
+    <p><button type="button" class="secondary-button" data-menu-add="footer">リンクを追加</button></p>
+
+    <p class="admin-note">URLは「/」で始まるサイト内リンク、「#」で始まるページ内リンク、または「https://」で始まる外部リンクのみ使えます。外部リンクには rel="noopener" が自動で付きます。フッターメニューは表示するリンクが最低1件必要です。ヘッダーメニューは0件でも保存できます（0件のときはヘッダーにメニューは表示されません）。削除は「このリンクを削除する」にチェックして保存すると確定します。</p>
+    <div class="admin-form-actions">
+        <p class="admin-unsaved-note" data-unsaved-note hidden>未保存の変更があります</p>
+        <button type="submit" class="primary-button">保存する</button>
+    </div>
+</form>
+{% endblock %}

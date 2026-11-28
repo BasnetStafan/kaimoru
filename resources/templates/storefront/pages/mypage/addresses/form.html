@@ -1,0 +1,84 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | {{ heading }}{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        {% include "storefront/parts/breadcrumb.html" %}
+        <h1>{{ heading }}</h1>
+
+        {% if let Some(message) = form_error %}
+            <p class="form-error">{{ message }}</p>
+        {% endif %}
+
+        <form method="post" action="{{ form_action }}" class="auth-form">
+            <input type="hidden" name="form_ticket" value="{{ form_ticket }}">
+            <label>
+                ラベル <span class="badge-optional">任意</span>
+                <input type="text" name="label" value="{{ values.label }}" placeholder="例：自宅・実家・勤務先">
+                {% if let Some(e) = errors.label %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+
+            <div class="field-row">
+                <label>
+                    姓 <span class="badge-required">必須</span>
+                    <input type="text" name="family_name" value="{{ values.family_name }}" aria-required="true" autocomplete="family-name">
+                    {% if let Some(e) = errors.family_name %}<p class="field-error">{{ e }}</p>{% endif %}
+                </label>
+                <label>
+                    名 <span class="badge-required">必須</span>
+                    <input type="text" name="given_name" value="{{ values.given_name }}" aria-required="true" autocomplete="given-name">
+                    {% if let Some(e) = errors.given_name %}<p class="field-error">{{ e }}</p>{% endif %}
+                </label>
+            </div>
+
+            <label>
+                郵便番号（ハイフンなし7桁） <span class="badge-required">必須</span>
+                <input type="text" name="postal_code" value="{{ values.postal_code }}" inputmode="numeric" aria-required="true" autocomplete="postal-code">
+                {% if let Some(e) = errors.postal_code %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+            <label>
+                都道府県 <span class="badge-required">必須</span>
+                <select name="prefecture" autocomplete="address-level1" aria-required="true">
+                    <option value="">選択してください</option>
+                    {% for pref in prefectures %}
+                        <option value="{{ pref }}" {% if values.prefecture == *pref %}selected{% endif %}>{{ pref }}</option>
+                    {% endfor %}
+                </select>
+                {% if let Some(e) = errors.prefecture %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+            <label>
+                市区町村 <span class="badge-required">必須</span>
+                <input type="text" name="city" value="{{ values.city }}" aria-required="true" autocomplete="address-level2">
+                {% if let Some(e) = errors.city %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+            <label>
+                番地 <span class="badge-required">必須</span>
+                <input type="text" name="address_line" value="{{ values.address_line }}" aria-required="true" autocomplete="street-address">
+                {% if let Some(e) = errors.address_line %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+            <label>
+                建物名・部屋番号 <span class="badge-optional">任意</span>
+                <input type="text" name="building" value="{{ values.building }}">
+            </label>
+            <label>
+                電話番号 <span class="badge-required">必須</span>
+                <input type="tel" name="phone" value="{{ values.phone }}" inputmode="tel" aria-required="true" autocomplete="tel">
+                {% if let Some(e) = errors.phone %}<p class="field-error">{{ e }}</p>{% endif %}
+            </label>
+
+            {% if default_locked %}
+            <p class="form-note">この住所はデフォルトのお届け先です。デフォルトの変更は、アドレス帳の一覧から別の住所を選んで行えます。</p>
+            {% else %}
+            <label class="checkbox-row">
+                <input type="checkbox" name="make_default" value="1" {% if make_default_checked %}checked{% endif %}>
+                デフォルトのお届け先にする
+            </label>
+            {% endif %}
+
+            <button type="submit" class="primary-button">{{ submit_label }}</button>
+        </form>
+
+        <p class="back-link"><a href="/mypage/addresses">← アドレス帳へ戻る</a></p>
+    </section>
+{% endblock %}

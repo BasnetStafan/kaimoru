@@ -1,0 +1,22 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | カテゴリーから探す{% endblock %}
+
+{% block homepart %}
+    <section class="special-page">
+        {% include "storefront/parts/breadcrumb.html" %}
+        <h1>カテゴリーから探す</h1>
+        {% if !categories.is_empty() %}
+        <nav class="category-nav" aria-label="カテゴリー">
+            <ul>
+                {% for category in categories %}
+                    <li><a href="/search?category={{ category|urlencode }}">{{ category }}</a></li>
+                {% endfor %}
+            </ul>
+        </nav>
+        {% else %}
+        <div class="empty-state empty-state-plain"><p>カテゴリーは準備中です。</p></div>
+        <p class="section-more"><a href="/">トップページへ戻る</a></p>
+        {% endif %}
+    </section>
+{% endblock %}

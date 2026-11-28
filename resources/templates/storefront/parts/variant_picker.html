@@ -1,0 +1,20 @@
+{# The variation picker: one pill group per axis, headed by the
+   axis's own name, plus the data block the picker script runs
+   on. Shared by the detail page's buy area and the quick-add
+   modal fragment (spec section 6): one partial, one script. #}
+{% if picker.has_picker() %}
+    <div class="variant-picker" data-variant-picker data-is-preorder="{% if product.is_preorder %}1{% else %}0{% endif %}">
+        {% for group in picker.axes %}
+            <div class="variant-group">
+                <p class="variant-group-name">{{ group.axis.name }}</p>
+                <div class="variant-pills">
+                    {% for opt in group.options %}
+                        <button type="button" class="variant-pill" data-option-id="{{ opt.id }}">{{ opt.value }}</button>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+        <p class="variant-hint" data-variant-hint></p>
+        <script type="application/json" data-variant-data>{{ picker.picker_json(product)|safe }}</script>
+    </div>
+{% endif %}

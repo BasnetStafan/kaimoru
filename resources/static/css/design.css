@@ -1,0 +1,3400 @@
+/* Agentic Store design layer: the modern EC refresh
+   (cards, cart/checkout layouts, detail buy panel).
+   Loaded after style.css so it can refine the base rules. */
+
+/* Theme tokens live in style.css :root (loaded before this file). */
+
+/* Product cards: flat bordered tiles, square image, price
+   forward. The whole card rule lives in this layer now; the
+   base layer carries no card rules any more. */
+.product-card {
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.product-card > a:first-child {
+    display: block;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background-color: var(--tint);
+}
+
+.product-card img {
+    width: 100%;
+    display: block;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+}
+
+.product-card h3 {
+    font-size: 15px;
+    line-height: 1.5;
+    margin: 8px 0 2px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.product-card h3 a {
+    color: var(--ink);
+    text-decoration: none;
+}
+
+.product-card .price {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 17px;
+    margin: 2px 0 0;
+}
+
+.product-card .card-cart {
+    margin-top: auto;
+    padding-top: 10px;
+}
+
+/* Home sections share one rhythm: 40px above each section
+   and an 18px heading. The agent strip keeps its dark panel
+   design; only its spacing joins the rhythm (in style.css). */
+.homepart {
+    margin-top: 40px;
+}
+
+.news {
+    margin-top: 40px;
+}
+
+.homepart h2,
+.category-nav h2,
+.news h2,
+.feature-banner h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 16px;
+    border-left: 4px solid var(--accent);
+    padding-left: 10px;
+}
+
+/* The feature banner centres its heading, so the shared left
+   bar would sit detached at the section's edge: it keeps the
+   size and weight, without the bar. */
+.feature-banner h2 {
+    border-left: none;
+    padding-left: 0;
+}
+
+/* Shopping agent results: the wrapper is a full-height
+   flex column, so the shared card stretches exactly as
+   it does as a direct grid item on the listing pages —
+   equal heights per row, the cart action pinned to the
+   card's foot — with the explanation note under it. */
+.agent-pick {
+    display: flex;
+    flex-direction: column;
+}
+
+.agent-pick > .product-card {
+    flex: 1 1 auto;
+}
+
+/* Shopping agent: the explanation note under a result card. */
+.agent-pick-note {
+    margin-top: 10px;
+}
+
+.rating .stars {
+    color: var(--amber);
+    margin-right: 2px;
+}
+
+/* Card ratings sit quiet under the name: smaller and muted,
+   the amber star the only colour. */
+.product-card .rating {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 2px 0 0;
+}
+
+.rating-note {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.add-cart-button {
+    border-radius: var(--r-md);
+    height: 44px;
+    font-size: 14px;
+}
+
+
+/* Checkout step indicator (cart = 1, customer info = 2,
+   payment method = 3, confirm = 4, complete = 5), shared by
+   the checkout flow pages. */
+.steps {
+    display: flex;
+    list-style: none;
+    padding: 0;
+    margin: 4px 0 20px;
+    gap: 18px;
+}
+
+.steps li {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--line);
+    white-space: nowrap;
+}
+
+.steps .step-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: var(--tint-strong);
+    color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 12px;
+    flex: none;
+}
+
+.steps li.active {
+    color: var(--ink);
+    font-weight: 700;
+    border-bottom-color: var(--accent);
+}
+
+.steps li.active .step-num,
+.steps li.done .step-num {
+    background-color: var(--accent);
+    color: var(--surface);
+}
+
+.steps li.done {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+/* The complete page's own hero already says the order is
+   done; the five-step row above it only repeats that. */
+.complete-page .steps {
+    display: none;
+}
+
+.cart-page h1,
+.checkout-page h1 {
+    font-size: 24px;
+    margin: 6px 0 20px;
+}
+
+/* The remaining page titles join the same scale: every page
+   H1 is 24px (the home hero and the order-complete hero keep
+   their display sizes). */
+.search-page h1 {
+    font-size: 24px;
+    margin: 6px 0 10px;
+}
+
+.mypage-hub h1,
+.account-shell h1 {
+    font-size: 24px;
+}
+
+/* Cart page: item cards left, sticky summary right. */
+.cart-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 26px;
+    align-items: start;
+}
+
+.cart-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 0;
+}
+
+.cart-line {
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+}
+
+.cart-thumb {
+    width: 92px;
+    height: 92px;
+    border-radius: var(--r-md);
+}
+
+.cart-line-remove {
+    margin-top: 8px;
+}
+
+.cart-line-side {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 10px;
+}
+
+.stepper-button {
+    width: 44px;
+    height: 44px;
+    background-color: var(--tint);
+    border-radius: var(--r-md);
+}
+
+.stepper-button:hover:not(:disabled) {
+    background-color: var(--accent-tint);
+}
+
+.cart-summary {
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    padding: 20px;
+    position: sticky;
+    top: 92px;
+}
+
+.summary-title {
+    margin: 0 0 14px;
+    font-size: 16px;
+}
+
+.ship-progress {
+    background-color: var(--tint);
+    border-radius: var(--r-md);
+    padding: 12px 14px;
+    margin-bottom: 16px;
+}
+
+.ship-message {
+    margin: 0 0 8px;
+    font-size: 13px;
+}
+
+.ship-message strong {
+    color: var(--accent);
+}
+
+.ship-free {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.ship-bar {
+    height: 8px;
+    background-color: var(--tint-strong);
+    border-radius: var(--r-pill);
+    overflow: hidden;
+}
+
+.ship-bar span {
+    display: block;
+    height: 100%;
+    background-color: var(--accent);
+    border-radius: var(--r-pill);
+    transition: width 0.4s ease;
+}
+
+.totals-list {
+    margin: 0 0 8px;
+}
+
+.totals-list > div {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 14px;
+}
+
+.totals-list dt {
+    color: var(--muted);
+}
+
+.totals-list dd {
+    margin: 0;
+    font-weight: 600;
+}
+
+.totals-list .totals-grand {
+    border-top: 1px solid var(--line);
+    margin-top: 6px;
+    padding-top: 10px;
+    font-size: 16px;
+}
+
+.totals-list .totals-grand dd {
+    color: var(--accent);
+    font-size: 18px;
+}
+
+.cart-actions {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.cart-actions a {
+    display: block;
+}
+
+/* One empty-state pattern (Phase 3): the cart's dashed panel,
+   shared by the search no-results block, empty home grids,
+   the mypage lists and the error pages. */
+.cart-empty,
+.empty-state {
+    text-align: center;
+    padding: 56px 20px;
+    background-color: var(--surface);
+    border: 1px dashed var(--line);
+    border-radius: var(--r-xl);
+}
+
+.empty-state-plain {
+    padding: 32px 20px;
+    grid-column: 1 / -1;
+}
+
+.empty-icon {
+    width: 56px;
+    height: 56px;
+    color: var(--disabled);
+}
+
+.cart-empty-title,
+.empty-state-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 12px 0 4px;
+}
+
+/* Checkout: section cards left, sticky summary right. */
+.checkout-layout {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 26px;
+    align-items: start;
+}
+
+.checkout-main {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+}
+
+.checkout-card {
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    padding: 22px;
+    box-shadow: var(--shadow-sm);
+}
+
+.checkout-card h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    margin: 0 0 16px;
+}
+
+.section-num {
+    color: var(--accent);
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    background-color: var(--accent-tint);
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.summary-card {
+    position: sticky;
+    top: 92px;
+    box-shadow: none;
+}
+
+.checkout-form .field-row {
+    display: block;
+    margin: 0 0 14px;
+}
+
+.checkout-form .field-row > label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.checkout-form input[type="email"],
+.checkout-form input[type="text"],
+.checkout-form input[type="tel"],
+.checkout-form select,
+.checkout-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 11px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    font-size: 15px;
+    background-color: var(--surface);
+}
+
+.checkout-form input:focus,
+.checkout-form select:focus,
+.checkout-form textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring);
+}
+
+.payment-box {
+    max-width: none;
+}
+
+.payment-name {
+    font-weight: 700;
+    font-size: 15px;
+    margin: 0 0 4px;
+}
+
+.payment-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.payment-option {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    padding: 12px;
+    cursor: pointer;
+}
+
+.payment-option:has(input:checked) {
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring);
+}
+
+.payment-option input {
+    margin-top: 3px;
+}
+
+.payment-option-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.payment-option-body .form-note {
+    margin: 0;
+}
+
+.coupon-applied {
+    background-color: var(--accent-tint);
+    color: var(--accent-dark);
+    border-radius: var(--r-sm);
+    padding: 10px 12px;
+    font-weight: 600;
+    font-size: 14px;
+    margin: 0;
+}
+
+.line-qty {
+    color: var(--muted);
+}
+
+.form-actions.vertical {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.form-actions.vertical a {
+    text-align: center;
+}
+
+.form-actions.center {
+    justify-content: center;
+}
+
+/* Completion page: a real success moment. */
+.complete-page {
+    max-width: 760px;
+    margin: 0 auto;
+}
+
+.complete-hero {
+    text-align: center;
+    padding: 10px 0 22px;
+}
+
+.complete-check {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background-color: var(--accent);
+    color: var(--surface);
+    font-size: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 20px rgba(15, 118, 110, 0.35);
+}
+
+.complete-hero h1 {
+    margin: 14px 0 6px;
+}
+
+.complete-card {
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    padding: 22px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 20px;
+}
+
+.order-number-big {
+    font-size: 17px;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+}
+
+/* Product detail: gallery panel + sticky buy card + sections. */
+.detail-main {
+    gap: 36px;
+}
+
+.detail-image {
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: var(--shadow-sm);
+    align-self: start;
+}
+
+.detail-image img {
+    border-radius: var(--r-md);
+    width: 100%;
+    display: block;
+}
+
+.detail-buy h1 {
+    font-size: 24px;
+    line-height: 1.4;
+}
+
+.buy-card {
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 14px rgba(35, 40, 37, 0.06);
+    position: sticky;
+    top: 92px;
+    margin-top: 14px;
+}
+
+.detail-price {
+    font-size: 28px;
+    color: var(--ink);
+    margin: 0 0 8px;
+}
+
+.tax-note {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 400;
+}
+
+.points-earn-note {
+    color: var(--accent);
+    font-size: 0.9rem;
+    margin: 0.25rem 0 0;
+}
+
+.price-tax-detail {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0 0 8px;
+}
+
+.card-tax-note {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 2px 0 0;
+}
+
+.cart-line-tax {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin: 2px 0 0;
+}
+
+.stock-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background-color: var(--accent-tint);
+    padding: 4px 12px;
+    border-radius: var(--r-pill);
+    font-size: 13px;
+    margin: 0 0 6px;
+}
+
+.stock-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--accent);
+    flex: none;
+}
+
+.stock-label.low {
+    background-color: #FBF0DC;
+    color: #92400E;
+}
+
+.stock-label.low .stock-dot {
+    background-color: var(--amber);
+}
+
+.stock-label.out {
+    background-color: var(--tint-strong);
+    color: var(--muted);
+}
+
+.stock-label.out .stock-dot {
+    background-color: #B9B2A4;
+}
+
+.buy-notes {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 12px 0 0;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.buy-notes li {
+    padding: 3px 0 3px 20px;
+    position: relative;
+}
+
+.buy-notes li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+/* Back-in-stock card inside the buy panel: a quiet bordered
+   block under the buybox, in the buy-notes' type scale. */
+.detail-image img[data-gallery-main] {
+    cursor: zoom-in;
+}
+.lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+}
+.lightbox[hidden] {
+    display: none;
+}
+.lightbox img {
+    max-width: 92vw;
+    max-height: 92vh;
+    object-fit: contain;
+}
+.lightbox-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: transparent;
+    border: 0;
+    color: #fff;
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+}
+body.lightbox-open {
+    overflow: hidden;
+}
+.review-helpful {
+    display: inline-block;
+    margin-top: 0.5rem;
+}
+.helpful-button {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    padding: 0.3rem 0.9rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+.helpful-done {
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.receipt-body {
+    background: #fff;
+}
+.receipt {
+    max-width: 44rem;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 3rem;
+    color: #111;
+}
+.receipt-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 2px solid #111;
+    padding-bottom: 0.5rem;
+}
+.receipt-head h1 {
+    font-size: 1.6rem;
+    letter-spacing: 0.4em;
+    margin: 0;
+}
+.receipt-recipient {
+    font-size: 1.15rem;
+    border-bottom: 1px solid #111;
+    display: inline-block;
+    padding: 0 2rem 0.2rem 0;
+    margin-top: 1.5rem;
+}
+.receipt-amount {
+    font-size: 1.5rem;
+    font-weight: 700;
+    border-bottom: 2px solid #111;
+    display: inline-block;
+    padding-bottom: 0.2rem;
+}
+.receipt-lines {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0 1rem;
+}
+.receipt-lines th,
+.receipt-lines td {
+    border-bottom: 1px solid #ccc;
+    padding: 0.45rem 0.4rem;
+    text-align: left;
+    font-size: 0.95rem;
+}
+.receipt-lines td + td,
+.receipt-lines th + th {
+    text-align: right;
+}
+.receipt-totals {
+    margin: 0 0 0 auto;
+    max-width: 20rem;
+}
+.receipt-totals > div {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+}
+.receipt-grand {
+    font-weight: 700;
+    border-top: 1px solid #111;
+}
+.receipt-tax {
+    margin-top: 1.5rem;
+}
+.receipt-tax-title {
+    font-weight: 600;
+}
+.receipt-foot {
+    margin-top: 2.5rem;
+    text-align: right;
+}
+.receipt-shop {
+    font-weight: 600;
+}
+@media print {
+    .receipt-actions {
+        display: none;
+    }
+    .receipt {
+        padding: 0;
+    }
+}
+
+.price-range-inputs {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.price-range-inputs input {
+    width: 6.5rem;
+    height: 40px;
+    box-sizing: border-box;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    font-size: 14px;
+    color: var(--ink);
+}
+
+.cart-notice {
+    border: 1px solid var(--line, #ddd);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+
+.recently-viewed {
+    margin: 2rem 0;
+}
+.recently-viewed-row {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+}
+.recently-viewed-card {
+    flex: 0 0 8.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    text-decoration: none;
+    color: inherit;
+}
+.recently-viewed-card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 0.5rem;
+}
+.recently-viewed-name {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.recently-viewed-price {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.restock-card {
+    margin: 14px 0 0;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.restock-card h3 {
+    margin: 0 0 6px;
+    font-size: 14px;
+    color: var(--ink);
+}
+
+.restock-card p {
+    margin: 0 0 8px;
+}
+
+.restock-form {
+    display: grid;
+    gap: 8px;
+}
+
+.restock-form label {
+    display: block;
+}
+
+/* The card's controls take the storefront form treatment (the
+   .auth-form / .checkout-form language): themed border and radius,
+   surface background, inherited font — never the browser default. */
+.restock-form select,
+.restock-form input[type="email"] {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 6px;
+    padding: 9px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: var(--surface);
+    font: inherit;
+    font-size: 14px;
+    color: var(--ink);
+}
+
+.restock-form select:focus,
+.restock-form input[type="email"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring);
+}
+
+/* Below-fold detail sections read as one quiet column: the
+   box chrome goes, a hairline plus the heading carries the
+   structure so sections stay clearly separated. */
+.detail-section {
+    border-top: 1px solid var(--line);
+    padding: 24px 2px 4px;
+    margin-top: 24px;
+}
+
+.detail-section h2 {
+    margin: 0 0 12px;
+    font-size: 18px;
+}
+
+/* The spec table inside the de-boxed section drops its white
+   header fill and side padding: muted labels over hairline
+   rows, no grid. Scoped to the detail page; the checkout
+   confirm tables keep their card treatment. */
+.product-detail .confirm-table th {
+    background-color: transparent;
+    color: var(--muted);
+    padding-left: 0;
+}
+
+.product-detail .confirm-table td {
+    padding-left: 0;
+}
+
+.crumb-sep {
+    color: #C9C2B4;
+    padding: 0 4px;
+}
+
+.qty-stepper .stepper-button {
+    width: 44px;
+    height: 44px;
+}
+
+.qty-input {
+    height: 44px;
+    box-sizing: border-box;
+}
+
+/* Mypage order history as cards. */
+.order-history li {
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow-sm);
+}
+
+.coupon-item {
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow-sm);
+}
+
+.order-history .badge.state {
+    background-color: var(--accent-tint);
+    color: var(--accent-dark);
+}
+
+/* Stack the two-column flows on narrow screens. */
+@media (max-width: 860px) {
+    .cart-layout,
+    .checkout-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .cart-summary,
+    .summary-card,
+    .buy-card {
+        position: static;
+    }
+
+    .steps li {
+        font-size: 11px;
+        gap: 5px;
+    }
+}
+
+
+/* ===== Design review fixes (D2, D8, D9, D10, D6) ===== */
+
+/* D8: one visible focus for every interactive element. */
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* D2: the auth pages join the card design language. */
+.auth-page {
+    max-width: 560px;
+    margin: 8px auto 0;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 28px 28px 24px;
+    box-shadow: var(--shadow-sm);
+}
+
+.auth-page h1 {
+    font-size: 24px;
+    margin-bottom: 14px;
+}
+
+.auth-page .steps {
+    margin-bottom: 18px;
+}
+
+/* Footer (the Nudge pattern, adopted at the owner's
+   direction): one quiet row on a plain ground under a
+   hairline — the guide links inline on the left, the
+   copyright on the right. Operator note/contact lines,
+   when set, sit above the row in the same quiet type. */
+.site-footer {
+    background-color: var(--surface);
+    text-align: left;
+    padding: 22px 20px;
+    margin-top: 56px;
+}
+
+.footer-inner {
+    max-width: var(--wrap);
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 28px;
+}
+
+.footer-nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 22px;
+}
+
+.footer-nav-list a {
+    color: var(--muted-strong);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.footer-nav-list a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+.footer-copyright {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.footer-note-line {
+    max-width: var(--wrap);
+    margin: 0 auto 10px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.footer-note-line a {
+    color: var(--muted-strong);
+}
+
+/* Header menu (CMS C-4): the operator's link row under the
+   header, rendered only when it has a visible item. The
+   footer links' pill treatment, at the header's width. */
+.header-menu {
+    max-width: var(--wrap);
+    margin: 0 auto;
+    padding: 0 20px 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+}
+
+.header-menu a {
+    color: var(--muted-strong);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: var(--r-pill);
+}
+
+.header-menu a:hover {
+    color: var(--accent);
+    background-color: var(--accent-tint);
+    text-decoration: none;
+}
+
+.site-footer p {
+    color: var(--muted-strong);
+}
+
+.info-page {
+    max-width: 760px;
+    margin: 0 auto;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 28px;
+    box-shadow: var(--shadow-sm);
+}
+
+.blog-breadcrumb {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0 0 0.5rem;
+}
+
+.blog-card-list {
+    list-style: none;
+    margin: 1.5rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 1.25rem;
+}
+
+.blog-card {
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    background: var(--surface);
+}
+
+.blog-card-cover img {
+    display: block;
+    width: 100%;
+    max-height: 240px;
+    object-fit: cover;
+}
+
+.blog-card-body {
+    padding: 1rem 1.25rem 1.25rem;
+}
+
+.blog-card-meta {
+    display: flex;
+    gap: 0.75rem;
+    align-items: baseline;
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin: 0 0 0.4rem;
+}
+
+.blog-category {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.blog-card-title {
+    font-size: 1.2rem;
+    margin: 0 0 0.4rem;
+}
+
+.blog-card-title a {
+    color: var(--text);
+    text-decoration: none;
+}
+
+.blog-card-title a:hover {
+    text-decoration: underline;
+}
+
+.blog-card-excerpt {
+    color: var(--muted);
+    margin: 0;
+    line-height: 1.7;
+}
+
+.blog-post-meta {
+    display: flex;
+    gap: 1rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0.5rem 0 1.5rem;
+}
+
+.blog-post-cover img {
+    display: block;
+    width: 100%;
+    border-radius: var(--r-lg);
+}
+
+.blog-back {
+    margin-top: 2.5rem;
+}
+
+/* Blog embeds (CMS_SPEC §8): a product embed sits in the
+   article column at catalog-card width; a category embed is
+   a headed grid section. */
+.blog-embed-card {
+    max-width: 320px;
+    margin: 1.5rem 0;
+}
+
+.blog-embed-category {
+    margin: 2rem 0;
+}
+
+.blog-embed-category-title {
+    font-size: 1.15rem;
+    margin: 0 0 0.8rem;
+}
+
+.blog-embed-grid {
+    margin: 0;
+}
+
+.blog-embed-category-more {
+    margin: 0.8rem 0 0;
+}
+
+.info-page h2 {
+    font-size: 18px;
+    margin: 22px 0 8px;
+}
+
+.info-page p {
+    line-height: 1.8;
+}
+
+@media (max-width: 640px) {
+    .only-sp {
+        display: block;
+    }
+    .only-pc {
+        display: none;
+    }
+}
+
+/* Phone floors (redesign foundation): form controls sit at
+   16px so iOS Safari does not zoom on focus -- the floor is
+   !important because it must beat every per-component size --
+   and the small controls grow to a 44px touch target. */
+@media (max-width: 640px) {
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+
+    .variant-pill {
+        box-sizing: border-box;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .stepper-button,
+    .qty-stepper .stepper-button {
+        width: 44px;
+        height: 44px;
+    }
+
+    .suggest-list a {
+        padding-top: 12px;
+        padding-bottom: 12px;
+    }
+
+    .hub-item {
+        min-height: 44px;
+    }
+
+    .footer-nav-list a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+    }
+}
+
+/* Phone product grids go two-up with tighter cards. The
+   chat results are excluded via :not -- they keep their own
+   scoped grid and card sizing inside the chat window. */
+@media (max-width: 640px) {
+    .product-grid:not(.chat-result .product-grid) {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .product-grid:not(.chat-result .product-grid) .product-card {
+        padding: 10px;
+    }
+
+    .product-grid:not(.chat-result .product-grid) .product-card h3 {
+        font-size: 14px;
+    }
+}
+
+/* The filter form's disclosure summary is phone-only: hidden
+   by default, the 640px block below turns it into the toggle
+   row. On PC the details stays open as the plain inline
+   filter row, so no summary is shown. */
+.search-filters-summary {
+    display: none;
+}
+
+/* PC: the filter row reads as one bar — a tinted panel with
+   the groups laid out inline (style.css carries the flex). */
+@media (min-width: 641px) {
+    .search-filters .search-tools {
+        background-color: var(--tint);
+        border: 1px solid var(--line);
+        border-radius: var(--r-lg);
+        padding: 14px 16px;
+    }
+}
+
+/* Phone search: the filter form collapses behind its
+   summary (app.js closes the shipped-open details at this
+   width). */
+@media (max-width: 640px) {
+    .search-filters {
+        margin: 16px 0 24px;
+    }
+
+    .search-filters .search-tools {
+        margin: 12px 0 0;
+    }
+
+    .search-filters-summary {
+        display: flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 14px;
+        border: 1px solid var(--line);
+        border-radius: var(--r-md);
+        background-color: var(--surface);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        list-style: none;
+    }
+
+    .search-filters-summary::-webkit-details-marker {
+        display: none;
+    }
+}
+
+/* D1a: the guest-cart note on the cart page. */
+.cart-guest-note {
+    background-color: var(--accent-tint);
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 14px;
+}
+
+/* D5: the keyboard-active suggestion row. */
+.suggest-list a.suggest-active {
+    background-color: var(--accent-tint);
+}
+
+/* D10: smallest print sits one step darker. */
+.form-note,
+.cart-guest-note {
+    color: var(--muted-strong);
+}
+
+/* D9: honour reduced-motion requests. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        transition: none !important;
+        transform: none !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+
+/* Order detail page (Order History Detail Spec). */
+.order-detail {
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+.back-link a {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.back-link a:hover {
+    text-decoration: underline;
+}
+
+.order-head-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 20px 22px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 18px;
+}
+
+.order-head-label {
+    font-size: 12px;
+    color: var(--muted-strong);
+    margin: 0;
+}
+
+.order-head-number {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    margin: 2px 0;
+}
+
+.order-head-date {
+    margin: 0;
+    font-size: 14px;
+}
+
+.order-head-side {
+    text-align: right;
+}
+
+.order-head-total {
+    font-weight: 700;
+    margin: 8px 0 0;
+}
+
+.order-detail-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 18px;
+    align-items: start;
+    margin-bottom: 18px;
+}
+
+.order-card {
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 20px 22px;
+    box-shadow: var(--shadow-sm);
+}
+
+.order-side {
+    display: grid;
+    gap: 18px;
+}
+
+.order-lines {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.order-lines li {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.order-lines li:last-child {
+    border-bottom: none;
+}
+
+.order-line-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--r-sm);
+    object-fit: cover;
+    flex: none;
+}
+
+.order-line-thumb-empty {
+    background-color: var(--tint-strong);
+    display: inline-block;
+}
+
+.order-line-main {
+    flex: 1;
+}
+
+.order-line-main a {
+    color: var(--ink);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.order-line-main a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+.order-line-price {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--muted-strong);
+}
+
+.order-line-total {
+    font-weight: 700;
+}
+
+@media (max-width: 860px) {
+    .order-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* Inline text links (the login page's sign-up link, the
+   guest-cart note's login link): bold so they read as
+   designed links, a darker teal with a tint on hover
+   instead of an underline. */
+.form-note a,
+.cart-guest-note a {
+    font-weight: 700;
+}
+
+.form-note a:hover,
+.cart-guest-note a:hover {
+    color: var(--accent-dark);
+    background-color: var(--accent-tint);
+    text-decoration: none;
+}
+
+/* The order detail page's status badge (Basnet's report):
+   inside the header card it fell back to the base black chip,
+   unlike the history-list badge, which the design refresh had
+   already tinted. Scoped to the detail header card only. */
+.order-head-card .badge.state {
+    background-color: var(--accent-tint);
+    color: var(--accent-dark);
+    border-radius: var(--r-pill);
+    font-weight: 600;
+}
+
+
+/* Reviews (Reviews Spec): the product-page review section and
+   the review form, in the store's modern card language — white
+   panels, 14px radii, soft shadows, stone tints, teal accent. */
+.rating-none {
+    color: #8A8474;
+}
+
+/* Summary panel: a tinted card inside the section card, the
+   big average on the left and the distribution on the right. */
+.review-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 36px;
+    align-items: center;
+    background-color: var(--tint);
+    border-radius: var(--r-lg);
+    padding: 18px 20px;
+    margin: 14px 0 6px;
+}
+
+.review-summary-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.review-average-num {
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--ink);
+}
+
+.review-count {
+    color: var(--muted-strong);
+    font-size: 14px;
+}
+
+.review-dist {
+    flex: 1;
+    min-width: 220px;
+    max-width: 340px;
+}
+
+.dist-row {
+    display: grid;
+    grid-template-columns: 34px 1fr 44px;
+    align-items: center;
+    gap: 8px;
+    margin: 3px 0;
+    font-size: 13px;
+}
+
+.dist-bar {
+    display: block;
+    height: 8px;
+    border-radius: var(--r-pill);
+    background-color: var(--tint-strong);
+    overflow: hidden;
+}
+
+.dist-fill {
+    display: block;
+    height: 100%;
+    border-radius: var(--r-pill);
+    background-color: var(--accent);
+}
+
+.dist-count {
+    text-align: right;
+    color: var(--muted-strong);
+}
+
+/* Sort: a segmented pill control, the active sort filled. */
+.review-sort {
+    display: inline-flex;
+    gap: 2px;
+    margin: 16px 0 4px;
+    padding: 3px;
+    border-radius: var(--r-pill);
+    background-color: var(--tint-strong);
+}
+
+.review-sort a {
+    padding: 6px 14px;
+    border-radius: var(--r-pill);
+    font-size: 13.5px;
+    color: var(--muted-strong);
+    text-decoration: none;
+}
+
+.review-sort a.active {
+    background-color: var(--surface);
+    color: var(--ink);
+    font-weight: 700;
+    box-shadow: 0 1px 4px rgba(35, 40, 37, 0.14);
+}
+
+/* Review entries: airy rows with an initial avatar, divided
+   by hairlines inside the section card. */
+.review-shop-reply {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: var(--tint);
+    border-radius: 8px;
+}
+
+.review-shop-reply-label {
+    font-weight: 700;
+    font-size: 0.85em;
+    margin: 0 0 4px;
+}
+
+.review-card {
+    padding: 18px 2px 16px;
+    border-top: 1px solid var(--line);
+}
+
+.review-card-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 8px;
+}
+
+.verified-badge {
+    padding: 2px 9px;
+    border-radius: var(--r-pill);
+    background-color: var(--accent-tint);
+    color: var(--accent-dark);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.review-date {
+    margin-left: auto;
+    font-size: 12.5px;
+    color: #8A8474;
+}
+
+.review-body {
+    margin: 10px 0 0;
+    white-space: pre-line;
+    line-height: 1.75;
+    color: #3A3F3B;
+}
+
+.review-own-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.review-own-actions a,
+.review-delete-button {
+    padding: 5px 13px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    background-color: var(--surface);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.review-own-actions a:hover,
+.review-delete-button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.review-own-actions form {
+    margin: 0;
+}
+
+.review-empty-panel {
+    margin-top: 14px;
+    padding: 26px 20px;
+    border: 1.5px dashed #D8D2C4;
+    border-radius: var(--r-lg);
+    text-align: center;
+}
+
+.review-empty {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.review-empty-note {
+    margin: 0;
+    color: var(--muted-strong);
+    font-size: 14px;
+}
+
+.review-write {
+    margin: 18px 0 2px;
+}
+
+/* The form page: its own card in the same language, with the
+   product as a tinted strip at the top. */
+.review-form-page {
+    max-width: 720px;
+    margin: 26px auto 40px;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-sm);
+    padding: 28px 30px 30px;
+}
+
+.review-form-page h1 {
+    margin: 0 0 16px;
+    font-size: 24px;
+}
+
+.review-product {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 0 0 8px;
+    padding: 12px 14px;
+    background-color: var(--tint);
+    border-radius: var(--r-lg);
+}
+
+.review-product img {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--r-md);
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.review-product-name {
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.review-product-price {
+    display: block;
+    margin-top: 2px;
+    font-size: 13.5px;
+    color: var(--muted-strong);
+}
+
+.auth-form .form-field {
+    margin: 16px 0;
+    font-size: 14px;
+}
+
+.auth-form textarea {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 6px;
+    padding: 11px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background-color: var(--surface);
+    font-family: inherit;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.field-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--muted-strong);
+}
+
+/* The star input: one row of five stars — the same clipped
+   overlay as the read-only displays (a grey row under a teal
+   row whose width is the fill) — with ten invisible radio
+   zones laid over it, each a tenth of the row: the left half
+   of a star chooses its .5 step, the right half the whole
+   step. The zones are pure geometry (percentages of the row),
+   so the halves land exactly whatever font renders the
+   glyphs; an earlier version clipped half-width text labels
+   instead and broke on real font metrics. The fill width
+   follows :has() on the checked radio, and the hover rules
+   come after the checked rules at equal specificity, so
+   pointing previews the pointed value and the selection
+   returns when the pointer leaves. */
+.star-input {
+    position: relative;
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 36px;
+    line-height: 1;
+}
+
+.star-row {
+    letter-spacing: 2px;
+    white-space: nowrap;
+}
+
+.star-row-bg {
+    color: #D8D2C4;
+}
+
+.star-row-fg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    overflow: hidden;
+    color: var(--accent);
+    transition: width 0.08s ease;
+}
+
+.star-input .zone {
+    position: absolute;
+    top: 0;
+    width: 10%;
+    height: 100%;
+    margin: 0;
+    cursor: pointer;
+}
+
+.star-input .zone input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.star-input .zone:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.star-input:has(input[value="0.5"]:checked) .star-row-fg { width: 10%; }
+.star-input:has(input[value="1"]:checked) .star-row-fg { width: 20%; }
+.star-input:has(input[value="1.5"]:checked) .star-row-fg { width: 30%; }
+.star-input:has(input[value="2"]:checked) .star-row-fg { width: 40%; }
+.star-input:has(input[value="2.5"]:checked) .star-row-fg { width: 50%; }
+.star-input:has(input[value="3"]:checked) .star-row-fg { width: 60%; }
+.star-input:has(input[value="3.5"]:checked) .star-row-fg { width: 70%; }
+.star-input:has(input[value="4"]:checked) .star-row-fg { width: 80%; }
+.star-input:has(input[value="4.5"]:checked) .star-row-fg { width: 90%; }
+.star-input:has(input[value="5"]:checked) .star-row-fg { width: 100%; }
+
+.star-input:has(input[value="0.5"]:hover) .star-row-fg { width: 10%; }
+.star-input:has(input[value="1"]:hover) .star-row-fg { width: 20%; }
+.star-input:has(input[value="1.5"]:hover) .star-row-fg { width: 30%; }
+.star-input:has(input[value="2"]:hover) .star-row-fg { width: 40%; }
+.star-input:has(input[value="2.5"]:hover) .star-row-fg { width: 50%; }
+.star-input:has(input[value="3"]:hover) .star-row-fg { width: 60%; }
+.star-input:has(input[value="3.5"]:hover) .star-row-fg { width: 70%; }
+.star-input:has(input[value="4"]:hover) .star-row-fg { width: 80%; }
+.star-input:has(input[value="4.5"]:hover) .star-row-fg { width: 90%; }
+.star-input:has(input[value="5"]:hover) .star-row-fg { width: 100%; }
+
+.review-delete-zone {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 28px;
+    padding-top: 18px;
+    border-top: 1px dashed #D8D2C4;
+}
+
+.review-delete-note {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted-strong);
+}
+
+.review-delete-zone form {
+    margin: 0;
+}
+
+.order-line-review {
+    margin: 8px 0 0;
+}
+
+.order-line-review .secondary-button {
+    padding: 6px 14px;
+    font-size: 13px;
+}
+
+/* Detail page add-to-cart: while the request is in flight, only
+   the button hides, with its layout box kept (visibility, not
+   display) and no message shown, so the buy area keeps its shape
+   and nothing flickers. The form is never swapped (hx-swap="none"
+   in the buybox), and htmx removes .htmx-request when the answer
+   arrives, which brings the button back. */
+.detail-add-form.htmx-request .add-cart-button {
+    visibility: hidden;
+}
+
+/* Add-to-cart toast: fixed at the top of the viewport, just below
+   the sticky header, so the confirmation is visible wherever the
+   visitor has scrolled to. The region is out of flow, so showing
+   or hiding the toast never moves page content. The shell is
+   always in the layout; the toast itself arrives out-of-band
+   from the add endpoint — a page load never renders one (the
+   one-shot flash renders separately, as a flash message). */
+.toast-region {
+    position: fixed;
+    top: 76px;
+    left: 0;
+    right: 0;
+    z-index: 300;
+    display: flex;
+    justify-content: center;
+    padding: 0 12px;
+    pointer-events: none;
+}
+
+.toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 560px;
+    background-color: var(--accent);
+    color: var(--surface);
+    font-size: 14px;
+    padding: 10px 16px;
+    border-radius: var(--r-lg);
+    box-shadow: 0 8px 24px rgba(35, 40, 37, 0.20);
+    animation: toast-in 0.25s ease-out;
+    transition: opacity 0.3s ease;
+}
+
+.toast-hide {
+    opacity: 0;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    color: var(--surface);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* The header wraps to two rows on narrow screens; the toast
+   clears the taller header there. */
+@media (max-width: 860px) {
+    .toast-region {
+        top: 128px;
+    }
+}
+
+/* Reduced motion: the toast simply appears and disappears. */
+@media (prefers-reduced-motion: reduce) {
+    .toast {
+        animation: none;
+        transition: none;
+    }
+}
+
+/* Product variants (free-form axes): the detail-page picker.
+   One pill group per axis; a pill is disabled when every
+   combination it can still form is sold out. */
+.variant-picker {
+    margin: 12px 0;
+}
+.variant-group {
+    margin-bottom: 10px;
+}
+.variant-group-name {
+    font-weight: 600;
+    margin: 0 0 6px;
+}
+.variant-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.variant-pill {
+    border: 1px solid #C9C2B4;
+    background: var(--surface);
+    color: #33302A;
+    border-radius: var(--r-pill);
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+.variant-pill:hover:not(:disabled) {
+    border-color: var(--accent);
+}
+.variant-pill.selected {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--surface);
+}
+.variant-pill:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+.tax-breakdown {
+    margin-top: 10px;
+    border-top: 1px dashed #D6D3D1;
+    padding-top: 8px;
+}
+.tax-breakdown-title {
+    font-weight: 600;
+    margin: 0 0 4px;
+}
+.regular-price {
+    color: #78716C;
+    text-decoration: line-through;
+    font-size: 0.85em;
+}
+.pre-line {
+    white-space: pre-line;
+}
+.only-sp {
+    display: none;
+}
+.variant-hint {
+    color: #B3261E;
+    font-size: 0.9rem;
+    min-height: 1.2em;
+    margin: 4px 0 0;
+}
+/* The chosen combination's snapshot label on cart lines and
+   order lines (cart, checkout, mypage, mail-adjacent pages). */
+.cart-line-variant,
+.order-line-variant {
+    color: var(--muted-strong);
+    font-size: 0.9rem;
+    margin: 2px 0 0;
+}
+
+/* Quick-add modal (D6): the shell lives in the storefront
+   layout; the card's 選択する button loads the picker fragment
+   into it. Vanilla styling only, matching the page theme. */
+.quick-add-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.quick-add-modal[hidden] {
+    display: none;
+}
+.quick-add-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(38, 35, 30, 0.5);
+}
+.quick-add-dialog {
+    position: relative;
+    background: var(--surface);
+    border-radius: var(--r-lg);
+    max-width: 520px;
+    width: calc(100% - 32px);
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    padding: 20px;
+    box-shadow: 0 12px 40px rgba(38, 35, 30, 0.3);
+}
+.quick-add-close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    border: none;
+    background: none;
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--muted-strong);
+}
+.quick-add-content {
+    display: flex;
+    gap: 16px;
+}
+.quick-add-image {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: var(--r-sm);
+    flex-shrink: 0;
+}
+.quick-add-main {
+    flex: 1;
+    min-width: 0;
+}
+.quick-add-name {
+    margin: 0 0 4px;
+    font-size: 1.05rem;
+}
+
+
+/* Content pages (CMS C-2): the last-updated line under a
+   rendered page body, in the footer's muted tone. */
+.content-updated {
+    color: var(--muted-strong);
+    font-size: 13px;
+    margin-top: 24px;
+}
+
+
+/* Search filters (UI programme S1): the three controls grouped in
+   fieldsets, and the active conditions repeated as removable
+   chips under the form, so the current state reads at a glance. */
+.search-filter-group {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+}
+
+.search-filter-group legend {
+    font-size: 12px;
+    color: var(--muted);
+    padding: 0;
+}
+
+/* One treatment for the whole filter row: the selects and
+   the submit share height, radius and border language, and
+   the checkbox group is the same 40px box under its legend,
+   so every control sits on one line at one height. Scoped
+   to this form — selects and buttons elsewhere keep theirs. */
+.search-filter-group select {
+    margin-top: 6px;
+    height: 40px;
+    padding: 0 10px;
+    font-size: 14px;
+    color: var(--ink);
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+}
+
+.search-tools .secondary-button {
+    display: inline-flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 18px;
+    border-radius: var(--r-md);
+}
+
+.search-filter-group .checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    height: 40px;
+    min-height: 40px;
+    font-size: 14px;
+}
+
+.search-filter-group .checkbox-label input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    margin: 0;
+    accent-color: var(--accent);
+}
+
+/* Search pagination: numbered pages as quiet pills; the
+   current page is a tinted span, not a link. Orders and
+   review pagination keep the plainer prev/next row. */
+.search-page .pagination {
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.search-page .pagination a,
+.search-page .pagination .page-current {
+    padding: 10px 14px;
+    border-radius: var(--r-pill);
+}
+
+.search-page .pagination .page-current {
+    background-color: var(--accent-tint);
+    color: var(--accent-dark);
+    font-weight: 700;
+}
+
+.search-page .pagination a:hover {
+    background-color: var(--accent-tint);
+}
+
+/* ===== Mypage hub, favourites, two-factor (2026-11-05) ===== */
+
+/* The hub is wider than the form pages: a menu grid, not a form. */
+.mypage-hub,
+.account-shell {
+    max-width: 880px;
+    margin: 8px auto 0;
+}
+
+.hub-greeting {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 4px 0 0;
+}
+
+.hub-email {
+    color: var(--muted);
+    margin: 2px 0 8px;
+}
+
+.hub-section {
+    margin-top: 22px;
+}
+
+.hub-section h2,
+.hub-recent h2 {
+    font-size: 18px;
+    margin: 0 0 10px;
+}
+
+.hub-menu {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 10px;
+}
+
+.hub-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-sm);
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 15px;
+    text-align: left;
+    width: 100%;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+.hub-item:hover {
+    border-color: var(--accent);
+    text-decoration: none;
+}
+
+.hub-item svg {
+    width: 22px;
+    height: 22px;
+    flex: none;
+    color: var(--accent-dark);
+}
+
+.hub-item-form {
+    margin: 0;
+}
+
+.hub-item-button {
+    font: inherit;
+    background-color: var(--surface);
+}
+
+.hub-chevron {
+    margin-left: auto;
+    color: #C9C2B4;
+    font-size: 18px;
+}
+
+.hub-badge {
+    background-color: var(--accent-dark);
+    color: var(--surface);
+    border-radius: var(--r-pill);
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    padding: 0 5px;
+}
+
+.hub-recent {
+    margin-top: 26px;
+}
+
+.hub-recent-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.hub-recent-head a {
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.order-history .recent-items {
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 240px;
+}
+
+/* Favourite toggle: card overlay and buybox button. */
+
+.card-favorite {
+    position: absolute;
+    top: 22px;
+    right: 22px;
+    z-index: 2;
+}
+
+.favorite-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--line);
+    background-color: var(--surface);
+    color: var(--muted);
+    border-radius: var(--r-pill);
+    padding: 6px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+    line-height: 1;
+    text-decoration: none;
+}
+
+.favorite-button svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+.favorite-button:hover {
+    color: var(--accent-dark);
+    border-color: var(--accent);
+}
+
+.favorite-button.is-favorite {
+    color: var(--accent-dark);
+    border-color: var(--accent);
+    background-color: var(--accent-tint);
+}
+
+.favorite-button.is-favorite svg {
+    fill: currentColor;
+}
+
+.favorite-toggle-labelled .favorite-button {
+    padding: 8px 14px;
+}
+
+.favorite-toggle-guest {
+    text-decoration: none;
+}
+
+.buybox-favorite {
+    margin-top: 10px;
+    /* Clear air between the favourite pill and the quantity
+       stepper directly below it (the form carries no top
+       margin of its own, so the pill nearly touched it). */
+    margin-bottom: 14px;
+}
+
+/* Two-factor enrolment and recovery codes. */
+.totp-qr {
+    text-align: center;
+    margin: 16px 0 8px;
+}
+
+.totp-qr svg {
+    width: 220px;
+    height: 220px;
+}
+
+.totp-secret {
+    text-align: center;
+    font-family: monospace;
+    font-size: 15px;
+    letter-spacing: 1px;
+    background-color: var(--accent-tint);
+    border-radius: var(--r-sm);
+    padding: 10px 12px;
+    word-break: break-all;
+}
+
+.recovery-codes {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 18px;
+    margin: 16px 0 20px;
+}
+
+.recovery-codes li {
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    padding: 9px 12px;
+    text-align: center;
+    font-size: 15px;
+    letter-spacing: 1px;
+}
+
+/* SNS login: brand buttons on the login / sign-up pages and
+   the link rows on the SNS settings page. Brand colours are
+   the providers' own; the shapes follow the auth forms. */
+.sns-buttons {
+    display: grid;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.sns-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 4px 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.sns-divider::before,
+.sns-divider::after {
+    content: "";
+    flex: 1;
+    border-top: 1px solid var(--line);
+}
+
+.sns-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 11px 16px;
+    border-radius: var(--r-sm);
+    font-weight: 700;
+    font-size: 15px;
+    text-decoration: none;
+}
+
+.sns-button.sns-line {
+    background-color: #06C755;
+    color: var(--surface);
+}
+
+.sns-button.sns-google {
+    background-color: var(--surface);
+    color: #3C4043;
+    border: 1px solid #DADCE0;
+}
+
+.sns-button.sns-yahoo {
+    background-color: #FF0033;
+    color: var(--surface);
+}
+
+.sns-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 2px;
+    border-bottom: 1px solid var(--line);
+}
+
+.sns-row .sns-name {
+    font-weight: 700;
+    min-width: 110px;
+}
+
+.sns-row .sns-state {
+    flex: 1;
+    color: var(--muted);
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.link-pending-banner {
+    border: 1px solid var(--accent-dark);
+    background-color: var(--accent-tint);
+    border-radius: var(--r-md);
+    padding: 14px 16px;
+    margin: 16px 0;
+}
+
+/* Shopping-agent chat (Session 5, slice 4): the conversation
+   thread and its composer. The language is the store's own —
+   the agent's turns sit on white card bubbles, the visitor's
+   on the accent — and while an answer is on its way the
+   thread holds a typing bubble in the agent's place (the
+   pending turn itself is built by app.js at submit time). */
+
+/* The chat window: the thread, the reset row and the
+   composer sit on one darker ground — a warm step down
+   from the page paper, in the store card border and
+   radius — so where the chat begins and ends is visible
+   at a glance. The composer paints the same variable,
+   so the window stays one surface while it sticks. */
+.chat-window {
+    --chat-window: var(--tint-strong);
+    /* The chat reads in the system sans the chat apps
+       use -- the system faces first, then the Japanese
+       ones -- whatever the store's own body stack is.
+       Everything in the window inherits this one
+       definition, the composer field included (it takes
+       font: inherit). */
+    font-size: 16px;
+    background-color: var(--chat-window);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-sm);
+    padding: 16px 16px 10px;
+    margin-top: 20px;
+}
+
+.chat-thread {
+    /* Clearance for the sticky composer below: its full
+       rendered height (border 1 + top padding 12, the presets
+       row 35, the input bar 75 plus its 10 gap, the note line
+       and its margins ~38, bottom padding 8) comes to ~200px.
+       The thread keeps that much room at its end, and every
+       entry keeps the same margin when scrolled into view,
+       so the bar never covers the newest turn. */
+    --chat-bar-clearance: calc(208px + env(safe-area-inset-bottom, 0px));
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 2px 0 8px;
+    padding-bottom: var(--chat-bar-clearance);
+}
+
+.chat-thread > * {
+    scroll-margin-bottom: var(--chat-bar-clearance);
+}
+
+.chat-row {
+    display: flex;
+}
+
+.chat-row-user {
+    justify-content: flex-end;
+}
+
+.chat-bubble {
+    max-width: 78%;
+    padding: 10px 14px;
+    border-radius: 18px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.chat-bubble-agent {
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-bottom-left-radius: 6px;
+    box-shadow: var(--shadow-sm);
+}
+
+.chat-bubble-user {
+    background-color: var(--accent);
+    color: var(--surface);
+    border-bottom-right-radius: 6px;
+    box-shadow: var(--shadow-sm);
+}
+
+/* A pending turn (the visitor's bubble plus the typing
+   bubble) keeps the thread's own rhythm while it waits to
+   be replaced by the real entries. */
+.chat-pending {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* The typing bubble: three dots rise in turn inside the
+   agent bubble's shape until the answer replaces them. */
+.chat-bubble-typing {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 14px 16px;
+}
+
+.chat-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: var(--accent);
+    opacity: 0.35;
+    animation: chat-typing 1.2s ease-in-out infinite;
+}
+
+.chat-dot:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.chat-dot:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+@keyframes chat-typing {
+    0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.35;
+    }
+    30% {
+        transform: translateY(-4px);
+        opacity: 0.9;
+    }
+}
+
+/* A turn that never arrived: the form-error colours in the
+   agent bubble's shape, so the failure reads as part of the
+   conversation rather than a page-level alarm. */
+.chat-bubble-error {
+    background-color: var(--danger-bg);
+    border-color: var(--danger-line);
+    color: var(--danger);
+    box-shadow: none;
+}
+
+/* New turns ease in as they land. */
+.chat-arrive {
+    animation: chat-in 0.28s ease both;
+}
+
+@keyframes chat-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+
+/* Reduced motion: turns simply appear, and the typing dots
+   hold still. */
+@media (prefers-reduced-motion: reduce) {
+    .chat-arrive {
+        animation: none;
+    }
+
+    .chat-dot {
+        animation: none;
+        opacity: 0.5;
+    }
+}
+
+.chat-result {
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    padding: 14px;
+    box-shadow: var(--shadow-sm);
+}
+
+/* Inside a result panel the shared grid's auto-fill leaves
+   its empty tracks at a full share, stranding a short row
+   of cards at the left of a wide panel. Auto-fit collapses
+   the empty tracks, so the cards present fill the panel the
+   way a listing row does; a lone card keeps a card's natural
+   size instead of stretching the panel's full width. */
+.chat-result .product-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.chat-result .agent-pick {
+    max-width: 400px;
+}
+
+/* Inside the window the shared note and error paragraphs
+   are labels riding along with the conversation, not
+   message text: one step smaller and quieter than the
+   bubbles, at the size the chips already use. */
+.chat-window .form-note,
+.chat-window .form-error {
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+/* Each score factor is one unbreakable unit: the breakdown
+   line wraps between factors, never inside one. */
+.agent-score-factor {
+    white-space: nowrap;
+}
+
+/* The settlement slot lives inside the chat window: the
+   settlement card is the newest turn of the conversation,
+   so it gives up its page-level top margin and keeps a
+   small gap from the thread above it. */
+.chat-window #agent-settlement-slot {
+    margin-top: 12px;
+}
+
+.chat-window .agent-approval-card {
+    margin-top: 0;
+}
+
+/* Unmet must-haves are guidance, not an error: a tinted
+   note with an amber edge, in the ink colour. */
+.agent-note-warn {
+    background: var(--tint);
+    border-left: 3px solid var(--amber);
+    color: var(--ink);
+    padding: 8px 12px;
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+/* The four-factor score breakdown folds behind one quiet
+   toggle; the total stays visible on the badge. */
+.agent-score-detail summary {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.agent-score-detail p {
+    margin-top: 4px;
+}
+
+/* Why the agent picked an item, at reading size in the ink
+   colour (form-note renders quieter than this). */
+.agent-pick-reason {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--ink);
+}
+
+.chat-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+/* The accumulated brief as removable chips, between the
+   thread and the settlement slot: the presets row's layout
+   in the thread's own spacing rhythm. */
+.chat-brief {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin: 0 0 12px;
+}
+
+.chat-brief-title {
+    font-size: 14px;
+    color: var(--ink);
+}
+
+/* The starter prompts stack under the greeting, one
+   tappable suggestion per line, instead of wrapping
+   mid-sentence. */
+.chat-examples {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.chat-examples .chat-chip {
+    border-radius: 16px;
+    text-align: left;
+}
+
+.chat-chip-form {
+    display: inline;
+    margin: 0;
+}
+
+.chat-chip {
+    border: 1px solid var(--accent);
+    background-color: var(--surface);
+    color: var(--accent-dark);
+    border-radius: var(--r-pill);
+    padding: 6px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.chat-chip:hover {
+    background-color: var(--accent-tint);
+}
+
+.chat-chip-active {
+    background-color: var(--accent);
+    color: var(--surface);
+}
+
+.chat-reset {
+    margin: 4px 0 12px;
+}
+
+/* The composer sticks to the window bottom on the chat
+   window ground (the variable is defined on
+   .chat-window), its input bar a single rounded card
+   holding the field and the send button. */
+.chat-composer {
+    position: sticky;
+    bottom: 0;
+    background-color: var(--chat-window);
+    padding: 12px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--line);
+}
+
+.chat-input-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: var(--shadow-sm);
+    padding: 6px;
+}
+
+.chat-input-bar textarea {
+    flex: 1;
+    border: none;
+    background-color: transparent;
+    padding: 9px 4px 9px 10px;
+    font: inherit;
+    line-height: 1.5;
+    resize: none;
+}
+
+.chat-input-bar textarea:focus {
+    outline: none;
+}
+
+/* The focus ring belongs to the whole bar: it is one input. */
+.chat-input-bar:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+.chat-send {
+    flex: none;
+    /* The glyph is centred by flex so it shares the bar's centre
+       line with the field's text in every engine. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background-color: var(--accent);
+    color: var(--surface);
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(15, 118, 110, 0.25);
+    transition: background-color 0.15s ease;
+}
+
+.chat-send:hover {
+    background-color: var(--accent-dark);
+}
+
+.chat-send:disabled {
+    background-color: var(--disabled);
+    box-shadow: none;
+    cursor: default;
+}
+
+@media (max-width: 640px) {
+    /* Phone composer: the sticky block slims down — the
+       height comes out of padding and gaps, never the type
+       (the field keeps its 16px, the iOS focus-zoom floor).
+       New block height: border 1 + top padding 8 + presets
+       ~30 + bar margin 6 + bar 50 + note margin 6 + the note
+       at two lines ~39 + bottom padding 6 = ~146px, so the
+       thread clearance drops from 208px to 154px (the same
+       ~8px of slack the desktop figure carries). */
+    .chat-thread {
+        --chat-bar-clearance: calc(154px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .chat-composer {
+        padding: 8px 0 calc(6px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .chat-presets {
+        gap: 6px;
+    }
+
+    .chat-composer .chat-chip {
+        padding: 4px 11px;
+        font-size: 13px;
+    }
+
+    .chat-input-bar {
+        margin-top: 6px;
+        padding: 4px;
+        border-radius: 22px;
+    }
+
+    .chat-input-bar textarea {
+        padding: 5px 2px 5px 8px;
+    }
+
+    .chat-send {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+
+    .chat-composer .form-note {
+        font-size: 13px;
+        line-height: 1.5;
+        margin: 6px 2px 0;
+    }
+}
+
+/* Product detail buy bar (phone widths only): price plus the
+   buy card's own add action. The bar never submits anything —
+   app.js mirrors the picker's price into it and forwards taps
+   to the buy card's add button, so variant, quantity and stock
+   state stay single-sourced in the buy card. */
+.buy-bar {
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .buy-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        position: sticky;
+        bottom: 0;
+        z-index: 60;
+        background-color: var(--surface);
+        border-top: 1px solid var(--line);
+        box-shadow: 0 -2px 10px rgba(35, 40, 37, 0.08);
+        padding: 10px 4px calc(10px + env(safe-area-inset-bottom, 0px));
+        margin-top: 24px;
+    }
+
+    .buy-bar-price {
+        margin: 0;
+        font-size: 19px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .buy-bar .buy-bar-button {
+        flex: 1;
+        min-height: 48px;
+    }
+}
+
+/* Product detail buy bar (PC widths): the same bar, fixed to
+   the viewport's foot and slid away while the buy card is on
+   screen — app.js toggles .is-visible from an intersection
+   watch on the buy card. The product name joins here; the
+   phone bar has no room for it. */
+.buy-bar-name {
+    display: none;
+}
+
+@media (min-width: 861px) {
+    .buy-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 90;
+        background-color: var(--surface);
+        border-top: 1px solid var(--line);
+        box-shadow: 0 -2px 10px rgba(35, 40, 37, 0.08);
+        padding: 10px 20px;
+        transform: translateY(110%);
+        transition: transform 0.25s ease;
+    }
+
+    .buy-bar.is-visible {
+        transform: none;
+    }
+
+    /* The fixed bar overlays the document's foot, so a page
+       carrying one reserves room for the footer beneath it. */
+    body:has(.buy-bar) {
+        padding-bottom: 76px;
+    }
+
+    .buy-bar-name {
+        display: block;
+        font-weight: 600;
+        font-size: 14px;
+        max-width: 420px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .buy-bar-price {
+        margin: 0;
+        font-size: 19px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .buy-bar .buy-bar-button {
+        flex: 0 1 320px;
+        min-height: 48px;
+    }
+}
+
+/* Cart buy bar (phone widths only): the summary's grand total
+   plus the same checkout link the summary carries, held at the
+   bottom of the cart while the lines scroll. It re-renders with
+   the cart fragment, so its total is always the server's. */
+.cart-bar {
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .cart-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        position: sticky;
+        bottom: 0;
+        z-index: 60;
+        background-color: var(--surface);
+        border-top: 1px solid var(--line);
+        box-shadow: 0 -2px 10px rgba(35, 40, 37, 0.08);
+        padding: 10px 4px calc(10px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .cart-bar-total {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .cart-bar-label {
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--muted);
+        margin-right: 6px;
+    }
+
+    .cart-bar .cart-bar-button {
+        flex: 1;
+        min-height: 48px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Steps on phones: numbered discs for every step, the
+       label only on the active one — five nowrap labels cannot
+       fit a phone, and shrinking the type only hides that. The
+       disc numbers carry their own size, so zeroing the row's
+       font hides labels without touching the discs. */
+    .steps {
+        gap: 10px;
+    }
+
+    .steps li {
+        flex: none;
+        font-size: 0;
+        gap: 0;
+        padding-bottom: 8px;
+    }
+
+    .steps li.active {
+        flex: 1;
+        font-size: 13px;
+        gap: 8px;
+    }
+
+    /* Paired fields stack instead of squeezing side by side. */
+    .field-row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    /* Read-back rows: the label becomes a small muted line
+       above its value instead of a fixed-width column. */
+    .confirm-list > div {
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .confirm-list dt {
+        min-width: 0;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 640px) {
+    /* MyPage hub on phones: the menu becomes a quiet hairline
+       list — the grouped cards keep their boxes on wide
+       screens, but a phone reads better as rows on the paper. */
+    .hub-menu {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .hub-item {
+        background-color: transparent;
+        border: none;
+        border-bottom: 1px solid var(--line);
+        border-radius: 0;
+        box-shadow: none;
+        padding: 14px 2px;
+    }
+}
+
+@media (max-width: 720px) {
+    /* The menu row stays one line on phone headers: it
+       scrolls sideways instead of stacking into extra header
+       rows. It also compacts: the old 10px bottom spacer
+       becomes link padding instead, so the row gets shorter
+       while the tap targets grow. */
+    .header-menu {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        padding: 0 20px 3px;
+        gap: 2px 6px;
+    }
+
+    .header-menu a {
+        flex: none;
+        font-size: 12.5px;
+        padding: 7px 9px;
+    }
+}
+
+/* Agent checkout approval card (Session 6): the same card
+   on the agent thread and on the cart page — the checkout
+   card's surface in both homes, with its actions in a row
+   that wraps on narrow screens. On the cart page it spans
+   the layout's full width under the lines and summary. */
+.agent-approval-card {
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    padding: 22px;
+    box-shadow: var(--shadow-sm);
+    margin-top: 18px;
+}
+
+.agent-approval-card h2 {
+    font-size: 18px;
+    margin: 0 0 16px;
+}
+
+.agent-approval-card .form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-top: 14px;
+}
+
+.agent-approval-card .form-actions form {
+    margin: 0;
+}
+
+/* Agent settlement steps (Session 6.5): the policy list,
+   the method buttons and the address step's extra pieces,
+   all inside the approval card's surface above. */
+.agent-approval-card h3 {
+    font-size: 15px;
+    margin: 18px 0 8px;
+}
+
+.settlement-policy {
+    margin: 0 0 6px;
+    padding-left: 20px;
+    line-height: 1.8;
+}
+
+.settlement-methods {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.settlement-method {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    width: 100%;
+    text-align: left;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 12px 14px;
+    cursor: pointer;
+    font: inherit;
+}
+
+.settlement-method:hover {
+    border-color: var(--accent);
+}
+
+.settlement-method.is-selected {
+    border-color: var(--accent);
+    background-color: var(--accent-tint);
+}
+
+.settlement-method-label {
+    font-weight: 600;
+}
+
+.settlement-address-summary {
+    line-height: 1.8;
+    margin: 6px 0 12px;
+}
+
+.settlement-address-change {
+    margin-top: 14px;
+}
+
+.settlement-address-change summary {
+    cursor: pointer;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.settlement-address-form {
+    margin-top: 12px;
+}
+
+/* Landing pages (CMS_SPEC §9): the minimal chrome's own
+   rules — the header keeps the standard bar's shape (its
+   inner row already spreads logo and nav apart); the
+   footer is a single centred legal row, and the article
+   column runs a little wider than the info pages'
+   measure, as a campaign page's cards want the room. */
+.lp-footer {
+    margin-top: 3rem;
+    padding: 1.5rem 1rem 2rem;
+    border-top: 1px solid var(--border, #ddd);
+    text-align: center;
+}
+
+.lp-footer-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+}
+
+.landing-page {
+    max-width: 880px;
+    margin: 0 auto;
+}

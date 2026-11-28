@@ -1,0 +1,79 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}お知らせ管理{% endblock %}
+
+{% block adminpart %}
+<div class="admin-page-head">
+    <h1 class="admin-h1">お知らせ管理</h1>
+    <a class="primary-button admin-new-button" href="/admin/notices/new">お知らせを登録</a>
+</div>
+
+{% if !filtered %}
+<section class="admin-section" aria-label="トップページ表示プレビュー">
+    <h2 class="admin-h2">トップページのお知らせ（現在の表示）</h2>
+    {% if preview.is_empty() %}
+    <p class="admin-empty">現在、トップページに表示中のお知らせはありません</p>
+    {% else %}
+    <ul class="admin-preview-notices">
+        {% for notice in preview %}
+        <li><span class="admin-muted">{{ notice.date_text }}</span>{% if !notice.title.is_empty() %} <strong>{{ notice.title }}</strong>{% endif %} {{ notice.body }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    <p class="admin-note">トップページのお知らせ欄にこの内容が表示されます。同じ内容のお知らせは1件にまとめて表示されます。</p>
+</section>
+{% endif %}
+
+<form method="get" action="/admin/notices" class="admin-filters">
+    <label>タイトルで検索
+        <input type="search" name="q" value="{{ q }}">
+    </label>
+    <label>状態
+        <select name="status">
+            {% for s in status_options %}
+            <option value="{{ s.value }}"{% if s.selected %} selected{% endif %}>{{ s.label }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <button type="submit" class="secondary-button">絞り込む</button>
+</form>
+
+{% if rows.is_empty() %}
+{% if filtered %}
+<p class="admin-empty">条件に一致するお知らせはありません</p>
+{% else %}
+<p class="admin-empty">お知らせはまだありません</p>
+{% endif %}
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>タイトル</th><th>本文</th><th>表示期間</th><th>状態</th><th>更新日時</th><th></th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td>
+                {% if row.title.is_empty() %}
+                <a href="/admin/notices/{{ row.id }}/edit">（タイトルなし）</a>
+                {% else %}
+                <a href="/admin/notices/{{ row.id }}/edit">{{ row.title }}</a>
+                {% endif %}
+            </td>
+            <td class="admin-notice-body">{{ row.body }}</td>
+            <td>{{ row.period_text }}</td>
+            <td><span class="admin-badge {{ row.state_class }}">{{ row.state_label }}</span>{% if row.duplicate_count > 1 %} <span class="admin-badge notice-duplicate">重複あり ×{{ row.duplicate_count }}</span>{% endif %}</td>
+            <td>{{ row.updated_text }}</td>
+            <td><a href="/admin/notices/{{ row.id }}/edit">編集</a></td>
+            <td>
+                <form method="post" action="/admin/notices/{{ row.id }}/delete" class="notice-delete-form">
+                    <button type="submit" class="secondary-button danger">削除</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+
+{% include "admin/parts/pagination.html" %}
+{% endblock %}

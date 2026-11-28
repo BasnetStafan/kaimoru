@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
+  <rect width="600" height="600" fill="#E2EFEA"/>
+  <path d="M185 230 L415 230 L400 470 C398 488 385 500 368 500 L232 500 C215 500 202 488 200 470 Z" fill="#0F766E"/>
+  <path d="M415 280 C480 280 480 380 402 385" fill="none" stroke="#0F766E" stroke-width="26"/>
+  <path d="M255 180 C245 150 265 140 255 110" fill="none" stroke="#9DB8B2" stroke-width="12" stroke-linecap="round"/>
+  <path d="M320 180 C310 150 330 140 320 110" fill="none" stroke="#9DB8B2" stroke-width="12" stroke-linecap="round"/>
+  <text x="300" y="385" font-family="sans-serif" font-size="44" font-weight="bold" fill="#E2EFEA" text-anchor="middle">axum</text>
+</svg>

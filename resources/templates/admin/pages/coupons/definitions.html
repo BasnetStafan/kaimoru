@@ -1,0 +1,43 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}クーポン定義{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">クーポン定義</h1>
+
+<p><a href="/admin/coupons/new" class="primary-button">新しいクーポンを作成</a></p>
+
+<nav class="admin-tabs" aria-label="状態">
+    {% for tab in tabs %}
+    <a href="{{ tab.url }}"{% if tab.active %} class="active" aria-current="page"{% endif %}>{{ tab.label }}（{{ tab.count }}）</a>
+    {% endfor %}
+</nav>
+
+{% if rows.is_empty() %}
+<p class="admin-empty">クーポン定義はありません</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>コード</th><th>割引</th><th>対象</th><th>最低注文金額</th><th>利用期間</th><th>トップ表示</th><th>状態</th><th>利用件数</th><th>操作</th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td><a href="/admin/coupons/{{ row.id }}">{{ row.code }}</a><br><span class="admin-muted">{{ row.description }}</span></td>
+            <td>{{ row.type_display }}{% if row.automatic %}<br><span class="admin-muted">自動適用</span>{% endif %}</td>
+            <td>{{ row.scope_display }}</td>
+            <td class="num">{{ row.min_display }}</td>
+            <td>{{ row.window_label }}</td>
+            <td>{% if row.band_featured %}表示{% else %}ー{% endif %}</td>
+            <td>{% if row.active %}有効{% else %}無効{% endif %}</td>
+            <td class="num">{{ row.redemptions }}件</td>
+            <td>
+                <a href="/admin/coupons/{{ row.id }}">編集</a>
+                <a href="/admin/coupons/usage?code={{ row.code }}">利用状況</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+{% endblock %}
