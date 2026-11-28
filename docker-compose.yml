@@ -1,3 +1,4 @@
+name: agentic-commerce
 services:
   db:
     image: postgres:16
