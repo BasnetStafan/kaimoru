@@ -1,0 +1,77 @@
+[package]
+name = "app"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+description = "Kaimoru - a Japan-complete, full-stack server-rendered e-commerce store in Rust (Axum/PostgreSQL), with KOMOJU and Stripe payments."
+edition = "2024"
+
+[dependencies]
+# The multipart feature serves the admin product image
+# upload endpoint; nothing else in axum changes.
+axum = { version = "0.8", features = ["multipart"] }
+# fs serves the assets, set-header stamps the cache and
+# security headers, compression-gzip powers the response
+# compression layer in the router.
+tower-http = { version = "0.7", features = ["fs", "set-header", "compression-gzip", "catch-panic"] }
+tracing = "0.1"
+askama = "0.16"
+tokio = { version = "1", features = ["macros", "rt", "time", "fs"] }
+serde = { version = "1", features = ["derive"] }
+serde_urlencoded = "0.7"
+uuid = { version = "1", features = ["v4"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres", "macros", "migrate", "chrono"] }
+chrono = "0.4"
+tower-sessions = "0.14"
+tower-sessions-sqlx-store = { version = "0.15", features = ["postgres"] }
+argon2 = "0.5"
+hmac = "0.12"
+# PII field encryption (app/src/pii.rs): AES-256-GCM from the
+# same RustCrypto family as hmac/sha2; base64 carries the
+# stored form (and the key's env encoding).
+aes-gcm = "0.10"
+base64 = "0.22"
+jsonwebtoken = "9"
+sha2 = "0.10"
+# TOTP two-factor authentication: authenticator apps default
+# to HMAC-SHA-1 (RFC 6238), which sha2 cannot produce; the
+# qrcode crate renders the enrolment QR as inline SVG
+# server-side, so no provider JavaScript is ever loaded.
+sha1 = "0.10"
+qrcode = { version = "0.14", default-features = false, features = ["svg"] }
+# Image derivatives: decode an uploaded product image
+# and encode its resized WebP copies. Only the raster formats
+# the upload endpoint accepts are enabled.
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+rand = "0.8"
+# Already in the tree via tower-sessions-sqlx-store; named directly
+# because the session repository decodes stored records with the same
+# serializer the store writes with (SF-3 session revocation).
+rmp-serde = "1.3"
+# JSON values at two boundaries: KOMOJU payloads and the
+# payments JSONB columns.
+serde_json = "1"
+# The KOMOJU API client (session decision 2026-11-03): minimal
+# features, rustls instead of OpenSSL, JSON bodies. Only
+# services/komoju_client.rs uses it; every other module speaks
+# the payment_gateway trait.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+# Content page bodies (CMS spec C-2, decision O1): Markdown
+# rendered server-side, raw HTML escaped by construction.
+pulldown-cmark = "0.13"
+async-trait = "0.1"
+lettre = { version = "0.11", default-features = false, features = ["smtp-transport", "builder", "tokio1", "tokio1-rustls", "rustls-tls"] }
+time = "0.3"
+configuration = { path = "../configuration" }
+ammonia = "4.2.4"
+# CSV import/export (approved 2026-11-06): the csv crate owns
+# quoting and escaping — product descriptions carry commas,
+# quotes and newlines, so hand-rolled splitting corrupts them.
+csv = "1.4.0"
+# Already in the tree transitively at this version; named
+# directly because csv_xfer decodes Shift_JIS uploads with it.
+encoding_rs = "0.8.44"
+rmcp = { version = "3.12.0", features = ["server", "macros", "transport-streamable-http-server"] }
+schemars = { version = "1.2.3", features = ["derive"] }
+
+[dev-dependencies]
+rmcp = { version = "3.12.0", features = ["client", "transport-streamable-http-client-reqwest"] }
