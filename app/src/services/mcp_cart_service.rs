@@ -7,7 +7,8 @@
 //! every mechanical respect — same lines table, same totals,
 //! same abandoned-cart sweep. The `mcp_carts` binding adds
 //! the one thing a guest token does not have: an owner (the
-//! API key), checked on every tool call.
+//! creating principal — an API key, or an OAuth subject
+//! since Phase 4), checked on every tool call.
 //!
 //! The claim token follows the verification-code discipline
 //! of `password_resets` / `email_changes`: the raw token is
@@ -25,6 +26,7 @@ use tower_sessions::Session;
 use crate::error::AppError;
 use crate::repositories::{cart_repository, mcp_cart_repository};
 use crate::services::cart_service::{self, CartOwner};
+use crate::services::mcp_principal::McpPrincipal;
 use crate::util::hmac_util::{hex_encode, hmac_sha256_hex};
 
 /// The cart handle's fixed leading marker.
@@ -57,20 +59,28 @@ pub(crate) fn hash_claim_token(token: &str) -> String {
     hmac_sha256_hex(secret.as_bytes(), &[token.as_bytes()])
 }
 
-/// Creates a cart bound to the calling key and returns its
-/// handle. No lines exist yet; the handle alone is the cart.
-pub async fn create_cart(pool: &PgPool, api_key_id: i64) -> Result<String, AppError> {
+/// Creates a cart bound to the calling principal and
+/// returns its handle. No lines exist yet; the handle
+/// alone is the cart.
+pub async fn create_cart(pool: &PgPool, principal: &McpPrincipal) -> Result<String, AppError> {
     let mut bytes = [0u8; CART_ID_BYTES];
     rand::thread_rng().fill_bytes(&mut bytes);
     let cart_id = format!("{CART_ID_PREFIX}{}", hex_encode(&bytes));
-    mcp_cart_repository::create_cart(pool, &cart_id, api_key_id).await?;
+    mcp_cart_repository::create_cart(
+        pool,
+        &cart_id,
+        principal.api_key_id(),
+        principal.oauth_subject(),
+        &principal.principal_key(),
+    )
+    .await?;
     Ok(cart_id)
 }
 
-/// Returns the owning key's ID for a cart handle, or `None`
-/// when no MCP cart has it.
-pub async fn owner_key_id(pool: &PgPool, cart_id: &str) -> Result<Option<i64>, AppError> {
-    Ok(mcp_cart_repository::owner_key_id(pool, cart_id).await?)
+/// Returns the owning principal's key for a cart handle,
+/// or `None` when no MCP cart has it.
+pub async fn owner_principal(pool: &PgPool, cart_id: &str) -> Result<Option<String>, AppError> {
+    Ok(mcp_cart_repository::owner_principal(pool, cart_id).await?)
 }
 
 /// Mints a fresh claim for a cart, replacing any previous

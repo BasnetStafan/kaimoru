@@ -67,7 +67,7 @@ async fn robots_txt(headers: HeaderMap) -> Response {
 /// same value the payment return URLs use), else the origin
 /// this request arrived on, so a local server advertises
 /// URLs that resolve to itself.
-fn base_url(headers: &HeaderMap) -> String {
+pub(crate) fn base_url(headers: &HeaderMap) -> String {
     if let Some(base) = CONFIG.public_base_url() {
         return base.trim_end_matches('/').to_string();
     }

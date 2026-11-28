@@ -1,4 +1,4 @@
-# MCP server (Phase 1: read-only catalog; Phase 2: carts; Phase 3: draft orders)
+# MCP server (Phase 1: read-only catalog; Phase 2: carts; Phase 3: draft orders; Phase 4: OAuth resource server)
 
 The store speaks the Model Context Protocol (MCP) so external
 AI clients — Claude, Cursor, VS Code, and other MCP hosts —
@@ -34,6 +34,15 @@ environment is **not** a go-live decision: the live
 store still runs with MCP disabled, and the
 no-agent-orders rule stands until a separate go-live
 decision lifts it.
+
+Phase 4 makes the server an **OAuth 2.1 resource server**:
+alongside API keys it accepts access tokens issued by an
+external authorization server (Auth0), so a standards-based
+MCP client can authorize through the provider's own flow
+instead of holding a store-issued key. The store validates
+tokens; it never issues them, and a token's subject is a
+principal of its own — separate from every API key and
+from member accounts (tokens are not bound to members).
 
 ## Enabling it
 
@@ -236,6 +245,118 @@ fingerprint against its locked cart read, so drift
 between binding and placement refuses instead of
 placing under a stale approval.
 
+## Phase 4: OAuth 2.1 resource server
+
+### Configuration
+
+OAuth is off until BOTH environment variables are set
+(they join the `.env.example` audit: 35 variables):
+
+- `MCP_OAUTH_ISSUER` — the authorization server's issuer
+  identifier, exactly as it appears in the tokens' `iss`
+  claim (for Auth0, `https://<tenant-domain>/` — the
+  trailing slash is part of the identifier).
+- `MCP_OAUTH_AUDIENCE` — the audience this store expects
+  in the tokens' `aud` claim (the API identifier chosen
+  in the tenant; the value is the operator's choice).
+
+One without the other leaves OAuth inactive: no token is
+accepted and the metadata document below answers 404.
+
+### How it works
+
+An OAuth gate (middleware on the `/mcp` branch only)
+inspects each request before the transport runs:
+
+- No bearer token, an API key, or OAuth inactive → the
+  request passes through untouched; Phases 1–3 behaviour
+  is unchanged.
+- A JWT-shaped bearer token while OAuth is active → the
+  gate validates it: RS256 signature against the issuer's
+  JWKS (`{issuer}/.well-known/jwks.json`, cached in-process
+  for 10 minutes, refetched early once when a token names
+  an unknown key id), `iss` equal to the configured
+  issuer, `aud` equal to the configured audience, `exp`
+  required (validation follows the `jsonwebtoken`
+  defaults, including its 60-second clock leeway).
+  - Invalid → HTTP 401 with a `WWW-Authenticate: Bearer`
+    challenge carrying
+    `resource_metadata="{base}/.well-known/oauth-protected-resource"`,
+    and the Phase 2 auth message as the JSON-RPC error
+    body — no detail about which check failed.
+  - Valid → the gate stamps the token's subject and scope
+    list onto the request as internal headers, and the
+    tool layer treats the subject as the caller. The gate
+    strips those headers from every incoming request
+    first, so a client can never stamp its own identity.
+- The metadata document (RFC 9728) is served at
+  `/.well-known/oauth-protected-resource` and
+  `/.well-known/oauth-protected-resource/mcp` while OAuth
+  is active: the resource URL, the authorization server,
+  the four scopes, header bearer only. It mounts with the
+  crawler documents — no session stack, under the
+  maintenance gate.
+
+### The principal model
+
+From Phase 4, ownership is by **principal**, not by key:
+`McpPrincipal` is either an API key or an OAuth subject,
+rendered `key:<id>` / `oauth:<sub>`. Migration
+`20261101000048_mcp_phase4.sql` adds `principal_key` and
+`oauth_subject` to `mcp_carts` and `mcp_order_drafts`,
+makes `api_key_id` nullable provenance (a CHECK keeps
+every row attributable to one creator kind or the other),
+and re-keys draft idempotency to
+`(principal_key, idempotency_key)`. Ownership checks, the
+no-oracle answers and both rate limits all compare
+principal keys, so the two credential kinds can never
+reach each other's carts or drafts — and an OAuth subject
+that happens to look numeric still cannot collide with a
+key id, because the namespaces are prefixed.
+
+### Auth0 tenant setup (operator recipe)
+
+1. In the Auth0 dashboard, create an **API**: its
+   *Identifier* becomes `MCP_OAUTH_AUDIENCE` (a URI-shaped
+   string, e.g. `https://kaimoru.example/mcp` — it is an
+   identifier, not a fetched URL).
+2. On the API's *Permissions* tab, add the four scopes:
+   `catalog:read`, `cart:write`, `orders:read`,
+   `orders:write`.
+3. Set the API's signing algorithm to **RS256** (the
+   default for new APIs).
+4. Authorize the client application(s) that will connect
+   (machine-to-machine or the MCP client's own app) for
+   this API, granting only the permissions each needs.
+5. Set `MCP_OAUTH_ISSUER` to `https://<tenant-domain>/`
+   and `MCP_OAUTH_AUDIENCE` to the identifier from step 1,
+   then restart the app. Clients discover the rest from
+   the metadata document.
+
+The development environment's audience choice is the
+operator's; the Phase 4 suite proves the whole flow
+against a local stub authorization server, so no tenant
+is needed to develop or test.
+
+### What compliance is true now, and what is not
+
+True: the protected-resource metadata is served as
+above; tokens are audience- and issuer-validated,
+RS256-only, with expiry required; the store never passes
+a caller's token onward (provider calls still use
+server-side keys); a token grants only the scopes it
+carries, checked per tool exactly like key scopes.
+
+Approximated, plainly: **step-up scope challenges are
+not implemented as the authorization specification
+describes.** When a token lacks the scope a tool needs,
+the answer is the tool layer's uniform auth refusal (a
+JSON-RPC error, HTTP 200) — not an HTTP 403 with an
+`insufficient_scope` challenge inviting the client to
+re-authorize with more scope. The refusal still leaks
+nothing and still refuses; a client that needs more
+scope must obtain a broader token out of band.
+
 ## Resources
 
 | URI | Content |
@@ -283,6 +404,14 @@ hosts even with the flag on.
   never places anything by itself — placement happens only
   on the approval page, by the person, after the binding
   re-verifies.
+- OAuth tokens (Phase 4) are validated at the gate before
+  the transport: RS256-only against the issuer's JWKS,
+  issuer and audience pinned by configuration, every
+  failure the same 401 challenge. The internal identity
+  headers the gate stamps are stripped from incoming
+  requests first, so they cannot be spoofed, and an OAuth
+  principal's carts and drafts are as unreachable to API
+  keys as one key's are to another.
 - Service failures surface as a generic protocol error; the
   detail is logged server-side only.
 - The surface sits under the maintenance gate and is logged
@@ -307,12 +436,31 @@ hosts even with the flag on.
   payment end to end, no-oracle reads across keys, the
   void and expiry paths, and the hosted path's dev
   outcome (provider redirect or payment error page).
+- `scripts/tests/test_mcp_phase4.sh` — the Phase 4 suite
+  (23 checks), hermetic like the Stripe suite: it starts a
+  stub authorization server
+  (`scripts/stubs/mcp_oauth_stub.py`, port 18103), restarts
+  the app port-scoped with the OAuth env pointing at the
+  stub, and checks the metadata document on both paths,
+  the OAuth cart + draft happy path and the principal rows
+  it writes, the scope refusal, the 401 challenge for
+  wrong-audience, expired and wrong-key tokens, the
+  spoofed-header strip, the API-key flow under an
+  OAuth-active config, and cross-principal isolation; it
+  then restores the app run.sh-style (full `.env`, no
+  OAuth env) and verifies the inactive state (metadata
+  404, 13 tools).
 - `cargo run --example mcp_client_check` with
   `MCP_TEST_API_KEY` set to a `cart:write` key also runs
   the cart flow (create, add, read back, checkout link) as
   a real rmcp client; with an `orders:write` key it also
   drafts the cart and reads the draft back (payment stays
-  the person's step, so the harness never pays).
+  the person's step, so the harness never pays). With
+  `MCP_TEST_OAUTH_TOKEN` set to an access token from the
+  configured authorization server, the same authenticated
+  flow runs on the OAuth principal instead (it takes
+  precedence over the API key) and prints an
+  `(oauth flow)` OK line.
 - `scripts/tests/fixtures/mcp_tools_list.json` — the
   checked-in `tools/list` snapshot. A tool name, description
   or schema change fails the suite until the fixture is
@@ -324,5 +472,7 @@ hosts even with the flag on.
 
 ## Later phases (not built)
 
-Phase 4 is OAuth 2.1, if a real deployment ever demands
-it: the documented position is API keys only until then.
+None planned. Subscriptions are a separate V2 track, not
+an MCP phase; member-account binding for OAuth tokens
+would revisit the guest-only order decision and is not
+planned.

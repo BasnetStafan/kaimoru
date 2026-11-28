@@ -1,11 +1,17 @@
 //! MCP cart repository.
 //!
 //! Owns every query against `mcp_carts`, the binding between
-//! an MCP cart handle and the API key that created it. The
-//! cart's lines live in `cart_items` under the cart_id as
-//! their session_id (the guest-cart shape); this table only
-//! answers "whose cart is this" and carries the single-use
-//! browser-handoff claim.
+//! an MCP cart handle and the principal that created it.
+//! The cart's lines live in `cart_items` under the cart_id
+//! as their session_id (the guest-cart shape); this table
+//! only answers "whose cart is this" and carries the
+//! single-use browser-handoff claim.
+//!
+//! Ownership is the `principal_key` (Phase 4): one value
+//! for both credential kinds, `key:<id>` or
+//! `oauth:<subject>`. The `api_key_id` / `oauth_subject`
+//! columns are provenance — exactly one of them is set,
+//! recording which credential created the cart.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
@@ -17,8 +23,13 @@ use sqlx::PgPool;
 pub struct McpCartRow {
     /// The cart handle; also the cart's `cart_items` session_id.
     pub cart_id: String,
-    /// The API key that created the cart.
-    pub api_key_id: i64,
+    /// The API key that created the cart, when a key did.
+    pub api_key_id: Option<i64>,
+    /// The one ownership value every check compares.
+    pub principal_key: String,
+    /// The OAuth subject that created the cart, when a
+    /// token did.
+    pub oauth_subject: Option<String>,
     /// HMAC-SHA-256 hash of the live claim token, if one was minted.
     pub claim_token_hash: Option<String>,
     /// When the live claim stops being valid.
@@ -30,23 +41,36 @@ pub struct McpCartRow {
 }
 
 /// All columns of an MCP cart binding, in table order of use.
-const MCP_CART_COLUMNS: &str = "cart_id, api_key_id, claim_token_hash, claim_expires_at, \
-    claim_used_at, created_at";
+const MCP_CART_COLUMNS: &str = "cart_id, api_key_id, principal_key, oauth_subject, \
+    claim_token_hash, claim_expires_at, claim_used_at, created_at";
 
-/// Binds a fresh cart handle to its creating key.
-pub async fn create_cart(pool: &PgPool, cart_id: &str, api_key_id: i64) -> Result<(), sqlx::Error> {
-    sqlx::query("INSERT INTO mcp_carts (cart_id, api_key_id) VALUES ($1, $2)")
-        .bind(cart_id)
-        .bind(api_key_id)
-        .execute(pool)
-        .await
-        .map(|_| ())
+/// Binds a fresh cart handle to its creating principal:
+/// the principal key is the ownership value, and exactly
+/// one provenance column is written with it.
+pub async fn create_cart(
+    pool: &PgPool,
+    cart_id: &str,
+    api_key_id: Option<i64>,
+    oauth_subject: Option<&str>,
+    principal_key: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO mcp_carts (cart_id, api_key_id, oauth_subject, principal_key) \
+         VALUES ($1, $2, $3, $4)",
+    )
+    .bind(cart_id)
+    .bind(api_key_id)
+    .bind(oauth_subject)
+    .bind(principal_key)
+    .execute(pool)
+    .await
+    .map(|_| ())
 }
 
-/// Returns the owning key's ID for a cart, or `None` when no
-/// MCP cart has this handle.
-pub async fn owner_key_id(pool: &PgPool, cart_id: &str) -> Result<Option<i64>, sqlx::Error> {
-    sqlx::query_scalar("SELECT api_key_id FROM mcp_carts WHERE cart_id = $1")
+/// Returns the owning principal's key for a cart, or
+/// `None` when no MCP cart has this handle.
+pub async fn owner_principal(pool: &PgPool, cart_id: &str) -> Result<Option<String>, sqlx::Error> {
+    sqlx::query_scalar("SELECT principal_key FROM mcp_carts WHERE cart_id = $1")
         .bind(cart_id)
         .fetch_optional(pool)
         .await

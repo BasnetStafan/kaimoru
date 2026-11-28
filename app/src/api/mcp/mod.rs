@@ -24,6 +24,14 @@
 //! never places the order and never confirms a payment.
 //! `orders:read` (or the write scope) reads drafts back
 //! and the status of the orders they placed.
+//!
+//! Phase 4 makes the server an OAuth 2.1 resource server:
+//! alongside API keys it accepts access tokens issued by
+//! the external authorization server (Auth0), validated
+//! by the OAuth gate before the transport runs. A token's
+//! subject is a principal of its own — its carts and
+//! drafts belong to it exactly as a key's belong to the
+//! key, and neither kind can reach the other's.
 
 mod tools;
 
@@ -52,13 +60,15 @@ use self::tools::{
     SearchProductsParams, UpdateCartItemParams, validate_draft, validate_search,
 };
 use crate::config::CONFIG;
+use crate::middleware::mcp_oauth::{OAUTH_SCOPES_HEADER, OAUTH_SUBJECT_HEADER};
 use crate::repositories::mcp_order_draft_repository;
 use crate::services::api_cart_service::{self, AddError};
 use crate::services::api_catalog_service::{ApiProduct, SearchPage, StoreInfo};
-use crate::services::api_key_service::{self, ApiKeyIdentity};
+use crate::services::api_key_service;
 use crate::services::cart_service::{self, CartOwner};
 use crate::services::mcp_cart_service;
 use crate::services::mcp_order_draft_service::{self, DraftError};
+use crate::services::mcp_principal::McpPrincipal;
 use sqlx::PgPool;
 
 use crate::error::AppError;
@@ -80,27 +90,57 @@ impl StoreMcpHandler {
         Self { pool }
     }
 
-    /// Authenticates a key-tool call: the bearer token from
-    /// the HTTP request's `Authorization` header (the
-    /// transport carries the request parts in the context
-    /// extensions — Axum middleware extensions do not reach
-    /// here, so the header is read from the parts directly),
-    /// holding one of the accepted scopes. Every failure —
-    /// missing, malformed, unknown, revoked, wrong scope —
-    /// is the same error carrying the caller's message, so
-    /// the endpoint cannot be used as an oracle for probing
-    /// keys.
-    async fn authenticate_key(
+    /// Authenticates a credential-tool call and resolves
+    /// the caller's principal: either an OAuth identity the
+    /// gate stamped onto the request after validating the
+    /// access token, or the API key in the request's
+    /// `Authorization` header (the transport carries the
+    /// request parts in the context extensions — Axum
+    /// middleware extensions do not reach here, so the
+    /// headers are read from the parts directly). The
+    /// credential must hold one of the accepted scopes.
+    /// Every failure — missing, malformed, unknown,
+    /// revoked, wrong scope — is the same error carrying
+    /// the caller's message, so the endpoint cannot be
+    /// used as an oracle for probing credentials.
+    async fn authenticate(
         &self,
         context: &RequestContext<RoleServer>,
         scopes: &[&str],
         message: &'static str,
-    ) -> Result<ApiKeyIdentity, McpError> {
+    ) -> Result<McpPrincipal, McpError> {
         let fail = || McpError::new(ErrorCode(AUTH_ERROR_CODE), message, None);
         let parts = context
             .extensions
             .get::<axum::http::request::Parts>()
             .ok_or_else(fail)?;
+        // The OAuth path: the internal identity headers
+        // exist only when the gate validated a token for
+        // this very request (it strips any the client sent
+        // itself), so their presence is the proof, and the
+        // scope list they carry is the token's own.
+        if let Some(subject) = parts
+            .headers
+            .get(OAUTH_SUBJECT_HEADER)
+            .and_then(|value| value.to_str().ok())
+            .filter(|subject| !subject.is_empty())
+        {
+            let granted: Vec<String> = parts
+                .headers
+                .get(OAUTH_SCOPES_HEADER)
+                .and_then(|value| value.to_str().ok())
+                .unwrap_or("")
+                .split_whitespace()
+                .map(ToString::to_string)
+                .collect();
+            if !scopes
+                .iter()
+                .any(|scope| granted.iter().any(|g| g == scope))
+            {
+                return Err(fail());
+            }
+            return Ok(McpPrincipal::OAuth(subject.to_string()));
+        }
         let token = parts
             .headers
             .get(axum::http::header::AUTHORIZATION)
@@ -113,20 +153,21 @@ impl StoreMcpHandler {
         if !scopes.contains(&identity.scope.as_str()) {
             return Err(fail());
         }
-        Ok(identity)
+        Ok(McpPrincipal::ApiKey(identity.id))
     }
 
-    /// Authenticates a cart-tool call, inside the key's
-    /// cart-call rate budget. An `orders:write` key is
-    /// accepted alongside `cart:write`: keys are
-    /// single-scope, and the orders key must be able to
-    /// build the cart its draft binds without a second key.
+    /// Authenticates a cart-tool call, inside the
+    /// principal's cart-call rate budget. An `orders:write`
+    /// credential is accepted alongside `cart:write`: keys
+    /// are single-scope, and the orders credential must be
+    /// able to build the cart its draft binds without a
+    /// second credential.
     async fn require_cart_key(
         &self,
         context: &RequestContext<RoleServer>,
-    ) -> Result<ApiKeyIdentity, McpError> {
-        let identity = self
-            .authenticate_key(
+    ) -> Result<McpPrincipal, McpError> {
+        let principal = self
+            .authenticate(
                 context,
                 &[
                     api_key_service::SCOPE_CART_WRITE,
@@ -135,8 +176,8 @@ impl StoreMcpHandler {
                 AUTH_ERROR_MESSAGE,
             )
             .await?;
-        check_cart_rate_limit(identity.id)?;
-        Ok(identity)
+        check_cart_rate_limit(&principal.principal_key())?;
+        Ok(principal)
     }
 
     /// Authenticates a draft-creation call: the
@@ -146,8 +187,8 @@ impl StoreMcpHandler {
     async fn require_orders_write_key(
         &self,
         context: &RequestContext<RoleServer>,
-    ) -> Result<ApiKeyIdentity, McpError> {
-        self.authenticate_key(
+    ) -> Result<McpPrincipal, McpError> {
+        self.authenticate(
             context,
             &[api_key_service::SCOPE_ORDERS_WRITE],
             ORDERS_WRITE_AUTH_MESSAGE,
@@ -158,13 +199,13 @@ impl StoreMcpHandler {
     /// Authenticates an order-read call (`get_order_draft`,
     /// `get_order_status`): the `orders:read` scope, or the
     /// write scope that created the draft, inside the
-    /// key's call rate budget.
+    /// principal's call rate budget.
     async fn require_orders_read_key(
         &self,
         context: &RequestContext<RoleServer>,
-    ) -> Result<ApiKeyIdentity, McpError> {
-        let identity = self
-            .authenticate_key(
+    ) -> Result<McpPrincipal, McpError> {
+        let principal = self
+            .authenticate(
                 context,
                 &[
                     api_key_service::SCOPE_ORDERS_READ,
@@ -173,24 +214,26 @@ impl StoreMcpHandler {
                 ORDERS_READ_AUTH_MESSAGE,
             )
             .await?;
-        check_cart_rate_limit(identity.id)?;
-        Ok(identity)
+        check_cart_rate_limit(&principal.principal_key())?;
+        Ok(principal)
     }
 
     /// Resolves a cart handle to its owner for a call: the
-    /// cart must exist AND belong to the caller's key. Both
-    /// failures answer identically, so one key cannot probe
-    /// for another key's carts.
+    /// cart must exist AND belong to the caller's
+    /// principal. Both failures answer identically, so one
+    /// principal cannot probe for another's carts.
     async fn owned_cart(
         &self,
-        identity: &ApiKeyIdentity,
+        principal: &McpPrincipal,
         cart_id: &str,
     ) -> Result<CartOwner, McpError> {
-        let owner = mcp_cart_service::owner_key_id(&self.pool, cart_id)
+        let owner = mcp_cart_service::owner_principal(&self.pool, cart_id)
             .await
             .map_err(service_error)?;
         match owner {
-            Some(key_id) if key_id == identity.id => Ok(CartOwner::Session(cart_id.to_string())),
+            Some(principal_key) if principal_key == principal.principal_key() => {
+                Ok(CartOwner::Session(cart_id.to_string()))
+            }
             _ => Err(McpError::invalid_params(
                 format!("no cart with id {cart_id} for this API key"),
                 None,
@@ -282,7 +325,7 @@ fn service_error(_error: AppError) -> McpError {
 /// gives — missing, malformed, unknown, revoked and
 /// wrong-scope keys are indistinguishable, so the endpoint
 /// cannot be used as an oracle for probing keys.
-const AUTH_ERROR_MESSAGE: &str = "a valid API key with the cart:write scope is required";
+pub(crate) const AUTH_ERROR_MESSAGE: &str = "a valid API key with the cart:write scope is required";
 
 /// The rate-limit answer for a key over its cart budget.
 const RATE_LIMIT_MESSAGE: &str = "rate limit exceeded for this API key; retry shortly";
@@ -295,7 +338,7 @@ const CART_WINDOW: Duration = Duration::from_secs(60);
 
 /// Error code for cart-tool authentication failures (a
 /// server-defined code in the JSON-RPC reserved range).
-const AUTH_ERROR_CODE: i32 = -32001;
+pub(crate) const AUTH_ERROR_CODE: i32 = -32001;
 
 /// Error code for cart-tool rate limiting.
 const RATE_LIMIT_ERROR_CODE: i32 = -32000;
@@ -309,25 +352,27 @@ const ORDERS_WRITE_AUTH_MESSAGE: &str = "a valid API key with the orders:write s
 /// gives.
 const ORDERS_READ_AUTH_MESSAGE: &str = "a valid API key with the orders:read scope is required";
 
-/// Per-key cart-call windows: key ID → (window start, calls
-/// in the window). In-memory by design — a restart resets
-/// the windows, which only ever makes the limit stricter
-/// from the caller's side after enough new calls.
-static CART_RATE_LIMIT: LazyLock<Mutex<HashMap<i64, (Instant, u32)>>> =
+/// Per-principal cart-call windows: principal key →
+/// (window start, calls in the window). In-memory by
+/// design — a restart resets the windows, which only ever
+/// makes the limit stricter from the caller's side after
+/// enough new calls.
+static CART_RATE_LIMIT: LazyLock<Mutex<HashMap<String, (Instant, u32)>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
-/// Counts one cart-tool call against the key's window and
-/// refuses once the budget is spent. The lock is never held
-/// across an await; a poisoned lock recovers its contents
-/// rather than panicking (the counts are advisory state).
-/// Order reads charge the same budget: it is the key's
-/// general call window, the cart tools' name aside.
-fn check_cart_rate_limit(key_id: i64) -> Result<(), McpError> {
+/// Counts one cart-tool call against the principal's
+/// window and refuses once the budget is spent. The lock
+/// is never held across an await; a poisoned lock recovers
+/// its contents rather than panicking (the counts are
+/// advisory state). Order reads charge the same budget:
+/// it is the principal's general call window, the cart
+/// tools' name aside.
+fn check_cart_rate_limit(principal_key: &str) -> Result<(), McpError> {
     let now = Instant::now();
     let mut windows = CART_RATE_LIMIT
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
-    let entry = windows.entry(key_id).or_insert((now, 0));
+    let entry = windows.entry(principal_key.to_string()).or_insert((now, 0));
     if now.duration_since(entry.0) >= CART_WINDOW {
         *entry = (now, 0);
     }
@@ -351,22 +396,22 @@ const DRAFT_CALLS_PER_WINDOW: usize = 10;
 /// The rate-limit window for draft creation.
 const DRAFT_WINDOW: Duration = Duration::from_secs(3600);
 
-/// Recent draft-creation instants per key ID. In-memory
-/// like the cart windows: a restart forgets them, which
-/// only ever grants a fresh budget.
-static DRAFT_RATE_LIMIT: LazyLock<Mutex<HashMap<i64, Vec<Instant>>>> =
+/// Recent draft-creation instants per principal key.
+/// In-memory like the cart windows: a restart forgets
+/// them, which only ever grants a fresh budget.
+static DRAFT_RATE_LIMIT: LazyLock<Mutex<HashMap<String, Vec<Instant>>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
-/// Counts one draft creation against the key's hourly
-/// window and refuses once the budget is spent. Sliding
-/// window of instants, the approval limiter's pattern;
-/// the lock is never held across an await.
-fn check_draft_rate_limit(key_id: i64) -> Result<(), McpError> {
+/// Counts one draft creation against the principal's
+/// hourly window and refuses once the budget is spent.
+/// Sliding window of instants, the approval limiter's
+/// pattern; the lock is never held across an await.
+fn check_draft_rate_limit(principal_key: &str) -> Result<(), McpError> {
     let now = Instant::now();
     let mut attempts = DRAFT_RATE_LIMIT
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
-    let times = attempts.entry(key_id).or_default();
+    let times = attempts.entry(principal_key.to_string()).or_default();
     times.retain(|t| now.duration_since(*t) < DRAFT_WINDOW);
     if times.len() >= DRAFT_CALLS_PER_WINDOW {
         return Err(McpError::new(
@@ -620,8 +665,8 @@ impl StoreMcpHandler {
         &self,
         context: RequestContext<RoleServer>,
     ) -> Result<Json<McpCart>, McpError> {
-        let identity = self.require_cart_key(&context).await?;
-        let cart_id = mcp_cart_service::create_cart(&self.pool, identity.id)
+        let principal = self.require_cart_key(&context).await?;
+        let cart_id = mcp_cart_service::create_cart(&self.pool, &principal)
             .await
             .map_err(service_error)?;
         let owner = CartOwner::Session(cart_id.clone());
@@ -638,8 +683,8 @@ impl StoreMcpHandler {
         context: RequestContext<RoleServer>,
         Parameters(params): Parameters<CartIdParams>,
     ) -> Result<Json<McpCart>, McpError> {
-        let identity = self.require_cart_key(&context).await?;
-        let owner = self.owned_cart(&identity, &params.cart_id).await?;
+        let principal = self.require_cart_key(&context).await?;
+        let owner = self.owned_cart(&principal, &params.cart_id).await?;
         self.cart_view(&params.cart_id, &owner).await
     }
 
@@ -653,8 +698,8 @@ impl StoreMcpHandler {
         context: RequestContext<RoleServer>,
         Parameters(params): Parameters<AddCartItemParams>,
     ) -> Result<Json<McpCart>, McpError> {
-        let identity = self.require_cart_key(&context).await?;
-        let owner = self.owned_cart(&identity, &params.cart_id).await?;
+        let principal = self.require_cart_key(&context).await?;
+        let owner = self.owned_cart(&principal, &params.cart_id).await?;
         api_cart_service::add_item_for_owner(
             &self.pool,
             &owner,
@@ -678,8 +723,8 @@ impl StoreMcpHandler {
         context: RequestContext<RoleServer>,
         Parameters(params): Parameters<UpdateCartItemParams>,
     ) -> Result<Json<McpCart>, McpError> {
-        let identity = self.require_cart_key(&context).await?;
-        let owner = self.owned_cart(&identity, &params.cart_id).await?;
+        let principal = self.require_cart_key(&context).await?;
+        let owner = self.owned_cart(&principal, &params.cart_id).await?;
         if params.quantity < 1 {
             return Err(McpError::invalid_params(
                 "quantity must be at least 1; use remove_cart_item to remove a line",
@@ -703,8 +748,8 @@ impl StoreMcpHandler {
         context: RequestContext<RoleServer>,
         Parameters(params): Parameters<RemoveCartItemParams>,
     ) -> Result<Json<McpCart>, McpError> {
-        let identity = self.require_cart_key(&context).await?;
-        let owner = self.owned_cart(&identity, &params.cart_id).await?;
+        let principal = self.require_cart_key(&context).await?;
+        let owner = self.owned_cart(&principal, &params.cart_id).await?;
         cart_service::remove_line(&self.pool, &owner, params.variant_id)
             .await
             .map_err(service_error)?;
@@ -722,8 +767,8 @@ impl StoreMcpHandler {
         context: RequestContext<RoleServer>,
         Parameters(params): Parameters<CartIdParams>,
     ) -> Result<Json<McpCheckoutLink>, McpError> {
-        let identity = self.require_cart_key(&context).await?;
-        let owner = self.owned_cart(&identity, &params.cart_id).await?;
+        let principal = self.require_cart_key(&context).await?;
+        let owner = self.owned_cart(&principal, &params.cart_id).await?;
         let cart = api_cart_service::view_for_owner(&self.pool, &owner)
             .await
             .map_err(service_error)?;
@@ -751,12 +796,12 @@ impl StoreMcpHandler {
         context: RequestContext<RoleServer>,
         Parameters(params): Parameters<CreateOrderDraftParams>,
     ) -> Result<Json<McpOrderDraft>, McpError> {
-        let identity = self.require_orders_write_key(&context).await?;
+        let principal = self.require_orders_write_key(&context).await?;
         let valid = validate_draft(&params)?;
-        check_draft_rate_limit(identity.id)?;
+        check_draft_rate_limit(&principal.principal_key())?;
         let (row, token) = mcp_order_draft_service::create_draft(
             &self.pool,
-            identity.id,
+            &principal,
             &params.cart_id,
             &valid.idempotency_key,
             &valid.address,
@@ -795,16 +840,20 @@ impl StoreMcpHandler {
         context: RequestContext<RoleServer>,
         Parameters(params): Parameters<DraftIdParams>,
     ) -> Result<Json<McpOrderDraft>, McpError> {
-        let identity = self.require_orders_read_key(&context).await?;
+        let principal = self.require_orders_read_key(&context).await?;
         if params.draft_id < 1 {
             return Err(McpError::invalid_params(
                 "draft_id must be a positive draft id",
                 None,
             ));
         }
-        let row = mcp_order_draft_service::get_draft(&self.pool, identity.id, params.draft_id)
-            .await
-            .map_err(service_error)?;
+        let row = mcp_order_draft_service::get_draft(
+            &self.pool,
+            &principal.principal_key(),
+            params.draft_id,
+        )
+        .await
+        .map_err(service_error)?;
         match row {
             Some(row) => draft_answer(&row, None),
             None => Err(McpError::invalid_params(
@@ -824,17 +873,20 @@ impl StoreMcpHandler {
         context: RequestContext<RoleServer>,
         Parameters(params): Parameters<OrderIdParams>,
     ) -> Result<Json<McpOrderStatus>, McpError> {
-        let identity = self.require_orders_read_key(&context).await?;
+        let principal = self.require_orders_read_key(&context).await?;
         if params.order_id < 1 {
             return Err(McpError::invalid_params(
                 "order_id must be a positive order id",
                 None,
             ));
         }
-        let status =
-            mcp_order_draft_service::order_status(&self.pool, identity.id, params.order_id)
-                .await
-                .map_err(service_error)?;
+        let status = mcp_order_draft_service::order_status(
+            &self.pool,
+            &principal.principal_key(),
+            params.order_id,
+        )
+        .await
+        .map_err(service_error)?;
         match status {
             Some(status) => Ok(Json(McpOrderStatus {
                 order_id: status.order_id,

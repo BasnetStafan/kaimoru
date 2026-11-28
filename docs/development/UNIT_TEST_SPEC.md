@@ -26,7 +26,7 @@
 
 ## ケース一覧
 
-<!-- MAX_UT_ID: 324 -->
+<!-- MAX_UT_ID: 329 -->
 <!-- INVENTORY:BEGIN -->
 
 ### app / api::mcp::tools
@@ -97,6 +97,12 @@
 | UT-029 | middleware::csrf::tests::similar_field_names_do_not_match | submitted_token | 異常系 | 類似名のフィールドはトークンとして一致せず None になること | Pass |
 | UT-030 | middleware::csrf::tests::token_found_among_other_fields | submitted_token | 正常系 | 他フィールドに混ざっていてもトークン値 abc123 を取り出せること | Pass |
 | UT-031 | middleware::csrf::tests::token_found_as_only_field | submitted_token | 正常系 | 単独フィールドからトークン値 deadbeef を取り出せること | Pass |
+
+### app / middleware::mcp_oauth
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-325 | middleware::mcp_oauth::tests::jwt_shape_is_two_separators_and_not_a_key | is_jwt_shaped | 境界値 | セパレータ「.」がちょうど2つのトークンが JWT 形式とみなされ、API キー（kmcp_ マーカー）、セパレータがそれより少ない／多いトークン、空トークンはみなされないこと | Pass |
 
 ### app / models::agent
 
@@ -406,12 +412,26 @@
 |---|---|---|---|---|---|
 | UT-319 | services::mcp_cart_service::tests::cart_handles_carry_the_prefix | カートハンドルの形式 | 境界値 | ハンドルのプレフィックスは mcp_ でランダムな16進数32文字、クレームトークンは16進数64文字であること | Pass |
 
+### app / services::mcp_oauth_service
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-326 | services::mcp_oauth_service::tests::scope_claim_accepts_both_wire_shapes | scope_claim | 正常系 | scope クレームが、プロバイダが送りうる両方のワイヤ形式（空白区切りの1文字列と、文字列の JSON 配列）から解析できること | Pass |
+| UT-327 | services::mcp_oauth_service::tests::scope_strings_split_on_whitespace | scope_claim | 境界値 | scope 文字列が空白の連続で分割され、空の scope 文字列は空の scope リストになること | Pass |
+
 ### app / services::mcp_order_draft_service
 
 | 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
 |---|---|---|---|---|---|
 | UT-323 | services::mcp_order_draft_service::tests::address_builds_a_guest_flow_with_the_method_chosen | DraftAddress::to_checkout_flow | 正常系 | 保存された住所が、その項目を持ち、選択した支払い方法が選択済みとマークされ、既定の配送時間帯を持つゲスト用 CheckoutFlow になること | Pass |
 | UT-324 | services::mcp_order_draft_service::tests::address_json_round_trips | DraftAddress serde | 正常系 | 住所が JSON の往復（下書きテーブルが保存する形式）を変更なく生き残ること | Pass |
+
+### app / services::mcp_principal
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-328 | services::mcp_principal::tests::principal_keys_carry_their_namespace | principal_key | 正常系 | API キーのプリンシパルは key:<id>、OAuth のプリンシパルは oauth:<sub> と表され、数値の OAuth サブジェクトでもキー ID と衝突しないこと | Pass |
+| UT-329 | services::mcp_principal::tests::provenance_columns_follow_the_kind | api_key_id / oauth_subject | 正常系 | 各プリンシパルは自種別の来歴のみを報告する（API キーはキー ID、OAuth はサブジェクト、他方については None）こと | Pass |
 
 ### app / services::member_account_service
 
@@ -658,4 +678,6 @@
 <!-- EXECUTION:BEGIN -->
 | 2026-11-22 | 301 | 301 | 0 | 全件実施 |
 | 2026-11-22 | 301 | 296 | 1 | 要確認: listed=301 executed=297 |
+| 2026-11-28 | 324 | 324 | 0 | 全件実施 |
+| 2026-11-28 | 329 | 329 | 0 | 全件実施 |
 <!-- EXECUTION:END -->

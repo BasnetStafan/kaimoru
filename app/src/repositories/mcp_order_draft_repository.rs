@@ -2,13 +2,19 @@
 //!
 //! Owns every query against `mcp_order_drafts`, the frozen
 //! cart a person approves in the browser: the creating
-//! key, the cart it binds, the idempotency key that makes
-//! creation safe to retry, the delivery address, the
+//! principal, the cart it binds, the idempotency key that
+//! makes creation safe to retry, the delivery address, the
 //! creation fingerprint and snapshot, and the single-use
 //! approval token's digest. Status moves exactly like the
 //! agent approvals' — every transition is a conditional
 //! UPDATE on the status it expects, so a race resolves to
 //! "already moved" instead of a double effect.
+//!
+//! Ownership is the `principal_key` (Phase 4): one value
+//! for both credential kinds, `key:<id>` or
+//! `oauth:<subject>`; idempotency is unique per principal.
+//! The `api_key_id` / `oauth_subject` columns are
+//! provenance — exactly one of them is set.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
@@ -30,8 +36,13 @@ pub const STATUS_VOID: &str = "void";
 pub struct McpOrderDraftRow {
     /// The draft's ID.
     pub id: i64,
-    /// The API key that created the draft.
-    pub api_key_id: i64,
+    /// The API key that created the draft, when a key did.
+    pub api_key_id: Option<i64>,
+    /// The one ownership value every check compares.
+    pub principal_key: String,
+    /// The OAuth subject that created the draft, when a
+    /// token did.
+    pub oauth_subject: Option<String>,
     /// The MCP cart handle the draft binds.
     pub cart_id: String,
     /// The client's idempotency key for this creation.
@@ -55,11 +66,12 @@ pub struct McpOrderDraftRow {
 }
 
 /// All columns of an order draft, in table order of use.
-const DRAFT_COLUMNS: &str = "id, api_key_id, cart_id, idempotency_key, address, fingerprint, \
-    snapshot, approval_token_hash, status, order_id, created_at, expires_at";
+const DRAFT_COLUMNS: &str = "id, api_key_id, principal_key, oauth_subject, cart_id, \
+    idempotency_key, address, fingerprint, snapshot, approval_token_hash, status, \
+    order_id, created_at, expires_at";
 
 /// Inserts a draft and returns its ID. The
-/// `(api_key_id, idempotency_key)` uniqueness is the
+/// `(principal_key, idempotency_key)` uniqueness is the
 /// idempotency guard: a racing duplicate insert fails
 /// with a unique violation and the caller re-reads.
 ///
@@ -72,7 +84,9 @@ const DRAFT_COLUMNS: &str = "id, api_key_id, cart_id, idempotency_key, address, 
 )]
 pub async fn insert(
     pool: &PgPool,
-    api_key_id: i64,
+    api_key_id: Option<i64>,
+    oauth_subject: Option<&str>,
+    principal_key: &str,
     cart_id: &str,
     idempotency_key: &str,
     address: &serde_json::Value,
@@ -82,11 +96,13 @@ pub async fn insert(
     expires_at: DateTime<Utc>,
 ) -> Result<i64, sqlx::Error> {
     sqlx::query_scalar(
-        "INSERT INTO mcp_order_drafts (api_key_id, cart_id, idempotency_key, address, \
-         fingerprint, snapshot, approval_token_hash, expires_at) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
+        "INSERT INTO mcp_order_drafts (api_key_id, oauth_subject, principal_key, cart_id, \
+         idempotency_key, address, fingerprint, snapshot, approval_token_hash, expires_at) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id",
     )
     .bind(api_key_id)
+    .bind(oauth_subject)
+    .bind(principal_key)
     .bind(cart_id)
     .bind(idempotency_key)
     .bind(address)
@@ -98,36 +114,36 @@ pub async fn insert(
     .await
 }
 
-/// Finds the draft a key created under one idempotency
-/// key — the retried create's answer.
+/// Finds the draft a principal created under one
+/// idempotency key — the retried create's answer.
 pub async fn find_by_idempotency(
     pool: &PgPool,
-    api_key_id: i64,
+    principal_key: &str,
     idempotency_key: &str,
 ) -> Result<Option<McpOrderDraftRow>, sqlx::Error> {
     sqlx::query_as::<_, McpOrderDraftRow>(&format!(
         "SELECT {DRAFT_COLUMNS} FROM mcp_order_drafts \
-         WHERE api_key_id = $1 AND idempotency_key = $2"
+         WHERE principal_key = $1 AND idempotency_key = $2"
     ))
-    .bind(api_key_id)
+    .bind(principal_key)
     .bind(idempotency_key)
     .fetch_optional(pool)
     .await
 }
 
-/// Finds one of a key's own drafts by ID. Another key's
-/// draft answers exactly like a missing one — the caller
-/// cannot probe across keys.
-pub async fn find_by_id_and_key(
+/// Finds one of a principal's own drafts by ID. Another
+/// principal's draft answers exactly like a missing one —
+/// the caller cannot probe across principals.
+pub async fn find_by_id_and_principal(
     pool: &PgPool,
     id: i64,
-    api_key_id: i64,
+    principal_key: &str,
 ) -> Result<Option<McpOrderDraftRow>, sqlx::Error> {
     sqlx::query_as::<_, McpOrderDraftRow>(&format!(
-        "SELECT {DRAFT_COLUMNS} FROM mcp_order_drafts WHERE id = $1 AND api_key_id = $2"
+        "SELECT {DRAFT_COLUMNS} FROM mcp_order_drafts WHERE id = $1 AND principal_key = $2"
     ))
     .bind(id)
-    .bind(api_key_id)
+    .bind(principal_key)
     .fetch_optional(pool)
     .await
 }
@@ -241,21 +257,21 @@ pub struct McpOrderStatusRow {
 
 /// Reads one order's status through the draft that
 /// placed it: the join is the authorisation — an order no
-/// draft of the caller's key placed answers like a
+/// draft of the caller's principal placed answers like a
 /// missing one.
 pub async fn find_order_status(
     pool: &PgPool,
     order_id: i64,
-    api_key_id: i64,
+    principal_key: &str,
 ) -> Result<Option<McpOrderStatusRow>, sqlx::Error> {
     sqlx::query_as::<_, McpOrderStatusRow>(
         "SELECT o.id AS order_id, o.status, o.total_yen, o.created_at, o.delivered_at, \
          o.carrier, o.tracking_number \
          FROM mcp_order_drafts d JOIN orders o ON o.id = d.order_id \
-         WHERE d.order_id = $1 AND d.api_key_id = $2",
+         WHERE d.order_id = $1 AND d.principal_key = $2",
     )
     .bind(order_id)
-    .bind(api_key_id)
+    .bind(principal_key)
     .fetch_optional(pool)
     .await
 }

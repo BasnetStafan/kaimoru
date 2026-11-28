@@ -16,6 +16,7 @@ pub mod home;
 pub mod login;
 pub mod mcp_draft;
 pub mod mypage;
+pub mod oauth_metadata;
 pub mod order_lookup;
 pub mod pages;
 pub mod password_reset;

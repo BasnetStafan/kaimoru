@@ -35,6 +35,7 @@ use crate::repositories::mcp_order_draft_repository::{self, McpOrderDraftRow};
 use crate::services::agent_approval_service::{self, PlacementRefusal};
 use crate::services::cart_service::{CartOwner, CartTotals};
 use crate::services::mcp_cart_service;
+use crate::services::mcp_principal::McpPrincipal;
 use crate::services::order_service::CheckoutFlow;
 use crate::util::hmac_util::hex_encode;
 
@@ -99,8 +100,9 @@ impl DraftAddress {
 /// terms. The handler maps each to its protocol answer.
 #[derive(Debug)]
 pub enum DraftError {
-    /// The cart does not exist or belongs to another key:
-    /// one variant for both, so the answer is no oracle.
+    /// The cart does not exist or belongs to another
+    /// principal: one variant for both, so the answer is
+    /// no oracle.
     CartNotOwned,
     /// The cart holds no purchasable line.
     EmptyCart,
@@ -139,19 +141,21 @@ impl From<sqlx::Error> for DraftError {
 /// [`DraftError::Internal`] on a store failure.
 pub async fn create_draft(
     pool: &PgPool,
-    api_key_id: i64,
+    principal: &McpPrincipal,
     cart_id: &str,
     idempotency_key: &str,
     address: &DraftAddress,
 ) -> Result<(McpOrderDraftRow, Option<String>), DraftError> {
+    let principal_key = principal.principal_key();
     if let Some(existing) =
-        mcp_order_draft_repository::find_by_idempotency(pool, api_key_id, idempotency_key).await?
+        mcp_order_draft_repository::find_by_idempotency(pool, &principal_key, idempotency_key)
+            .await?
     {
         let existing = resolve_expiry(pool, existing).await?;
         return Ok((existing, None));
     }
-    let owner_key = mcp_cart_service::owner_key_id(pool, cart_id).await?;
-    if owner_key != Some(api_key_id) {
+    let owner = mcp_cart_service::owner_principal(pool, cart_id).await?;
+    if owner.as_deref() != Some(principal_key.as_str()) {
         return Err(DraftError::CartNotOwned);
     }
     let owner = CartOwner::Session(cart_id.to_string());
@@ -172,7 +176,9 @@ pub async fn create_draft(
     let expires_at = Utc::now() + chrono::Duration::minutes(CONFIG.agent_approval_ttl_minutes);
     let id = match mcp_order_draft_repository::insert(
         pool,
-        api_key_id,
+        principal.api_key_id(),
+        principal.oauth_subject(),
+        &principal_key,
         cart_id,
         idempotency_key,
         &address_json,
@@ -191,7 +197,7 @@ pub async fn create_draft(
             if is_unique_violation(&e)
                 && let Some(existing) = mcp_order_draft_repository::find_by_idempotency(
                     pool,
-                    api_key_id,
+                    &principal_key,
                     idempotency_key,
                 )
                 .await?
@@ -202,7 +208,7 @@ pub async fn create_draft(
             return Err(AppError::Db(e).into());
         }
     };
-    let row = mcp_order_draft_repository::find_by_id_and_key(pool, id, api_key_id)
+    let row = mcp_order_draft_repository::find_by_id_and_principal(pool, id, &principal_key)
         .await?
         .expect("the draft was just inserted");
     Ok((row, Some(token)))
@@ -217,20 +223,21 @@ fn is_unique_violation(error: &sqlx::Error) -> bool {
 /// Reads one of the caller's drafts, resolving a pending
 /// draft past its window into `expired` on the way (the
 /// approvals' lazy expiry: no background job is needed).
-/// Another key's draft answers exactly like a missing
-/// one.
+/// Another principal's draft answers exactly like a
+/// missing one.
 ///
 /// # Errors
 /// Returns a store error when a read or the lazy
 /// transition fails.
 pub async fn get_draft(
     pool: &PgPool,
-    api_key_id: i64,
+    principal_key: &str,
     draft_id: i64,
 ) -> Result<Option<McpOrderDraftRow>, AppError> {
-    let Some(row) = mcp_order_draft_repository::find_by_id_and_key(pool, draft_id, api_key_id)
-        .await
-        .map_err(|e| AppError::db("load mcp order draft", e))?
+    let Some(row) =
+        mcp_order_draft_repository::find_by_id_and_principal(pool, draft_id, principal_key)
+            .await
+            .map_err(|e| AppError::db("load mcp order draft", e))?
     else {
         return Ok(None);
     };
@@ -418,19 +425,19 @@ pub async fn consume(pool: &PgPool, draft_id: i64, order_id: i64) -> Result<bool
         .map_err(|e| AppError::db("consume mcp order draft", e))
 }
 
-/// Reads one order's status for the key whose draft
-/// placed it. Orders placed any other way — another
-/// key's drafts, the storefront, the agent settlement —
-/// are invisible here.
+/// Reads one order's status for the principal whose
+/// draft placed it. Orders placed any other way — another
+/// principal's drafts, the storefront, the agent
+/// settlement — are invisible here.
 ///
 /// # Errors
 /// Returns a store error when the read fails.
 pub async fn order_status(
     pool: &PgPool,
-    api_key_id: i64,
+    principal_key: &str,
     order_id: i64,
 ) -> Result<Option<mcp_order_draft_repository::McpOrderStatusRow>, AppError> {
-    mcp_order_draft_repository::find_order_status(pool, order_id, api_key_id)
+    mcp_order_draft_repository::find_order_status(pool, order_id, principal_key)
         .await
         .map_err(|e| AppError::db("read mcp order status", e))
 }

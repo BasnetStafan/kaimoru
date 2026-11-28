@@ -751,6 +751,40 @@ impl Config {
         non_empty_env("PUBLIC_BASE_URL")
     }
 
+    /// The MCP OAuth 2.1 issuer from `MCP_OAUTH_ISSUER`: the
+    /// authorization server (Auth0) whose access tokens the
+    /// MCP endpoint accepts. The value must equal the tokens'
+    /// `iss` claim byte for byte — for Auth0 that includes
+    /// the trailing slash. Read together with
+    /// [`Config::mcp_oauth_audience`]; OAuth is active only
+    /// when both are set (see [`Config::mcp_oauth_active`]).
+    #[must_use]
+    pub fn mcp_oauth_issuer(&self) -> Option<String> {
+        non_empty_env("MCP_OAUTH_ISSUER")
+    }
+
+    /// The MCP OAuth 2.1 audience from `MCP_OAUTH_AUDIENCE`:
+    /// the API identifier registered at the authorization
+    /// server, matched against the tokens' `aud` claim.
+    /// OAuth is active only when this and
+    /// [`Config::mcp_oauth_issuer`] are both set.
+    #[must_use]
+    pub fn mcp_oauth_audience(&self) -> Option<String> {
+        non_empty_env("MCP_OAUTH_AUDIENCE")
+    }
+
+    /// Whether MCP OAuth is active: an issuer and an
+    /// audience are both configured, so the endpoint
+    /// validates externally issued access tokens alongside
+    /// API keys and serves its protected-resource metadata.
+    /// One value set without the other activates nothing —
+    /// a half-configured authorization server must not
+    /// half-open the endpoint.
+    #[must_use]
+    pub fn mcp_oauth_active(&self) -> bool {
+        self.mcp_oauth_issuer().is_some() && self.mcp_oauth_audience().is_some()
+    }
+
     /// The Google Search Console verification token from
     /// `GOOGLE_SITE_VERIFICATION`, present when the operator has
     /// claimed the store in Search Console. The storefront layout

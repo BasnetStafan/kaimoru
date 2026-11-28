@@ -146,8 +146,12 @@ pub fn create_router(
     // postal lookup they mount with no session stack and no
     // CSRF layer — a crawler fetch must not create a session —
     // under the maintenance gate, logged on the storefront
-    // surface they describe.
+    // surface they describe. The OAuth protected-resource
+    // metadata document rides the same mount: it is the
+    // public pointer MCP clients follow to the authorization
+    // server, and it answers 404 while OAuth is inactive.
     let crawler_docs = controllers::storefront::sitemap::router()
+        .merge(controllers::storefront::oauth_metadata::router())
         .with_state(pool.clone())
         .layer(axum::middleware::from_fn_with_state(
             pool.clone(),
@@ -168,6 +172,9 @@ pub fn create_router(
     let mcp_api = if crate::config::CONFIG.mcp_enabled {
         Router::new()
             .route_service("/mcp", crate::api::mcp::service(pool.clone()))
+            .layer(axum::middleware::from_fn(
+                crate::middleware::mcp_oauth::gate,
+            ))
             .layer(axum::middleware::from_fn_with_state(
                 pool.clone(),
                 crate::middleware::maintenance::gate,

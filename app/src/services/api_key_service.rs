@@ -33,8 +33,11 @@ pub const SCOPES: [&str; 4] = [
     SCOPE_ORDERS_WRITE,
 ];
 
-/// The token's fixed leading marker.
-const TOKEN_MARKER: &str = "kmcp_";
+/// The token's fixed leading marker. Shared with the
+/// MCP OAuth gate, which must tell a key apart from a
+/// JWT-shaped token before deciding whose business the
+/// bearer token is.
+pub(crate) const TOKEN_MARKER: &str = "kmcp_";
 /// Random bytes behind the public prefix (12 hex chars).
 const PREFIX_BYTES: usize = 6;
 /// Random bytes behind the secret (64 hex chars).

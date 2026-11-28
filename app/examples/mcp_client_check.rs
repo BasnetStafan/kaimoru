@@ -11,6 +11,12 @@
 //! read back, checkout link) on a second, authenticated
 //! connection. Unset, the cart flow is skipped and the
 //! Phase 1 behaviour is unchanged.
+//!
+//! With `MCP_TEST_OAUTH_TOKEN` set to an access token from
+//! the configured authorization server instead (Phase 4),
+//! the same authenticated flow runs on the OAuth
+//! principal; it takes precedence over the API key when
+//! both are set.
 
 use rmcp::{
     ClientHandler, RoleClient, ServiceExt,
@@ -147,12 +153,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Phase 2 cart flow, only when a key is provided: a
     // second connection carrying the bearer key, because the
     // anonymous connection above must stay anonymous.
-    if let Ok(api_key) = std::env::var("MCP_TEST_API_KEY") {
+    // The authenticated flow's credential: an OAuth
+    // access token when one is provided, else an API key.
+    // Both travel as the same bearer header — the server
+    // tells them apart by the token's shape.
+    let oauth_token = std::env::var("MCP_TEST_OAUTH_TOKEN").ok();
+    let credential = oauth_token
+        .clone()
+        .or_else(|| std::env::var("MCP_TEST_API_KEY").ok());
+    if let Some(bearer) = credential {
         // The config's auth value is the bare token: the
         // transport sends it via reqwest's bearer_auth,
         // which adds the "Bearer " scheme itself.
         let config = StreamableHttpClientTransportConfig::with_uri("http://127.0.0.1:3000/mcp")
-            .auth_header(api_key);
+            .auth_header(bearer);
         let transport = StreamableHttpClientTransport::from_config(config);
         let authed: RunningService<RoleClient, CheckClient> = CheckClient.serve(transport).await?;
 
@@ -324,6 +338,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         println!("MCP CLIENT CHECK (cart flow): ALL OK");
+        if oauth_token.is_some() {
+            println!("MCP CLIENT CHECK (oauth flow): ALL OK");
+        }
     }
 
     println!("MCP CLIENT CHECK: ALL OK");
