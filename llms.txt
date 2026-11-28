@@ -1,0 +1,16 @@
+# Kaimoru
+
+> Kaimoru is a full-stack, server-side-rendered e-commerce store built complete for Japan, written in Rust (Axum) with PostgreSQL. It covers domestic payments (KOMOJU and Stripe), consumption-tax classes including the reduced rate, qualified-invoice receipts, a points programme, step mail, and a built-in conversational shopping agent whose proposals enter the cart only with explicit human approval. Dual-licensed MIT / Apache-2.0.
+
+## Docs
+
+- [README (Japanese, canonical)](https://github.com/BasnetStafan/kaimoru/blob/main/README.md): product overview, quickstart, Japan-specific features, features, limitations, roadmap
+- [README (English)](https://github.com/BasnetStafan/kaimoru/blob/main/README.en.md): English version of the README
+- [Architecture](https://github.com/BasnetStafan/kaimoru/blob/main/docs/development/ARCHITECTURE.md): system design, layering, payment and background-task flows
+- [Testing guide](https://github.com/BasnetStafan/kaimoru/blob/main/docs/development/TESTING.md): the check.sh quality gate and the E2E suite inventory
+- [Unit test specification](https://github.com/BasnetStafan/kaimoru/blob/main/docs/development/UNIT_TEST_SPEC.md): all unit-test cases with execution records
+- [Page and function specification (PDF, Japanese)](https://github.com/BasnetStafan/kaimoru/blob/main/docs/specs/EC_PAGE_FUNCTION_SPEC.pdf): every screen and its behaviour
+- [Detailed specification (PDF, Japanese)](https://github.com/BasnetStafan/kaimoru/blob/main/docs/specs/EC_DETAILED_SPEC.pdf): data model, background workers, and machine-facing APIs
+- [Optimistic locking specification (Japanese)](https://github.com/BasnetStafan/kaimoru/blob/main/docs/specs/OPTIMISTIC_LOCKING_SPEC.md): how concurrent writes are kept from overwriting each other
+- [Contributing](https://github.com/BasnetStafan/kaimoru/blob/main/CONTRIBUTING.md): house rules, the quality gate, and the AI-usage policy
+- [Security policy](https://github.com/BasnetStafan/kaimoru/blob/main/SECURITY.md): how to report a vulnerability

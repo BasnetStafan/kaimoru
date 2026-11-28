@@ -1,0 +1,13 @@
+[package]
+name = "configuration"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+description = "Kaimoru - a Japan-complete, full-stack server-rendered e-commerce store in Rust (Axum/PostgreSQL), with KOMOJU and Stripe payments."
+edition = "2024"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+# The PII master key arrives base64-encoded in its env var;
+# this crate owns decoding and validating it (fail closed).
+base64 = "0.22"
+toml = "1"
