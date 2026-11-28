@@ -843,13 +843,3 @@ pub async fn tax_breakdowns(
     rows.sort_by_key(|r| crate::models::tax::class_rank(&r.tax_class_code));
     Ok(rows)
 }
-
-/// The summed tax of an order from its stored breakdown.
-pub async fn tax_total(pool: &PgPool, order_id: i64) -> Result<i64, sqlx::Error> {
-    sqlx::query_scalar(
-        "SELECT COALESCE(SUM(tax_yen), 0) FROM order_tax_breakdowns WHERE order_id = $1",
-    )
-    .bind(order_id)
-    .fetch_one(pool)
-    .await
-}

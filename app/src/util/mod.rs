@@ -20,3 +20,4 @@ pub mod logging;
 pub mod markdown;
 pub mod pagination;
 pub mod rate_limit_knobs;
+pub mod xml;

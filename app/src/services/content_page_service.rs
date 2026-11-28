@@ -39,8 +39,8 @@ pub async fn published_custom_page(
 /// a fresh `updated_at`, so an entry matches only while the
 /// row is unchanged — a save invalidates exactly, with no TTL
 /// and nothing to clear by hand.
-/// One cached rendering: the  of the row it was
-/// rendered from and the HTML itself.
+/// One cached rendering: the `updated_at` of the row it
+/// was rendered from and the HTML itself.
 type RenderEntry = (DateTime<Utc>, String);
 
 static RENDER_CACHE: LazyLock<Mutex<HashMap<i64, RenderEntry>>> =

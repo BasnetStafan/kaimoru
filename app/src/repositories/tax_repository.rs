@@ -67,14 +67,6 @@ pub async fn class_rates_on(pool: &PgPool, date: NaiveDate) -> Result<Vec<ClassR
         .collect())
 }
 
-/// One class by ID.
-pub async fn find_class(pool: &PgPool, id: i64) -> Result<Option<TaxClass>, sqlx::Error> {
-    sqlx::query_as::<_, TaxClass>("SELECT id, code, name FROM tax_classes WHERE id = $1")
-        .bind(id)
-        .fetch_optional(pool)
-        .await
-}
-
 /// Every rate of one class, newest effective date first — the
 /// administration overview's history rows.
 pub async fn rates_of_class(pool: &PgPool, class_id: i64) -> Result<Vec<TaxRate>, AppError> {

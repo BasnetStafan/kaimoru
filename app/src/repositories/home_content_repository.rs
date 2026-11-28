@@ -4,7 +4,7 @@
 use sqlx::PgPool;
 
 use crate::error::AppError;
-use crate::models::{HeroImage, HomePin, HomeSection, HomeSlot, PinRow, ProductOption};
+use crate::models::{HeroImage, HomePin, HomeSection, HomeSlot, ProductOption};
 
 /// The slot column set, bound once so every read agrees
 /// about the shape.
@@ -132,19 +132,6 @@ pub async fn list_pins(pool: &PgPool) -> Result<Vec<HomePin>, AppError> {
     .fetch_all(pool)
     .await
     .map_err(|e| AppError::db("list home pins", e))
-}
-
-/// Returns every stored pin joined with its product's name
-/// and status, for the admin pin editor's rows.
-pub async fn list_pin_rows(pool: &PgPool) -> Result<Vec<PinRow>, AppError> {
-    sqlx::query_as::<_, PinRow>(
-        "SELECT p.section_key, p.product_id, p.sort_order, pr.name, pr.status \
-         FROM home_section_pins p JOIN products pr ON pr.id = p.product_id \
-         ORDER BY p.section_key, p.sort_order, p.product_id",
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|e| AppError::db("list home pin rows", e))
 }
 
 /// Returns every product as a pin editor option, in id

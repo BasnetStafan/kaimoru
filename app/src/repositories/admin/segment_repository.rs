@@ -166,19 +166,6 @@ macro_rules! bind_segment {
     };
 }
 
-/// How many members currently match.
-pub async fn count_matching(pool: &PgPool, segment: &CustomerSegment) -> Result<i64, AppError> {
-    let sql = format!(
-        "{} SELECT COUNT(*) FROM users u \
-         LEFT JOIN rfm_bands rb ON rb.user_id = u.id WHERE {MATCH_WHERE}",
-        crate::repositories::admin::rfm_repository::bands_cte()
-    );
-    bind_segment!(sqlx::query_scalar::<_, i64>(&sql), segment)
-        .fetch_one(pool)
-        .await
-        .map_err(|e| AppError::db("count segment members", e))
-}
-
 /// One row of the bulk count read: a segment plus its
 /// live member count.
 #[derive(sqlx::FromRow)]
@@ -192,8 +179,8 @@ struct SegmentCountRow {
 
 /// Every segment with its live member count, newest
 /// first, in ONE grouped query — the list screen's read.
-/// The per-segment [`count_matching`] loop this replaces
-/// cost one round trip per saved segment.
+/// The per-segment counting loop this replaces cost one
+/// round trip per saved segment.
 pub async fn list_with_counts(pool: &PgPool) -> Result<Vec<(CustomerSegment, i64)>, AppError> {
     let sql = format!(
         "{} SELECT s.id, s.name, s.tag, s.min_total_spend_yen, s.min_order_count, \

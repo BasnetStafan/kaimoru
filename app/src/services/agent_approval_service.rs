@@ -556,13 +556,15 @@ pub async fn verify_for_pay(
         }
     }
     if approval.is_expired(Utc::now()) {
-        let _ = agent_approval_repository::transition(
-            pool,
-            approval.id,
-            STATUS_PENDING,
-            STATUS_EXPIRED,
-        )
-        .await;
+        if let Err(e) =
+            agent_approval_repository::transition(pool, approval.id, STATUS_PENDING, STATUS_EXPIRED)
+                .await
+        {
+            tracing::error!(
+                "agent approval expiry transition failed for approval {}: {e}",
+                approval.id
+            );
+        }
         return Err(PlacementRefusal {
             message: order_failed_message(&expired_notice()),
         });
@@ -571,9 +573,15 @@ pub async fn verify_for_pay(
         .await
         .map_err(|_| refuse("カートの確認に失敗しました。しばらくしてから再度お試しください。"))?;
     if lines_binding(&approval) != fingerprint_for(&lines, &totals) {
-        let _ =
+        if let Err(e) =
             agent_approval_repository::transition(pool, approval.id, STATUS_PENDING, STATUS_VOIDED)
-                .await;
+                .await
+        {
+            tracing::error!(
+                "agent approval void transition failed for approval {}: {e}",
+                approval.id
+            );
+        }
         return Err(PlacementRefusal {
             message: order_failed_message(CHANGED_NOTICE),
         });

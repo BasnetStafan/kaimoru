@@ -10,6 +10,7 @@ use tower_sessions::Session;
 
 use super::{db_error, layout_for, render};
 use crate::models::PaymentMethod;
+use crate::models::jst::jst_datetime_label;
 use crate::pricing;
 use crate::services::admin::reconciliation_service;
 use crate::session::CurrentAdmin;
@@ -18,13 +19,6 @@ use crate::views::admin::payments::{CapturedRow, FlaggedRow, OpenPaymentRow, Pay
 /// Route: the reconciliation page.
 pub fn router() -> Router<PgPool> {
     Router::new().route("/admin/payments", get(page))
-}
-
-/// A timestamp in JST, the admin's datetime format.
-fn jst_label(at: chrono::DateTime<chrono::Utc>) -> String {
-    at.with_timezone(&crate::models::jst::jst())
-        .format("%Y/%m/%d %H:%M")
-        .to_string()
 }
 
 /// A payment method code's display label.
@@ -59,10 +53,10 @@ pub async fn page(
                 status_label: crate::models::payment::status_label_for_status(&p.status)
                     .to_string(),
                 amount: pricing::display_price(p.amount_yen),
-                created_label: jst_label(p.created_at),
+                created_label: jst_datetime_label(p.created_at),
                 deadline_label: p
                     .payment_deadline
-                    .map(jst_label)
+                    .map(jst_datetime_label)
                     .unwrap_or_else(|| "—".to_string()),
             })
             .collect(),
@@ -85,7 +79,7 @@ pub async fn page(
                 status_label: crate::models::payment::status_label_for_status(&p.status)
                     .to_string(),
                 flag_note: p.flag_note.clone(),
-                updated_label: jst_label(p.updated_at),
+                updated_label: jst_datetime_label(p.updated_at),
             })
             .collect(),
     })

@@ -12,25 +12,7 @@ const EVAL_COLS: &str = "code, discount_type, discount_yen, percent, min_subtota
                          scope, product_id, variant_id,
                          max_uses_total, max_uses_per_customer, is_automatic, description";
 
-/// Finds an active coupon by its exact code.
-pub async fn find_active<'e, E>(executor: E, code: &str) -> Result<Option<Coupon>, sqlx::Error>
-where
-    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
-{
-    let sql = format!(
-        "SELECT {EVAL_COLS} FROM coupons \
-         WHERE code = $1 AND active \
-         AND (starts_at IS NULL OR starts_at <= now()) \
-         AND (ends_at IS NULL OR ends_at > now())"
-    );
-    sqlx::query_as::<_, Coupon>(&sql)
-        .bind(code)
-        .fetch_optional(executor)
-        .await
-}
-
-/// The bulk twin of [`find_active`]: every active
-/// definition among `codes`, in one query. Result order is
+/// Every active definition among `codes`, in one query. Result order is
 /// unspecified; the caller re-imposes its own.
 pub async fn find_active_many(pool: &PgPool, codes: &[String]) -> Result<Vec<Coupon>, sqlx::Error> {
     let sql = format!(
@@ -239,81 +221,6 @@ where
          END
          FROM coupons c
          WHERE uc.user_id = $1 AND uc.code = $2 AND c.code = uc.code",
-    )
-    .bind(user_id)
-    .bind(code)
-    .execute(executor)
-    .await
-    .map(|_| ())
-}
-
-/// Releases a member's use of a code, inside the caller's
-/// transaction: the grant row's used stamp is cleared, so the
-/// once-only coupon becomes usable again. The exact inverse of
-/// [`mark_used`], called when the order that consumed the coupon
-/// is cancelled before the money settles (payment expiry or
-/// cancellation) — never for a settled order: a refunded order
-/// keeps the coupon consumed.
-pub async fn release_used<'e, E>(executor: E, user_id: i64, code: &str) -> Result<(), sqlx::Error>
-where
-    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
-{
-    sqlx::query(
-        "UPDATE user_coupons SET used_at = NULL \
-         WHERE user_id = $1 AND code = $2 AND used_at IS NOT NULL",
-    )
-    .bind(user_id)
-    .bind(code)
-    .execute(executor)
-    .await
-    .map(|_| ())
-}
-
-/// Whether this member has already used the code (a grant row
-/// with `used_at` set). Members without any grant row may still
-/// use a public store code once; placement records the use.
-pub async fn member_has_used<'e, E>(
-    executor: E,
-    user_id: i64,
-    code: &str,
-) -> Result<bool, sqlx::Error>
-where
-    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
-{
-    sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM user_coupons \
-         WHERE user_id = $1 AND code = $2 AND used_at IS NOT NULL)",
-    )
-    .bind(user_id)
-    .bind(code)
-    .fetch_one(executor)
-    .await
-}
-
-/// Records that a member used a code, inside the caller's
-/// transaction: updates their grant row when one exists, and
-/// inserts a used row for a public code they had no grant for,
-/// so a public code is also once-per-member.
-pub async fn mark_used<'e, E>(executor: E, user_id: i64, code: &str) -> Result<(), sqlx::Error>
-where
-    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
-{
-    // One statement: a grant row is stamped used; a member with no
-    // row gets a used row inserted, so once-per-member holds either
-    // way. The CTE shape (rather than an upsert) keeps the stamp
-    // and the insert in one pass over the caller's transaction.
-    // The unique (user_id, code) index is the backstop when two
-    // placements race: the loser fails with a unique violation,
-    // which placement maps to a coupon refusal.
-    sqlx::query(
-        "WITH updated AS ( \
-             UPDATE user_coupons SET used_at = now() \
-             WHERE user_id = $1 AND code = $2 AND used_at IS NULL RETURNING id \
-         ) \
-         INSERT INTO user_coupons (user_id, code, used_at) \
-         SELECT $1, $2, now() \
-         WHERE NOT EXISTS (SELECT 1 FROM updated) \
-           AND NOT EXISTS (SELECT 1 FROM user_coupons WHERE user_id = $1 AND code = $2)",
     )
     .bind(user_id)
     .bind(code)

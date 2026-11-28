@@ -12,7 +12,11 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 
 /// A member's two-factor storage state.
-#[derive(Debug, Clone, sqlx::FromRow)]
+///
+/// It deliberately does not derive `Debug`: the enrolment
+/// secret it carries must never reach a log line, an error
+/// message, or a panic payload.
+#[derive(Clone, sqlx::FromRow)]
 pub struct TotpState {
     /// The base32 enrolment secret; `None` when not enrolled.
     pub secret: Option<String>,

@@ -6,10 +6,11 @@
 //! and resource serves exactly what the storefront and the
 //! agent API already expose without a login — public
 //! products, categories, store information and the published
-//! pages. No member data, no orders, no writes. The handlers
-//! call the same catalog service the agent API uses, so an MCP
-//! client and a person browsing the store never see different
-//! facts.
+//! pages. No member data, no orders, no writes. The catalog
+//! tools call the same catalog service the agent API uses, so
+//! an MCP client and a person browsing the store never see
+//! different product facts; the page resources read the
+//! published content pages from the content-page repository.
 //!
 //! Phase 2 adds cart tools behind bearer API keys (scope
 //! `cart:write`). A cart is bound to the key that created it

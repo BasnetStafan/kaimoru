@@ -37,6 +37,7 @@ use crate::services::cart_service::{CartOwner, CartTotals};
 use crate::services::mcp_cart_service;
 use crate::services::mcp_principal::McpPrincipal;
 use crate::services::order_service::CheckoutFlow;
+use crate::services::review_service;
 use crate::util::hmac_util::hex_encode;
 
 /// Random bytes behind an approval token (64 hex chars).
@@ -194,7 +195,7 @@ pub async fn create_draft(
             // A racing create with the same idempotency key
             // won the insert: its draft is this call's
             // answer too. Anything else is a store failure.
-            if is_unique_violation(&e)
+            if review_service::is_unique_violation(&e)
                 && let Some(existing) = mcp_order_draft_repository::find_by_idempotency(
                     pool,
                     &principal_key,
@@ -212,12 +213,6 @@ pub async fn create_draft(
         .await?
         .expect("the draft was just inserted");
     Ok((row, Some(token)))
-}
-
-/// Whether a database error is a unique violation — the
-/// idempotency race's signature.
-fn is_unique_violation(error: &sqlx::Error) -> bool {
-    matches!(error, sqlx::Error::Database(db) if db.is_unique_violation())
 }
 
 /// Reads one of the caller's drafts, resolving a pending
@@ -349,13 +344,19 @@ pub async fn verify_for_pay(
         }
     }
     if draft.expires_at <= Utc::now() {
-        let _ = mcp_order_draft_repository::transition(
+        if let Err(e) = mcp_order_draft_repository::transition(
             pool,
             draft.id,
             mcp_order_draft_repository::STATUS_PENDING,
             mcp_order_draft_repository::STATUS_EXPIRED,
         )
-        .await;
+        .await
+        {
+            tracing::error!(
+                "order draft expiry transition failed for draft {}: {e}",
+                draft.id
+            );
+        }
         return Err(PlacementRefusal {
             message: order_failed_message(&agent_approval_service::expired_notice()),
         });
@@ -365,13 +366,19 @@ pub async fn verify_for_pay(
         .await
         .map_err(|_| refuse("カートの確認に失敗しました。しばらくしてから再度お試しください。"))?;
     if lines_binding(draft) != agent_approval_service::fingerprint_for(&lines, &totals) {
-        let _ = mcp_order_draft_repository::transition(
+        if let Err(e) = mcp_order_draft_repository::transition(
             pool,
             draft.id,
             mcp_order_draft_repository::STATUS_PENDING,
             mcp_order_draft_repository::STATUS_VOID,
         )
-        .await;
+        .await
+        {
+            tracing::error!(
+                "order draft void transition failed for draft {}: {e}",
+                draft.id
+            );
+        }
         return Err(PlacementRefusal {
             message: order_failed_message(agent_approval_service::CHANGED_NOTICE),
         });

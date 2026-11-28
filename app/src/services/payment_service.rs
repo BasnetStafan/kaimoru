@@ -1072,13 +1072,17 @@ pub async fn sweep_once(pool: &PgPool) {
     }
     // Explicit unlock; the connection's close would free it
     // anyway, but releasing here returns the connection to
-    // the pool already unlocked.
+    // the pool already unlocked. A failed unlock leaves the
+    // session-scoped lock on the connection: close it rather
+    // than returning it to the pool, where it would stall
+    // later sweeps.
     if let Err(e) = sqlx::query("SELECT pg_advisory_unlock($1)")
         .bind(PAYMENT_SWEEP_LOCK_KEY)
         .execute(&mut *conn)
         .await
     {
-        tracing::warn!("payment sweep could not release the sweep lock: {e}");
+        tracing::error!("payment sweep unlock failed; closing the lock connection: {e}");
+        let _ = conn.close().await;
     }
 }
 

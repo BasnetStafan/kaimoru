@@ -46,7 +46,10 @@ pub fn hex_encode(bytes: &[u8]) -> String {
 /// Decodes lowercase or uppercase hex; `Err` on any non-hex
 /// character or odd length.
 fn hex_decode(text: &str) -> Result<Vec<u8>, ()> {
-    if !text.len().is_multiple_of(2) {
+    // ASCII first: with only single-byte characters, every
+    // even byte offset below is a char boundary, so the
+    // slicing cannot panic. A non-ASCII string is not hex.
+    if !text.is_ascii() || !text.len().is_multiple_of(2) {
         return Err(());
     }
     (0..text.len())
@@ -84,6 +87,15 @@ mod tests {
         assert!(!verify_hmac_sha256_hex(b"other", body, &signature));
         assert!(!verify_hmac_sha256_hex(key, body, "not-hex"));
         assert!(!verify_hmac_sha256_hex(key, body, ""));
+    }
+
+    #[test]
+    fn non_ascii_signature_is_refused_not_panicked_on() {
+        // Two 3-byte characters: an even byte length whose
+        // byte offsets are not char boundaries. The decoder
+        // must refuse the input, never panic on the slice.
+        assert!(hex_decode("\u{3042}\u{3042}").is_err());
+        assert!(!verify_hmac_sha256_hex(b"k", b"data", "\u{3042}\u{3042}"));
     }
 
     #[test]

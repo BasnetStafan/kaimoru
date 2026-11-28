@@ -207,12 +207,6 @@ impl Product {
         self.points_earn_percent.unwrap_or(shop_percent)
     }
 
-    /// Whether the product reads as low stock at its current
-    /// level (tracked products only).
-    pub fn is_low_stock(&self) -> bool {
-        self.track_stock && self.stock > 0 && self.stock <= self.low_stock_threshold()
-    }
-
     /// The card note naming a non-standard tax class, for
     /// the card and quick-add price lines: standard-rate
     /// products carry no note, reduced-rate ones the

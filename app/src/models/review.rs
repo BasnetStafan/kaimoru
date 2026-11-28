@@ -41,13 +41,6 @@ pub struct Review {
     pub shop_reply_at: Option<DateTime<Utc>>,
 }
 
-impl Review {
-    /// Whether the review is hidden from the storefront.
-    pub fn is_hidden(&self) -> bool {
-        self.hidden_at.is_some()
-    }
-}
-
 /// How much of the five-star bar a rating fills, as a whole
 /// percent — the one computation behind every star bar, so the
 /// storefront and the admin moderation list always agree.

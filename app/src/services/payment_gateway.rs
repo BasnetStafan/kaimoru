@@ -210,12 +210,6 @@ impl FakeGateway {
             }
         }
     }
-
-    /// How many sessions creation produced (the double-submit
-    /// question: retries included).
-    pub fn session_count(&self) -> usize {
-        self.state.lock().expect("fake gateway lock").sessions.len()
-    }
 }
 
 #[async_trait]

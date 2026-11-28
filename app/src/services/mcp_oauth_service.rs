@@ -32,6 +32,13 @@ const JWKS_TTL: Duration = Duration::from_secs(600);
 /// never stall a tool call.
 const JWKS_FETCH_TIMEOUT: Duration = Duration::from_secs(5);
 
+/// The shortest gap between two JWKS fetches. An unknown
+/// `kid` refetches early (see [`JWKS_TTL`]), but a stream
+/// of tokens with invented key ids must not turn the store
+/// into a fetch amplifier against the issuer: inside the
+/// window, an uncached key id simply fails closed.
+const JWKS_REFETCH_COOLDOWN: Duration = Duration::from_secs(60);
+
 /// Who a validated access token speaks for: the subject
 /// and the scopes it was granted. Carries no token
 /// material — the token itself is dropped at validation —
@@ -87,6 +94,10 @@ fn split_scopes(text: &str) -> Vec<String> {
 /// the parsed key set. A single issuer is configured, so
 /// a single entry is the whole cache.
 static JWKS_CACHE: Mutex<Option<(Instant, Jwks)>> = Mutex::new(None);
+
+/// When the last JWKS fetch was attempted, success or
+/// failure: the refetch cooldown's clock.
+static JWKS_LAST_FETCH: Mutex<Option<Instant>> = Mutex::new(None);
 
 /// Type alias for the cached key set, so the cache's
 /// shape names what it holds.
@@ -144,10 +155,24 @@ pub async fn validate_access_token(token: &str) -> Result<OAuthIdentity, ()> {
 
 /// Finds the signing key for one key id: a fresh cached
 /// set answers directly; a missing key id (a rotation) or
-/// a stale set refetches the document once.
+/// a stale set refetches the document, at most once per
+/// refetch cooldown — inside the window an unknown key id
+/// fails closed instead of fetching again.
 async fn fetch_jwk(issuer: &str, kid: &str) -> Result<jsonwebtoken::jwk::Jwk, ()> {
     if let Some(jwk) = cached_jwk(kid) {
         return Ok(jwk);
+    }
+    {
+        // The cooldown gate: the attempt is recorded
+        // before fetching, so a failed fetch counts
+        // against the window too — a dead issuer is not
+        // hammered either. A poisoned lock fails closed,
+        // like every other refusal in this module.
+        let mut last_fetch = JWKS_LAST_FETCH.lock().map_err(|_| ())?;
+        if matches!(*last_fetch, Some(at) if at.elapsed() < JWKS_REFETCH_COOLDOWN) {
+            return Err(());
+        }
+        *last_fetch = Some(Instant::now());
     }
     let url = format!("{}/.well-known/jwks.json", issuer.trim_end_matches('/'));
     let response = http_client().get(url).send().await.map_err(|_| ())?;

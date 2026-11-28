@@ -46,12 +46,6 @@ pub async fn record_signup(pool: &PgPool, user_id: i64, opted_in: bool) -> Resul
     apply_preference(pool, user_id, opted_in, SOURCE_SIGNUP).await
 }
 
-/// Syncs the consent record with the MyPage profile form's
-/// mail-magazine checkbox, stamping the change's source.
-pub async fn sync_preference(pool: &PgPool, user_id: i64, wants: bool) -> Result<(), AppError> {
-    apply_preference(pool, user_id, wants, SOURCE_MYPAGE).await
-}
-
 /// Syncs the consent record inside the caller's transaction:
 /// the profile edit writes the `users` row in the same unit,
 /// so a preference change and its consent record commit or
