@@ -27,6 +27,7 @@ pub mod order;
 pub mod payment;
 pub mod pending_registration;
 pub mod points;
+pub mod post;
 pub mod postal_code;
 pub mod product;
 pub mod restock;
@@ -75,6 +76,10 @@ pub use notification_template::NotificationTemplate;
 pub use order::{Order, OrderLine, RecentOrder};
 pub use payment::{Payment, PaymentMethod, WebhookEvent};
 pub use pending_registration::PendingRegistration;
+pub use post::{
+    NewPost, Post, PostCategory, PostRevision, PostRevisionSummary, PostState, PostSummary,
+    PostView,
+};
 pub use postal_code::PostalAddress;
 pub use product::Product;
 pub use shop_settings::{FeeSettings, ShopSettings};

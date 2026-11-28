@@ -23,6 +23,8 @@ pub mod notfound;
 pub mod notices;
 pub mod orders;
 pub mod payments;
+pub mod post_categories;
+pub mod posts;
 pub mod products;
 pub mod returns;
 pub mod reviews;

@@ -40,6 +40,8 @@
             <a href="/admin/content/pages"{% if nav == "content" %} class="active" aria-current="page"{% endif %}>コンテンツ</a>
             <a href="/admin/content/home"{% if nav == "content_home" %} class="active" aria-current="page"{% endif %}>トップページ設定</a>
             <a href="/admin/content/menus"{% if nav == "content_menus" %} class="active" aria-current="page"{% endif %}>メニュー設定</a>
+            <a href="/admin/posts"{% if nav == "posts" %} class="active" aria-current="page"{% endif %}>ブログ記事</a>
+            <a href="/admin/post-categories"{% if nav == "post_categories" %} class="active" aria-current="page"{% endif %}>ブログカテゴリ</a>
             <a href="/admin/coupons"{% if nav == "coupons" %} class="active" aria-current="page"{% endif %}>クーポン</a>
             {% endif %}
             {% if layout.can_mail %}

@@ -1,0 +1,36 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}ブログカテゴリ{% endblock %}
+
+{% block adminpart %}
+<div class="admin-page-head">
+    <h1 class="admin-h1">ブログカテゴリ</h1>
+    <a class="primary-button admin-new-button" href="/admin/post-categories/new">カテゴリを登録</a>
+</div>
+
+<p class="admin-note">ブログ記事のカテゴリです。カテゴリを削除しても記事は削除されず、カテゴリなしになります。</p>
+
+{% if rows.is_empty() %}
+<p class="admin-empty">カテゴリはまだありません</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>カテゴリ名</th><th>スラッグ</th><th></th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td><a href="{{ row.edit_url }}">{{ row.name }}</a></td>
+            <td>{{ row.slug }}</td>
+            <td><a href="{{ row.edit_url }}">編集</a></td>
+            <td>
+                <form method="post" action="{{ row.delete_url }}" class="post-category-delete-form">
+                    <button type="submit" class="secondary-button danger">削除</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+{% endblock %}

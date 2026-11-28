@@ -56,11 +56,12 @@ fn gate_for(path: &str) -> Gate {
     if path == "/admin" {
         return Gate::Any;
     }
-    const ANY_PREFIXES: [&str; 4] = [
+    const ANY_PREFIXES: [&str; 5] = [
         "/admin/login",
         "/admin/logout",
         "/admin/profile",
         "/admin/password",
+        "/admin/totp",
     ];
     for prefix in ANY_PREFIXES {
         if let Some(rest) = path.strip_prefix(prefix)
@@ -69,7 +70,7 @@ fn gate_for(path: &str) -> Gate {
             return Gate::Any;
         }
     }
-    const TABLE: [(&str, Gate); 19] = [
+    const TABLE: [(&str, Gate); 21] = [
         ("/admin/admins", Gate::OwnerOnly),
         ("/admin/orders", Gate::Area(AREA_SALES)),
         ("/admin/analytics", Gate::Area(AREA_SALES)),
@@ -84,6 +85,8 @@ fn gate_for(path: &str) -> Gate {
         ("/admin/tags", Gate::Area(AREA_PRODUCTS)),
         ("/admin/notices", Gate::Area(AREA_PRODUCTS)),
         ("/admin/content", Gate::Area(AREA_CONTENT)),
+        ("/admin/posts", Gate::Area(AREA_CONTENT)),
+        ("/admin/post-categories", Gate::Area(AREA_CONTENT)),
         ("/admin/coupons", Gate::Area(AREA_CONTENT)),
         ("/admin/mail", Gate::Area(AREA_MAIL)),
         ("/admin/customers", Gate::Area(AREA_STORE)),
@@ -154,6 +157,8 @@ mod tests {
         assert_eq!(gate_for("/admin/logout"), Gate::Any);
         assert_eq!(gate_for("/admin/profile"), Gate::Any);
         assert_eq!(gate_for("/admin/password"), Gate::Any);
+        assert_eq!(gate_for("/admin/totp"), Gate::Any);
+        assert_eq!(gate_for("/admin/totp/setup"), Gate::Any);
     }
 
     #[test]

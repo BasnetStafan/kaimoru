@@ -28,6 +28,8 @@ pub mod order_repository;
 pub mod payment_repository;
 pub mod pending_registration_repository;
 pub mod point_repository;
+pub mod post_category_repository;
+pub mod post_repository;
 pub mod postal_code_repository;
 pub mod product_image_repository;
 pub mod product_repository;

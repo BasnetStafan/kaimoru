@@ -152,6 +152,7 @@ pub fn create_router(
     // server, and it answers 404 while OAuth is inactive.
     let crawler_docs = controllers::storefront::sitemap::router()
         .merge(controllers::storefront::oauth_metadata::router())
+        .merge(controllers::storefront::blog::feed_router())
         .with_state(pool.clone())
         .layer(axum::middleware::from_fn_with_state(
             pool.clone(),
@@ -162,13 +163,14 @@ pub fn create_router(
             logging::request_log,
         ));
 
-    // The MCP server (Phase 1: the read-only public catalog
-    // for external AI clients) mounts only when the deployment
-    // enables it — with the flag off the path does not exist.
-    // Like the agent API it carries no session stack and no
-    // CSRF layer: its callers are MCP clients, not browsers,
-    // and Phase 1 serves public data only. It sits under the
-    // maintenance gate, logged on the API surface.
+    // The MCP server for external AI clients mounts only
+    // when the deployment enables it — with the flag off the
+    // path does not exist. Like the agent API it carries no
+    // session stack and no CSRF layer: its callers are MCP
+    // clients, not browsers — anonymous catalog reads, and
+    // cart and draft-order writes behind the caller's own
+    // API key or OAuth token (see `api::mcp`). It sits under
+    // the maintenance gate, logged on the API surface.
     let mcp_api = if crate::config::CONFIG.mcp_enabled {
         Router::new()
             .route_service("/mcp", crate::api::mcp::service(pool.clone()))

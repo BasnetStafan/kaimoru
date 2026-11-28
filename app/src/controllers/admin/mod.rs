@@ -28,6 +28,8 @@ pub mod menus;
 pub mod notices;
 pub mod orders;
 pub mod payments;
+pub mod post_categories;
+pub mod posts;
 pub mod products;
 pub mod returns;
 pub mod reviews;
@@ -73,6 +75,8 @@ pub fn router() -> Router<PgPool> {
         .merge(notices::router())
         .merge(categories::router())
         .merge(content_pages::router())
+        .merge(posts::router())
+        .merge(post_categories::router())
         .merge(home_content::router())
         .merge(menus::router())
         .merge(tags::router())

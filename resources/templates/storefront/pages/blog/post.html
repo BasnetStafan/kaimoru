@@ -1,0 +1,22 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ title }} | {{ header.shop.shop_name }}{% endblock %}
+{% block meta_description %}{{ meta_description }}{% endblock %}
+
+{% block homepart %}
+<article class="info-page blog-post">
+    <p class="blog-breadcrumb"><a href="/blog">ブログ</a>{% if let Some(name) = category_name %}{% if let Some(url) = category_url %} / <a href="{{ url }}">{{ name }}</a>{% endif %}{% endif %}</p>
+    <h1>{{ title }}</h1>
+    <p class="blog-post-meta">
+        <time>{{ date_label }}</time>
+        <span class="blog-post-author">{{ author_name }}</span>
+    </p>
+    {% if let Some(path) = cover_image_path %}
+    <p class="blog-post-cover"><img src="{{ path }}" alt=""></p>
+    {% endif %}
+    <div class="info-body">
+        {{ body_html|safe }}
+    </div>
+    <p class="blog-back"><a href="/blog">ブログ一覧に戻る</a></p>
+</article>
+{% endblock %}

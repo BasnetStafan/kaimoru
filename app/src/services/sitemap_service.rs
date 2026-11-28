@@ -8,7 +8,10 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 
 use crate::error::AppError;
-use crate::repositories::{content_page_repository, product_repository};
+use crate::repositories::{
+    content_page_repository, post_category_repository, post_repository, product_repository,
+};
+use crate::util::xml::escape_xml;
 
 /// One sitemap entry: a path under the store's base URL and,
 /// when the record behind it carries one, its last change.
@@ -50,13 +53,17 @@ const DISALLOWED_PREFIXES: [&str; 9] = [
 ];
 
 /// Builds the sitemap document for `base_url`: the fixed
-/// pages, every public product inside its publish window and
-/// every published custom page.
+/// pages, every public product inside its publish window,
+/// every published custom page, and the blog — its index,
+/// every live post and every category archive holding a
+/// live post.
 pub async fn sitemap_xml(pool: &PgPool, base_url: &str) -> Result<String, AppError> {
     let products = product_repository::sitemap_products(pool)
         .await
         .map_err(|e| AppError::db("sitemap products", e))?;
     let pages = content_page_repository::list_published_custom(pool).await?;
+    let posts = post_repository::list_live_for_sitemap(pool).await?;
+    let blog_categories = post_category_repository::list_with_live_posts(pool).await?;
 
     let mut entries: Vec<SitemapEntry> = STATIC_PATHS
         .iter()
@@ -72,6 +79,18 @@ pub async fn sitemap_xml(pool: &PgPool, base_url: &str) -> Result<String, AppErr
     entries.extend(pages.into_iter().map(|(slug, updated_at)| SitemapEntry {
         path: format!("/pages/{slug}"),
         lastmod: Some(updated_at),
+    }));
+    entries.push(SitemapEntry {
+        path: "/blog".to_string(),
+        lastmod: None,
+    });
+    entries.extend(posts.into_iter().map(|(slug, updated_at)| SitemapEntry {
+        path: format!("/blog/{slug}"),
+        lastmod: Some(updated_at),
+    }));
+    entries.extend(blog_categories.into_iter().map(|category| SitemapEntry {
+        path: category.url_path(),
+        lastmod: None,
     }));
     Ok(render_sitemap(base_url, &entries))
 }
@@ -113,25 +132,6 @@ pub fn render_robots(base_url: &str) -> String {
     }
     text.push_str(&format!("\nSitemap: {base}/sitemap.xml\n"));
     text
-}
-
-/// Escapes the five XML-special characters in a URL. Sitemap
-/// locations are built from our own origin plus ids and
-/// operator-entered slugs, and a slug may legally contain
-/// characters XML forbids raw.
-fn escape_xml(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    for ch in text.chars() {
-        match ch {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            '\'' => out.push_str("&apos;"),
-            _ => out.push(ch),
-        }
-    }
-    out
 }
 
 #[cfg(test)]

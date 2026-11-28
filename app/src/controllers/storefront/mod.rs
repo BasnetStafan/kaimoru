@@ -7,6 +7,7 @@
 
 pub mod addresses;
 pub mod agent;
+pub mod blog;
 pub mod cart;
 pub mod category_index;
 pub mod checkout;
@@ -78,6 +79,7 @@ pub fn router() -> Router<PgPool> {
         .merge(reviews::router())
         .merge(unsubscribe::router())
         .merge(pages::router())
+        .merge(blog::router())
         .fallback(not_found_fallback)
 }
 

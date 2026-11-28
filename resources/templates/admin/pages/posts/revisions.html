@@ -1,0 +1,33 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}版の履歴 | {{ post_title }}{% endblock %}
+
+{% block adminpart %}
+<p class="admin-back"><a href="{{ edit_url }}">← 編集に戻る</a></p>
+<h1 class="admin-h1">版の履歴</h1>
+<p class="admin-note">「{{ post_title }}」を保存する前の内容が、新しい順に最大50件残っています。復元されるのはタイトル・本文・要約などの内容だけで、ステータス・カテゴリ・カバー画像・公開日時は変わりません。復元すると、現在の内容も版として保存されるため、復元自体もあとから取り消せます。</p>
+
+{% if rows.is_empty() %}
+<p class="admin-empty">版はまだありません</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>保存日時</th><th>タイトル</th><th>編集者</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td>{{ row.created_label }}</td>
+            <td>{{ row.title }}</td>
+            <td>{{ row.editor_name }}</td>
+            <td>
+                <form method="post" action="{{ row.restore_url }}" class="post-revision-restore-form">
+                    <button type="submit" class="secondary-button">復元する</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+{% endblock %}

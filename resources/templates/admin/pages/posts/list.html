@@ -1,0 +1,45 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}ブログ記事{% endblock %}
+
+{% block adminpart %}
+<div class="admin-page-head">
+    <h1 class="admin-h1">ブログ記事</h1>
+    <a class="primary-button admin-new-button" href="/admin/posts/new">記事を登録</a>
+</div>
+
+<p class="admin-note">店舗のブログ記事を編集します。公開日時が未来の記事は「予約中」となり、日時が来ると自動で公開されます（公開中に変わります）。</p>
+
+<nav class="admin-filter-tabs" aria-label="状態で絞り込み">
+    <a href="/admin/posts"{% if state.is_empty() %} class="active" aria-current="page"{% endif %}>すべて</a>
+    <a href="/admin/posts?state=draft"{% if state == "draft" %} class="active" aria-current="page"{% endif %}>下書き</a>
+    <a href="/admin/posts?state=scheduled"{% if state == "scheduled" %} class="active" aria-current="page"{% endif %}>予約中</a>
+    <a href="/admin/posts?state=live"{% if state == "live" %} class="active" aria-current="page"{% endif %}>公開中</a>
+</nav>
+
+{% if rows.is_empty() %}
+<p class="admin-empty">記事はまだありません</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>タイトル</th><th>URL</th><th>カテゴリ</th><th>状態</th><th>公開日時</th><th>最終更新</th><th>著者</th><th>編集者</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td><a href="{{ row.edit_url }}">{{ row.title }}</a></td>
+            <td>{{ row.url_path }}</td>
+            <td>{% if let Some(name) = row.category_name %}{{ name }}{% else %}-{% endif %}</td>
+            <td>{% if row.live %}<span class="content-status content-status-published">公開中</span>{% else if row.scheduled %}<span class="content-status content-status-scheduled">予約中</span>{% else %}<span class="content-status content-status-draft">下書き</span>{% endif %}</td>
+            <td>{{ row.published_label }}</td>
+            <td>{{ row.updated_label }}</td>
+            <td>{{ row.author_name }}</td>
+            <td>{% if let Some(name) = row.editor_name %}{{ name }}{% else %}-{% endif %}</td>
+            <td><a href="{{ row.edit_url }}">編集</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% include "admin/parts/pagination.html" %}
+{% endif %}
+{% endblock %}

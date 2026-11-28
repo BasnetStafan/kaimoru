@@ -10,6 +10,7 @@ pub mod agent_run_service;
 pub mod api_cart_service;
 pub mod api_catalog_service;
 pub mod api_key_service;
+pub mod blog_service;
 pub mod cart_reminder_service;
 pub mod cart_service;
 pub mod content_page_service;

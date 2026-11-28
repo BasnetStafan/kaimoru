@@ -1698,6 +1698,36 @@ button.danger,
     background: #9A958A;
 }
 
+.content-status-scheduled {
+    background: #B7791F;
+}
+
+.admin-filter-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin: 0 0 1rem;
+}
+
+.admin-filter-tabs a {
+    padding: 0.35rem 0.8rem;
+    border: 1px solid var(--admin-border);
+    border-radius: 999px;
+    color: var(--admin-text);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.admin-filter-tabs a.active {
+    background: var(--admin-text);
+    color: var(--admin-surface);
+}
+
+.post-cover-preview {
+    max-width: 320px;
+    max-height: 200px;
+    border-radius: 6px;
+}
+
 /* Product form upgrade: collapsible sections, the wider
    combination grid, and per-image alt inputs. The section box
    keeps the established .admin-form-section styling; only the

@@ -26,7 +26,7 @@
 
 ## ケース一覧
 
-<!-- MAX_UT_ID: 329 -->
+<!-- MAX_UT_ID: 345 -->
 <!-- INVENTORY:BEGIN -->
 
 ### app / api::mcp::tools
@@ -163,6 +163,17 @@
 | UT-059 | models::payment::tests::unknown_provider_status_never_invents_a_state | next_status | 異常系 | 未知の状態語では現状態を維持し、新しい状態を作らないこと | Pass |
 | UT-060 | models::payment::tests::zero_yen_komoju_payment_is_born_settled_without_a_session | initial_status_for / settles_without_session | 境界値 | 0円の KOMOJU 系は PAID で生まれセッション無しで確定し、1円は PENDING、COD は0円でも PENDING だがセッション無しであること | Pass |
 
+### app / models::post
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-330 | models::post::tests::excerpt_derives_from_html_text | models::post | （未記入） | タグ付きの HTML 本文（保存済み抜粋なし） | タグが除去され、残りのテキストが返される |
+| UT-331 | models::post::tests::excerpt_derives_from_markdown_text | models::post | （未記入） | 見出し・リンク・強調マーカー付きの Markdown 本文（保存済み抜粋なし） | マーカーが除去され、読めるテキストが返される |
+| UT-332 | models::post::tests::excerpt_truncates_with_ellipsis | models::post | （未記入） | 120 文字を超える本文テキスト | ちょうど 120 文字＋省略記号になる |
+| UT-333 | models::post::tests::liveness_needs_published_and_arrived_date | models::post | （未記入） | 下書き／公開＋未来日／公開＋日付なし／公開＋過去日 | 最後のものだけが公開中になる |
+| UT-334 | models::post::tests::state_labels_follow_the_derived_state | models::post | （未記入） | 各派生状態の記事が1件ずつ | ラベルは 下書き / 予約中 / 公開中 |
+| UT-335 | models::post::tests::stored_excerpt_wins_over_derivation | models::post | （未記入） | 保存済み抜粋と異なる本文を持つ記事 | 保存済み抜粋がそのまま返される |
+
 ### app / models::return_request
 
 | 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
@@ -235,6 +246,15 @@
 | UT-086 | services::admin::notice_service::tests::garbage_date_is_an_error_not_an_open_end | validate_notice | 異常系 | 解釈不能な日付は display_from エラー1件になり、オープンエンドに化けないこと | Pass |
 | UT-087 | services::admin::notice_service::tests::state_derivation_follows_flag_then_period | display_state | 状態導出 | 表示フラグ→期間の順で Hidden / Visible / OutOfPeriod が導出され、同日範囲は Visible になること | Pass |
 | UT-088 | services::admin::notice_service::tests::title_limit_counts_characters_not_bytes | validate_notice | 境界値 | タイトル上限はバイト数でなく文字数で数えられること | Pass |
+
+### app / services::admin::post_service
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-336 | services::admin::post_service::tests::published_at_input_round_trips_through_jst | services::admin::post_service | （未記入） | UTC の瞬間をフォーム値に描画して解析し戻す | 同じ瞬間が戻る |
+| UT-337 | services::admin::post_service::tests::published_at_parses_jst_wall_time | services::admin::post_service | （未記入） | 秒あり・秒なしの datetime-local 値を JST の壁時計として読む | 一致する UTC の瞬間（JST = UTC+9） |
+| UT-338 | services::admin::post_service::tests::resolve_published_at_rules | services::admin::post_service | （未記入） | 日付なし公開（新規・既存の記事）、入力した日付、下書き保存 | 日付なし公開のときだけ現在時刻が刻まれ、入力した日付が常に優先され、下書きは入力した日付か無しを保持する |
+| UT-339 | services::admin::post_service::tests::slug_rule_matches_the_pages_bounds | services::admin::post_service | （未記入） | 2・3・61 文字のスラッグ | 3..=60 の範囲だけが通る |
 
 ### app / services::admin::product_service
 
@@ -349,6 +369,14 @@
 |---|---|---|---|---|---|
 | UT-317 | services::api_key_service::tests::malformed_tokens_are_refused | parse_token | 異常系 | マーカーを持たないもの、シークレット部分を持たないもの、短いまたは16進数でないシークレット、空入力はいずれも拒否される（None）こと | Pass |
 | UT-318 | services::api_key_service::tests::minted_token_parses_back | parse_token | 正常系 | 発行したトークンが自身のプレフィックス（16進数12文字）とシークレット（16進数64文字）に分割して戻ること | Pass |
+
+### app / services::blog_service
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-340 | services::blog_service::tests::feed_escapes_operator_text | services::blog_service | （未記入） | &、<、> を含む記事タイトルと抜粋 | フィードはエスケープされた実体を持ち、生のマークアップは決して含まない |
+| UT-341 | services::blog_service::tests::feed_renders_channel_and_items_with_absolute_links | services::blog_service | （未記入） | 公開中の記事1件とベース URL | チャンネルのタイトル／リンクと、アイテムの絶対リンク・guid・RFC 822 の pubDate を持つ RSS 2.0 |
+| UT-342 | services::blog_service::tests::rfc822_label_is_gmt_english | services::blog_service | （未記入） | 既知の UTC の瞬間（2026-11-28 12:00 UTC） | "Sat, 28 Nov 2026 12:00:00 GMT" |
 
 ### app / services::cart_service
 
@@ -601,6 +629,7 @@
 
 | 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
 |---|---|---|---|---|---|
+| UT-343 | util::hmac_util::tests::non_ascii_signature_is_refused_not_panicked_on | hex_decode / verify_hmac_sha256_hex | 検証／堅牢性 | 偶数バイト長の非 ASCII 署名が、パニックせずに拒否される（デコードエラー／false）こと | Pass |
 | UT-266 | util::hmac_util::tests::parts_concatenate_in_order | hmac_sha256_hex | 変換 | 分割した入力が連結順どおりに全体の HMAC と一致すること | Pass |
 | UT-267 | util::hmac_util::tests::rfc4231_test_case_1 | hmac_sha256_hex | 検証・標準準拠 | RFC 4231 テストケース1の既知値と一致すること | Pass |
 | UT-268 | util::hmac_util::tests::verify_accepts_only_the_exact_bytes | verify_hmac_sha256_hex | 検証 | 正しい署名のみ true で、再エンコード、別キー、非 hex、空はすべて false になること | Pass |
@@ -642,6 +671,13 @@
 | UT-289 | util::markdown::tests::find_invalid_url_names_the_offender | find_invalid_url | 異常系 | 違反した URL を特定でき、正常なリンクのみでは None になること | Pass |
 | UT-290 | util::markdown::tests::headings_lists_and_links_render | Markdown レンダリング | 変換 | 見出し、リスト、リンクが HTML 化されること | Pass |
 | UT-291 | util::markdown::tests::raw_html_renders_as_text | Markdown レンダリング | 検証・サニタイズ | 生 HTML はエスケープされ、スクリプトとして実行されないこと | Pass |
+
+### app / util::xml
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-344 | util::xml::tests::escapes_all_five_xml_specials | escape_xml | 変換 | 5つの XML 特殊文字（&、<、>、ダブルクォート、シングルクォート）すべてが実体形式に置換されること | Pass |
+| UT-345 | util::xml::tests::leaves_plain_text_untouched | escape_xml | 変換 | 特殊文字を含まないテキストは変更されずに返されること | Pass |
 
 ### app / validation
 

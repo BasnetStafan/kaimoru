@@ -21,6 +21,8 @@ pub mod notice_service;
 pub mod notification_template_service;
 pub mod ops_status_service;
 pub mod order_service;
+pub mod post_category_service;
+pub mod post_service;
 pub mod product_csv_service;
 pub mod product_service;
 pub mod reconciliation_service;
