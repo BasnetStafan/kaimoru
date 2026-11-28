@@ -1,0 +1,32 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | 認証コードの入力{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        {% include "storefront/parts/breadcrumb.html" %}
+        <h1>認証コードの入力</h1>
+
+        <p>{{ email_masked }} に6桁の認証コードを送信しました。<br>
+        メールに記載のコードを入力してください。(有効期限:10分)</p>
+
+        {% if let Some(message) = notice %}
+            <p class="form-notice">{{ message }}</p>
+        {% endif %}
+
+        <form method="post" action="/mypage/withdraw/verify" class="auth-form">
+            <label>
+                認証コード(6桁) <span class="badge-required">必須</span>
+                <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code"
+                       maxlength="6" aria-required="true" class="code-input">
+                {% if let Some(message) = error %}<p class="field-error">{{ message }}</p>{% endif %}
+            </label>
+            <button type="submit" class="danger-button">確認する</button>
+        </form>
+
+        <form method="post" action="/mypage/withdraw/resend" class="inline-form" data-resend>
+            <p class="form-note">メールが届かない場合は、迷惑メールフォルダを確認のうえ、
+            <button type="submit" class="link-button" data-resend-button>コードを再送する</button><span data-resend-wait>(60秒後から再送できます)</span></p>
+        </form>
+    </section>
+{% endblock %}

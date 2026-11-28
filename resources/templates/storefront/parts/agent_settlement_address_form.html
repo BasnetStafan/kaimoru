@@ -1,0 +1,71 @@
+<form method="post" action="/agent/settle/address" hx-post="/agent/settle/address" hx-target="#agent-settlement-slot" hx-swap="innerHTML" class="settlement-address-form">
+    {% if !card.saved_addresses.is_empty() %}
+        <div data-address-picker>
+            {% for addr in card.saved_addresses %}
+                <label class="picker-card">
+                    <input type="radio" name="delivery_choice" value="{{ addr.id }}" {% if addr.is_default %}checked{% endif %}>
+                    <span class="address-name">{{ addr.summary }}</span>
+                </label>
+            {% endfor %}
+            <label class="picker-card">
+                <input type="radio" name="delivery_choice" value="new">
+                <span class="address-name">新しいお届け先に送る</span>
+            </label>
+        </div>
+    {% endif %}
+    <div id="typed-address">
+        {% if !card.is_member %}
+            <div class="field-row">
+                <label for="settle_email">メールアドレス <span class="badge-required">必須</span></label>
+                <input type="email" id="settle_email" name="email" autocomplete="email" aria-required="true" value="{{ card.v_email }}">
+                {% if let Some(error) = card.errors.email %}<p class="field-error">{{ error }}</p>{% endif %}
+            </div>
+        {% endif %}
+        <div class="field-row">
+            <span class="field-label">お名前 <span class="badge-required">必須</span></span>
+            <div class="field-pair" role="group" aria-label="お名前">
+                <input type="text" name="family_name" placeholder="姓" autocomplete="family-name" aria-label="姓" aria-required="true" value="{{ card.v_family_name }}">
+                <input type="text" name="given_name" placeholder="名" autocomplete="given-name" aria-label="名" aria-required="true" value="{{ card.v_given_name }}">
+            </div>
+            {% if let Some(error) = card.errors.family_name %}<p class="field-error">{{ error }}</p>{% endif %}
+            {% if let Some(error) = card.errors.given_name %}<p class="field-error">{{ error }}</p>{% endif %}
+        </div>
+        <div class="field-row">
+            <label for="settle_postal_code">郵便番号 <span class="badge-required">必須</span></label>
+            <input type="text" id="settle_postal_code" name="postal_code" inputmode="numeric" autocomplete="postal-code" placeholder="1500001" aria-required="true" value="{{ card.v_postal_code }}">
+            {% if let Some(error) = card.errors.postal_code %}<p class="field-error">{{ error }}</p>{% endif %}
+        </div>
+        <div class="field-row">
+            <label for="settle_prefecture">都道府県 <span class="badge-required">必須</span></label>
+            <select id="settle_prefecture" name="prefecture" autocomplete="address-level1" aria-required="true">
+                <option value="">選択してください</option>
+                {% for p in card.prefectures %}
+                    <option value="{{ p }}" {% if card.v_prefecture == *p %}selected{% endif %}>{{ p }}</option>
+                {% endfor %}
+            </select>
+            {% if let Some(error) = card.errors.prefecture %}<p class="field-error">{{ error }}</p>{% endif %}
+        </div>
+        <div class="field-row">
+            <label for="settle_city">市区町村 <span class="badge-required">必須</span></label>
+            <input type="text" id="settle_city" name="city" autocomplete="address-level2" aria-required="true" value="{{ card.v_city }}">
+            {% if let Some(error) = card.errors.city %}<p class="field-error">{{ error }}</p>{% endif %}
+        </div>
+        <div class="field-row">
+            <label for="settle_address_line">番地 <span class="badge-required">必須</span></label>
+            <input type="text" id="settle_address_line" name="address_line" autocomplete="street-address" aria-required="true" value="{{ card.v_address_line }}">
+            {% if let Some(error) = card.errors.address_line %}<p class="field-error">{{ error }}</p>{% endif %}
+        </div>
+        <div class="field-row">
+            <label for="settle_building">建物名・部屋番号 <span class="badge-optional">任意</span></label>
+            <input type="text" id="settle_building" name="building" value="{{ card.v_building }}">
+        </div>
+        <div class="field-row">
+            <label for="settle_phone">電話番号 <span class="badge-required">必須</span></label>
+            <input type="tel" id="settle_phone" name="phone" inputmode="tel" autocomplete="tel" aria-required="true" value="{{ card.v_phone }}">
+            {% if let Some(error) = card.errors.phone %}<p class="field-error">{{ error }}</p>{% endif %}
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit" class="primary-button">この内容で続ける</button>
+    </div>
+</form>

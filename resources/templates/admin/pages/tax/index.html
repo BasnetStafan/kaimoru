@@ -1,0 +1,63 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}消費税設定{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">消費税設定</h1>
+<p class="admin-field-help">税率は適用開始日ごとに登録します。将来の税率変更は、開始日を指定して今から登録でき、過去の注文の税額計算には影響しません。登録済みの税率は変更・削除できません。</p>
+
+{% for entry in classes %}
+<section class="admin-form-section">
+    <h2 class="admin-form-section-title">{{ entry.class.name }}</h2>
+    <div class="admin-table-scroll"><table class="admin-table">
+        <thead>
+            <tr><th>税率</th><th>適用開始日</th><th>適用終了日</th></tr>
+        </thead>
+        <tbody>
+            {% for rate in entry.rates %}
+            <tr>
+                <td>{{ rate.rate_percent }}%</td>
+                <td>{{ rate.from_label() }}</td>
+                <td>{{ rate.to_label() }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table></div>
+</section>
+{% endfor %}
+
+<form method="post" action="/admin/settings/tax" class="admin-form tax-rate-form" data-unsaved-guard>
+    <section class="admin-form-section">
+        <h2 class="admin-form-section-title">税率を追加</h2>
+        <div class="admin-form-row">
+            <label>消費税区分 <span class="badge-required">必須</span>
+                <select name="tax_class_id" aria-required="true">
+                    <option value="">選択してください</option>
+                    {% for entry in classes %}
+                    <option value="{{ entry.class.id }}"{% if class_selected(entry.class.id) %} selected{% endif %}>{{ entry.class.name }}</option>
+                    {% endfor %}
+                </select>
+                {% if let Some(message) = class_error %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+            <label>税率（%） <span class="badge-required">必須</span>
+                <input type="text" name="rate_percent" value="{{ form_rate }}" inputmode="numeric" aria-required="true">
+                {% if let Some(message) = rate_error %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+            <label>適用開始日 <span class="badge-required">必須</span>
+                <input type="date" name="effective_from" value="{{ form_from }}" aria-required="true">
+                {% if let Some(message) = from_error %}
+                <span class="field-error">{{ message }}</span>
+                {% endif %}
+            </label>
+        </div>
+        <div class="admin-form-actions">
+            <p class="admin-unsaved-note" data-unsaved-note hidden>未保存の変更があります</p>
+            <button type="submit" class="primary-button">税率を登録する</button>
+        </div>
+    </section>
+</form>
+{% endblock %}

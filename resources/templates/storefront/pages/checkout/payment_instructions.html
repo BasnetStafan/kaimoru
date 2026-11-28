@@ -1,0 +1,38 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | コンビニ支払いのご案内{% endblock %}
+
+{% block homepart %}
+    <section class="checkout-page">
+        <ol class="steps">
+            <li class="done"><span class="step-num">1</span>カート</li>
+            <li class="done"><span class="step-num">2</span>お客様情報</li>
+            <li class="done"><span class="step-num">3</span>お支払い方法</li>
+            <li class="done"><span class="step-num">4</span>注文確認</li>
+            <li class="active"><span class="step-num">5</span>お支払い</li>
+        </ol>
+
+        <div class="complete-hero">
+            <h1>ご注文を受け付けました</h1>
+            <p>コンビニでのお支払いをお願いいたします。ご案内メールもお送りしました。<br>入金の確認が取れ次第、商品の発送準備を進めます。</p>
+        </div>
+
+        <div class="complete-card">
+            <dl class="confirm-list">
+                <div><dt>注文番号</dt><dd><strong class="order-number-big">{{ order.order_number() }}</strong></dd></div>
+                <div><dt>お支払い金額</dt><dd><strong>{{ formatted_total() }}</strong></dd></div>
+            </dl>
+
+            <h2>お支払いについて</h2>
+            {% include "storefront/parts/payment_block.html" %}
+            <p class="form-note">期限を過ぎるとご注文は自動でキャンセルされます。お支払い後の確認には少し時間がかかる場合があります。</p>
+        </div>
+
+        <div class="form-actions center">
+            <a href="/" class="secondary-button">トップページへ戻る</a>
+            {% if is_member %}
+                <a href="/mypage" class="primary-button">注文履歴を見る</a>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}

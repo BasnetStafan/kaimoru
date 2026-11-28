@@ -1,0 +1,63 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | 2段階認証設定{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        {% include "storefront/parts/breadcrumb.html" %}
+        <h1>2段階認証設定</h1>
+
+        {% if let Some(message) = error %}
+            <p class="form-error">{{ message }}</p>
+        {% endif %}
+        {% if let Some(message) = notice %}
+            <p class="form-notice">{{ message }}</p>
+        {% endif %}
+
+        {% if enabled %}
+            <p>2段階認証は<strong>有効</strong>です。{% if let Some(date) = enabled_date %}（{{ date }}に設定）{% endif %}</p>
+            <p class="form-note">ログインのたびに、パスワードに加えて認証アプリの6桁コード（またはリカバリーコード）が必要になります。</p>
+
+            <h2>リカバリーコードの再発行</h2>
+            <p class="form-note">新しいコードを発行すると、これまでのリカバリーコードはすべて使えなくなります。認証アプリの現在のコードで本人確認をします。</p>
+            <form method="post" action="/mypage/totp/recovery/regenerate" class="auth-form">
+                <label>
+                    認証コード（6桁） <span class="badge-required">必須</span>
+                    <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-required="true" class="code-input">
+                </label>
+                <button type="submit" class="secondary-button danger">リカバリーコードを再発行する</button>
+            </form>
+
+            <h2>2段階認証を無効にする</h2>
+            <p class="form-note">無効にすると、次回からパスワードだけでログインできるようになります。現在のパスワードと認証コード（またはリカバリーコード）で本人確認をします。</p>
+            <form method="post" action="/mypage/totp/disable" class="auth-form">
+                <label>
+                    現在のパスワード <span class="badge-required">必須</span>
+                    <input type="password" name="password" autocomplete="current-password" aria-required="true">
+                </label>
+                <label>
+                    認証コードまたはリカバリーコード <span class="badge-required">必須</span>
+                    <input type="text" name="code" autocomplete="one-time-code" aria-required="true" class="code-input">
+                </label>
+                <button type="submit" class="secondary-button danger">2段階認証を無効にする</button>
+            </form>
+        {% else if let Some(setup) = setup %}
+            <p>スマートフォンの認証アプリ（Google Authenticator など）でQRコードを読み取ってください。読み取れない場合は、以下のキーを手入力できます。</p>
+            <div class="totp-qr">{{ setup.qr_svg|safe }}</div>
+            <p class="totp-secret">{{ setup.grouped_secret }}</p>
+            <p class="form-note">アプリに表示される6桁のコードを入力すると、設定が有効になります。</p>
+            <form method="post" action="/mypage/totp/enable" class="auth-form">
+                <label>
+                    認証コード（6桁） <span class="badge-required">必須</span>
+                    <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-required="true" class="code-input">
+                </label>
+                <button type="submit" class="primary-button">有効にする</button>
+            </form>
+        {% else %}
+            <p>ログイン時に、パスワードに加えてスマートフォンの認証アプリに表示される6桁のコードが必要になります。パスワードが漏れても、スマートフォンがないとログインできません。</p>
+            <form method="post" action="/mypage/totp/setup" class="auth-form">
+                <button type="submit" class="primary-button">設定を開始する</button>
+            </form>
+        {% endif %}
+    </section>
+{% endblock %}

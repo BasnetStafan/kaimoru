@@ -1,0 +1,66 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | 注文完了{% endblock %}
+
+{% block homepart %}
+    <section class="checkout-page complete-page">
+        <ol class="steps">
+            <li class="done"><span class="step-num">1</span>カート</li>
+            <li class="done"><span class="step-num">2</span>お客様情報</li>
+            <li class="done"><span class="step-num">3</span>お支払い方法</li>
+            <li class="done"><span class="step-num">4</span>注文確認</li>
+            <li class="done"><span class="step-num">5</span>完了</li>
+        </ol>
+
+        <div class="complete-hero">
+            <span class="complete-check">✓</span>
+            <h1>注文が完了しました</h1>
+            <p>ご注文ありがとうございます。確認メールをお送りしました。</p>
+        </div>
+        {% if let Some(note) = address_note %}
+            <p class="form-note">{{ note }}</p>
+        {% endif %}
+
+        <div class="complete-card">
+            <dl class="confirm-list">
+                <div><dt>注文番号</dt><dd><strong class="order-number-big">{{ order.order_number() }}</strong></dd></div>
+                <div><dt>お支払い金額</dt><dd><strong>{{ formatted_total() }}</strong>{{ payment_note }}{% if !tax_breakdown.is_empty() %}（内消費税 {{ formatted_tax_total() }}）{% endif %}</dd></div>
+                <div><dt>お届け先</dt><dd>〒{{ order.postal_code }} {{ order.prefecture }}{{ order.city }}{{ order.address_line }}{% if let Some(building) = order.building %} {{ building }}{% endif %}<br>{{ order.family_name }} {{ order.given_name }} 様</dd></div>
+                <div><dt>お届け希望日時</dt><dd>{{ order.delivery_request_display() }}</dd></div>
+                {% for line in order.gift_lines() %}
+                <div><dt>ギフト</dt><dd>{{ line }}</dd></div>
+                {% endfor %}
+            </dl>
+
+            <h2>注文内容</h2>
+            <ul class="checkout-lines">
+                {% for line in lines %}
+                    <li>
+                        <a href="/products/{{ line.product_id }}">{% if let Some(img) = line.image_path %}<img src="{{ img }}" alt="" class="order-line-thumb">{% else %}<span class="order-line-thumb order-line-thumb-empty" aria-hidden="true"></span>{% endif %}</a>
+                        <span class="order-line-main"><a href="/products/{{ line.product_id }}">{{ line.product_name }}</a>{% if !line.variant_label.is_empty() %}（{{ line.variant_label }}）{% endif %} <span class="line-qty">×{{ line.quantity }}</span></span>
+                        <span>{{ line.formatted_line_total() }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+            {% if !tax_breakdown.is_empty() %}
+            <div class="tax-breakdown">
+                <p class="tax-breakdown-title">税率ごとの内訳</p>
+                <dl class="totals-list">
+                    {% for row in tax_breakdown %}
+                    <div><dt>{{ row.tax_class_name }}（{{ row.rate_percent }}%）対象</dt><dd>{{ row.formatted_base() }}</dd></div>
+                    <div><dt>うち消費税</dt><dd>{{ row.formatted_tax() }}</dd></div>
+                    {% endfor %}
+                    <div><dt>内消費税合計</dt><dd>{{ formatted_tax_total() }}</dd></div>
+                </dl>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-actions center">
+            <a href="/" class="secondary-button">トップページへ戻る</a>
+            {% if is_member %}
+                <a href="/mypage" class="primary-button">注文履歴を見る</a>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}

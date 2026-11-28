@@ -1,0 +1,195 @@
+{% if let Some(card) = settlement %}
+    <section class="agent-approval-card">
+        {% if card.stage == "offer" %}
+            <h2>この内容で注文しますか？</h2>
+            {% if let Some(message) = card.notice %}
+                <p class="form-error">{{ message }}</p>
+            {% endif %}
+            <ul class="checkout-lines">
+                {% for line in card.lines %}
+                    <li>
+                        <span>{{ line.name }}{% if !line.variant_label.is_empty() %}（{{ line.variant_label }}）{% endif %} <span class="line-qty">×{{ line.quantity }}</span></span>
+                        <span>{{ line.formatted_line_total }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+            <dl class="totals-list">
+                <div><dt>商品合計</dt><dd>{{ card.formatted_subtotal }}</dd></div>
+                <div><dt>送料</dt><dd>{{ card.formatted_shipping }}</dd></div>
+                <div class="totals-grand"><dt>合計</dt><dd>{{ card.formatted_total }}</dd></div>
+            </dl>
+            {% if card.in_chat %}
+                <p class="form-note">エージェントがカートに入れた内容です。注文手続きはこの画面で続けて行えます（お届け先とお支払い方法の選択、最終確認まで、この画面の案内に沿って進みます）。</p>
+                <div class="form-actions">
+                    <form method="post" action="/agent/settle/start" hx-post="/agent/settle/start" hx-target="#agent-settlement-slot" hx-swap="innerHTML">
+                        <button type="submit" class="primary-button">この内容で注文する</button>
+                    </form>
+                    <form method="post" action="/agent/settle/continue" hx-post="/agent/settle/continue" hx-target="#agent-settlement-slot" hx-swap="innerHTML">
+                        <button type="submit" class="secondary-button">買い物を続ける</button>
+                    </form>
+                </div>
+            {% else %}
+                <p class="form-note">注文の確定はチャット画面で行います。お届け先とお支払い方法の選択、最終確認まで、チャットの案内に沿って進めます。</p>
+                <div class="form-actions">
+                    <a href="/agent" class="primary-button">チャットで注文を確定する</a>
+                    <form method="post" action="/agent/settle/continue">
+                        <button type="submit" class="secondary-button">買い物を続ける</button>
+                    </form>
+                </div>
+            {% endif %}
+            <p class="form-note">※ クーポンはエージェント注文ではご利用いただけません。ご利用の場合は通常のレジからご注文ください。</p>
+        {% else if card.stage == "progress" %}
+            <h2>注文手続きが進行中です</h2>
+            <ul class="checkout-lines">
+                {% for line in card.lines %}
+                    <li>
+                        <span>{{ line.name }}{% if !line.variant_label.is_empty() %}（{{ line.variant_label }}）{% endif %} <span class="line-qty">×{{ line.quantity }}</span></span>
+                        <span>{{ line.formatted_line_total }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+            <dl class="totals-list">
+                <div><dt>商品合計</dt><dd>{{ card.formatted_subtotal }}</dd></div>
+                <div><dt>送料</dt><dd>{{ card.formatted_shipping }}</dd></div>
+                <div class="totals-grand"><dt>合計</dt><dd>{{ card.formatted_total }}</dd></div>
+            </dl>
+            <p class="form-note">チャット画面で注文手続きを行っています{% if let Some(expires) = card.expires_label %}（{{ expires }} まで有効）{% endif %}。続きはチャット画面で操作してください。</p>
+            <div class="form-actions">
+                <a href="/agent" class="primary-button">チャットに戻る</a>
+                <form method="post" action="/agent/approve/void">
+                    <button type="submit" class="secondary-button">手続きを取り消す</button>
+                </form>
+            </div>
+        {% else if card.stage == "policy" %}
+            <h2>ご注文にあたっての確認</h2>
+            <p>注文手続きを進める前に、以下の内容をご確認ください。</p>
+            <ul class="settlement-policy">
+                <li>この注文は、エージェントがカートに入れた商品・数量・金額にもとづきます。</li>
+                <li>お支払いは決済事業者（{{ card.gateway_name }}）の画面で完了します。代金引換をお選びの場合は、お届け時のお支払いとなります。</li>
+                <li>注文のキャンセル・返品は、通常のご注文と同じルールが適用されます。</li>
+                <li>表示価格はすべて税込です。送料・代引き手数料を含む最終金額は、次の確認画面で確定します。</li>
+            </ul>
+            {% if let Some(expires) = card.expires_label %}
+                <p class="form-note">この手続きは {{ expires }} まで有効です。</p>
+            {% endif %}
+            <div class="form-actions">
+                <form method="post" action="/agent/settle/agree" hx-post="/agent/settle/agree" hx-target="#agent-settlement-slot" hx-swap="innerHTML">
+                    <button type="submit" class="primary-button">同意する</button>
+                </form>
+                <form method="post" action="/agent/settle/cancel" hx-post="/agent/settle/cancel" hx-target="#agent-settlement-slot" hx-swap="innerHTML">
+                    <button type="submit" class="secondary-button">やめる</button>
+                </form>
+            </div>
+        {% else if card.stage == "address" %}
+            <h2>お届け先の指定</h2>
+            {% if let Some(message) = card.notice %}
+                <p class="form-error">{{ message }}</p>
+            {% endif %}
+            {% if card.is_member && card.default_address_id.is_some() %}
+                <p class="form-note">登録済みのお届け先（初期設定）</p>
+                <p class="settlement-address-summary">{{ card.default_address_summary.as_ref().unwrap() }}</p>
+                <div class="form-actions">
+                    <form method="post" action="/agent/settle/address" hx-post="/agent/settle/address" hx-target="#agent-settlement-slot" hx-swap="innerHTML">
+                        <input type="hidden" name="delivery_choice" value="{{ card.default_address_id.unwrap() }}">
+                        <button type="submit" class="primary-button">この住所でOK</button>
+                    </form>
+                </div>
+                <details class="settlement-address-change">
+                    <summary>住所を変更する</summary>
+                    {% include "storefront/parts/agent_settlement_address_form.html" %}
+                </details>
+            {% else %}
+                {% include "storefront/parts/agent_settlement_address_form.html" %}
+            {% endif %}
+            <form method="post" action="/agent/settle/cancel" hx-post="/agent/settle/cancel" hx-target="#agent-settlement-slot" hx-swap="innerHTML">
+                <button type="submit" class="text-button">手続きをやめる</button>
+            </form>
+        {% else if card.stage == "payment" %}
+            <h2>お支払い方法の選択</h2>
+            {% if let Some(message) = card.notice %}
+                <p class="form-error">{{ message }}</p>
+            {% endif %}
+            <dl class="totals-list">
+                <div><dt>商品合計</dt><dd>{{ card.formatted_subtotal }}</dd></div>
+                <div><dt>送料</dt><dd>{{ card.formatted_shipping }}</dd></div>
+                {% if card.show_cod_fee %}<div data-cod-fee-row><dt>代引き手数料</dt><dd>{{ card.formatted_cod_fee }}</dd></div>{% endif %}
+                <div class="totals-grand" data-grand-total data-total-cod="{{ card.formatted_total_cod }}" data-total-online="{{ card.formatted_total_online }}" data-cod-fee="{{ card.formatted_cod_fee }}"><dt>合計</dt><dd>{{ card.formatted_total }}</dd></div>
+            </dl>
+            <form method="post" action="/agent/settle/method" hx-post="/agent/settle/method" hx-target="#agent-settlement-slot" hx-swap="innerHTML">
+                <div class="settlement-methods" data-settlement-methods>
+                    {% for method in card.methods %}
+                        <button type="submit" name="payment_method" value="{{ method.slug }}" class="settlement-method{% if method.selected %} is-selected{% endif %}" aria-pressed="{% if method.selected %}true{% else %}false{% endif %}">
+                            <span class="settlement-method-label">{{ method.label }}</span>
+                            <span class="form-note">{{ method.note }}</span>
+                        </button>
+                    {% endfor %}
+                </div>
+            </form>
+            {% if !card.method_chosen %}
+                <p class="form-note">お支払い方法を選ぶと、合計がその場で更新されます。代金引換の場合は手数料が加算されます。</p>
+            {% endif %}
+            <div class="form-actions">
+                <form method="post" action="/agent/settle/proceed" hx-post="/agent/settle/proceed" hx-target="#agent-settlement-slot" hx-swap="innerHTML">
+                    <input type="hidden" name="payment_method" data-settlement-method-input value="{% if let Some(slug) = card.chosen_method_slug %}{{ slug }}{% endif %}">
+                    <button type="submit" class="primary-button" data-settlement-proceed{% if !card.method_chosen %} disabled{% endif %}>確認画面へ進む</button>
+                </form>
+                <form method="post" action="/agent/settle/back" hx-post="/agent/settle/back" hx-target="#agent-settlement-slot" hx-swap="innerHTML">
+                    <input type="hidden" name="to" value="address">
+                    <button type="submit" class="secondary-button">住所を変更する</button>
+                </form>
+                <form method="post" action="/agent/settle/cancel" hx-post="/agent/settle/cancel" hx-target="#agent-settlement-slot" hx-swap="innerHTML">
+                    <button type="submit" class="text-button">手続きをやめる</button>
+                </form>
+            </div>
+        {% else if card.stage == "confirm" %}
+            <h2>注文内容の最終確認</h2>
+            {% if let Some(message) = card.notice %}
+                <p class="form-error">{{ message }}</p>
+            {% endif %}
+            <ul class="checkout-lines">
+                {% for line in card.lines %}
+                    <li>
+                        <span>{{ line.name }}{% if !line.variant_label.is_empty() %}（{{ line.variant_label }}）{% endif %} <span class="line-qty">×{{ line.quantity }}</span></span>
+                        <span>{{ line.formatted_line_total }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+            <dl class="totals-list">
+                <div><dt>商品合計</dt><dd>{{ card.formatted_subtotal }}</dd></div>
+                <div><dt>送料</dt><dd>{{ card.formatted_shipping }}</dd></div>
+                {% if card.show_cod_fee %}<div><dt>代引き手数料</dt><dd>{{ card.formatted_cod_fee }}</dd></div>{% endif %}
+                <div class="totals-grand"><dt>合計</dt><dd>{{ card.formatted_total }}</dd></div>
+            </dl>
+            <h3>お届け先</h3>
+            <p class="settlement-address-summary">
+                {{ card.delivery_name.as_ref().unwrap() }}<br>
+                {{ card.delivery_address.as_ref().unwrap() }}<br>
+                電話：{{ card.delivery_phone.as_ref().unwrap() }}<br>
+                メール：{{ card.delivery_email.as_ref().unwrap() }}
+            </p>
+            <h3>お支払い方法</h3>
+            <p>{{ card.method_label.as_ref().unwrap() }}</p>
+            {% if let Some(expires) = card.expires_label %}
+                <p class="form-note">この内容での承認は {{ expires }} まで有効です。支払うボタンを押すと注文が確定します。</p>
+            {% endif %}
+            <div class="form-actions">
+                <form method="post" action="/agent/settle/pay">
+                    <button type="submit" class="primary-button">支払う</button>
+                </form>
+            </div>
+            <div class="form-actions">
+                <form method="post" action="/agent/settle/back" hx-post="/agent/settle/back" hx-target="#agent-settlement-slot" hx-swap="innerHTML">
+                    <input type="hidden" name="to" value="payment">
+                    <button type="submit" class="secondary-button">お支払い方法を変更する</button>
+                </form>
+                <form method="post" action="/agent/settle/back" hx-post="/agent/settle/back" hx-target="#agent-settlement-slot" hx-swap="innerHTML">
+                    <input type="hidden" name="to" value="address">
+                    <button type="submit" class="secondary-button">住所を変更する</button>
+                </form>
+                <form method="post" action="/agent/settle/cancel" hx-post="/agent/settle/cancel" hx-target="#agent-settlement-slot" hx-swap="innerHTML">
+                    <button type="submit" class="text-button">手続きをやめる</button>
+                </form>
+            </div>
+        {% endif %}
+    </section>
+{% endif %}

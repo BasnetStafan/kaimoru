@@ -1,0 +1,15 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | メールマガジンの配信停止{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        <h1>メールマガジンの配信停止</h1>
+        <p>メールマガジン（お知らせメール）の配信を停止します。よろしければ「配信を停止する」を押してください。</p>
+        <p>ご注文の確認や商品の発送など、お取引に関するメールは配信停止後も届きます。</p>
+        <form method="post" action="/unsubscribe/{{ token }}">
+            <button type="submit" class="primary-button">配信を停止する</button>
+        </form>
+        <p><a href="/" class="secondary-button">トップページへ戻る</a></p>
+    </section>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}在庫履歴{% endblock %}
+
+{% block adminpart %}
+<p class="admin-back"><a href="/admin/products/{{ product_id }}/edit">← 商品編集に戻る</a></p>
+<h1 class="admin-h1">在庫履歴（{{ product_name }}）</h1>
+<p class="admin-field-help">注文・キャンセル・返金・手動調整による在庫の増減履歴です。直近{{ rows.len() }}件を表示しています。</p>
+
+{% if rows.is_empty() %}
+<p class="admin-muted">まだ在庫の増減はありません。</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>日時</th><th>組み合わせ</th><th>増減</th><th>理由</th><th>注文</th><th>備考</th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td>{{ row.created_display() }}</td>
+            <td>{% if row.variant_label.is_empty() %}（バリエーションなし）{% else %}{{ row.variant_label }}{% endif %}</td>
+            <td>{% if row.delta > 0 %}+{{ row.delta }}{% else %}{{ row.delta }}{% endif %}</td>
+            <td>{{ row.reason_label() }}</td>
+            <td>{% if let Some(oid) = row.order_id %}<a href="/admin/orders/{{ oid }}">#{{ oid }}</a>{% endif %}</td>
+            <td>{{ row.note }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+{% endblock %}

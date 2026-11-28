@@ -1,0 +1,18 @@
+{% if entry.is_result %}
+    <div class="chat-row chat-row-agent">
+        <div class="chat-bubble chat-bubble-agent">{{ entry.text }}</div>
+    </div>
+    <div class="chat-result">
+        {% if let Some(result) = entry.result %}
+            {% include "storefront/parts/agent_result.html" %}
+        {% endif %}
+    </div>
+{% else if entry.is_user %}
+    <div class="chat-row chat-row-user">
+        <div class="chat-bubble chat-bubble-user">{{ entry.text }}</div>
+    </div>
+{% else %}
+    <div class="chat-row chat-row-agent">
+        <div class="chat-bubble chat-bubble-agent">{{ entry.text }}</div>
+    </div>
+{% endif %}

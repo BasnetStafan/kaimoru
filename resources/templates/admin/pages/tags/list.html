@@ -1,0 +1,59 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}タグ管理{% endblock %}
+
+{% block adminpart %}
+<div class="admin-page-head">
+    <h1 class="admin-h1">タグ管理</h1>
+    <a class="primary-button admin-new-button" href="/admin/tags/new">タグを登録</a>
+    <a class="secondary-button" href="/admin/tags/csv-export">CSVダウンロード</a>
+    <a class="secondary-button" href="/admin/tags/csv-import">CSV取込</a>
+</div>
+
+<form method="get" action="/admin/tags" class="admin-filters">
+    <label>キーワード
+        <input type="search" name="q" value="{{ q }}" placeholder="タグ名・スラッグ">
+    </label>
+    <label>並び順
+        <select name="sort">
+            {% for option in sort_options %}
+            <option value="{{ option.value }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <button type="submit" class="secondary-button">絞り込む</button>
+</form>
+
+{% if rows.is_empty() %}
+{% if filtered %}
+<p class="admin-empty">条件に一致するタグはありません</p>
+{% else %}
+<p class="admin-empty">タグはまだありません</p>
+{% endif %}
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>タグ名</th><th>スラッグ</th><th>説明</th><th>商品数</th><th></th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td><a href="/admin/tags/{{ row.id }}/edit">{{ row.label }}</a></td>
+            <td>{{ row.slug }}</td>
+            <td>{{ row.description }}</td>
+            <td>{{ row.product_count }}{% if row.product_count == 0 %} <span class="admin-badge unused">未使用</span>{% endif %}</td>
+            <td><a href="/admin/tags/{{ row.id }}/edit">編集</a></td>
+            <td>
+                <form method="post" action="/admin/tags/{{ row.id }}/delete" class="tag-delete-form">
+                <input type="hidden" name="return_url" value="{{ return_url }}">
+                    <button type="submit" class="secondary-button danger">削除</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+
+{% include "admin/parts/pagination.html" %}
+{% endblock %}

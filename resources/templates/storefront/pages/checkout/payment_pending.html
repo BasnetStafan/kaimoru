@@ -1,0 +1,30 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | お支払い確認中{% endblock %}
+
+{% block head %}<meta http-equiv="refresh" content="15">{% endblock %}
+
+{% block homepart %}
+    <section class="checkout-page">
+        <div class="complete-hero">
+            <h1>お支払いの確認中です</h1>
+            <p>決済の結果を確認しています。このページは自動で更新されます。<br>確認が取れ次第、確認メールをお送りします。</p>
+        </div>
+
+        <div class="complete-card">
+            {% if let Some(number) = order_number %}
+                <dl class="confirm-list">
+                    <div><dt>注文番号</dt><dd><strong class="order-number-big">{{ number }}</strong></dd></div>
+                </dl>
+            {% endif %}
+            <p class="form-note">しばらくたっても確認が取れない場合は、注文履歴またはメールをご確認ください。二重にお支払い手続きをする必要はありません。</p>
+        </div>
+
+        <div class="form-actions center">
+            <a href="/" class="secondary-button">トップページへ戻る</a>
+            {% if is_member %}
+                <a href="/mypage" class="primary-button">注文履歴を見る</a>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | お届け先が見つかりません{% endblock %}
+
+{% block homepart %}
+    <section class="auth-page">
+        {% include "storefront/parts/breadcrumb.html" %}
+        <h1>お届け先が見つかりませんでした</h1>
+        <p>指定されたお届け先は存在しないか、表示する権限がありません。</p>
+        <p><a href="/mypage/addresses" class="secondary-button">アドレス帳へ戻る</a></p>
+    </section>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "admin/layouts/admin.html" %}
+
+{% block title %}顧客セグメント{% endblock %}
+
+{% block adminpart %}
+<h1 class="admin-h1">顧客セグメント</h1>
+<p class="admin-note">条件に合う会員をまとめた定義です。メール配信（メールキャンペーン）の宛先に使えます。条件はすべて満たす会員が対象で、空欄の条件は絞り込みません。累計購入額と注文回数はキャンセル済み注文を除いて数えます。RFMスコア（1〜5）はRFM分析のスコアで、注文のない会員はスコア条件に該当しません。</p>
+
+{% if !form_error.is_empty() %}<p class="admin-error">{{ form_error }}</p>{% endif %}
+<form method="post" action="/admin/segments" class="admin-form">
+    <label>セグメント名 <span class="badge-required">必須</span>
+        <input type="text" name="name" value="{{ form_name }}" maxlength="100">
+    </label>
+    <label>タグ（完全一致）
+        <input type="text" name="tag" value="{{ form_tag }}" maxlength="50" placeholder="例：常連">
+    </label>
+    <label>累計購入額の下限（円）
+        <input type="text" name="min_total_spend_yen" value="{{ form_min_spend }}" inputmode="numeric" placeholder="例：30000">
+    </label>
+    <label>注文回数の下限
+        <input type="text" name="min_order_count" value="{{ form_min_orders }}" inputmode="numeric" placeholder="例：3">
+    </label>
+    <label>最終注文日（この日まで）
+        <input type="date" name="last_order_before" value="{{ form_before }}">
+    </label>
+    <label>最終注文日（この日以降）
+        <input type="date" name="last_order_after" value="{{ form_after }}">
+    </label>
+    <label>Rスコアの下限（1〜5）
+        <input type="text" name="min_r_score" value="{{ form_r }}" inputmode="numeric" placeholder="例：4">
+    </label>
+    <label>Fスコアの下限（1〜5）
+        <input type="text" name="min_f_score" value="{{ form_f }}" inputmode="numeric" placeholder="例：4">
+    </label>
+    <label>Mスコアの下限（1〜5）
+        <input type="text" name="min_m_score" value="{{ form_m }}" inputmode="numeric" placeholder="例：4">
+    </label>
+    <button type="submit" class="primary-button">セグメントを作成</button>
+</form>
+
+{% if rows.is_empty() %}
+<p class="admin-empty">セグメントはまだありません</p>
+{% else %}
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead>
+        <tr><th>名前</th><th>条件</th><th>該当会員</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td>{{ row.segment.name }}</td>
+            <td>{{ row.conditions_label }}</td>
+            <td>{{ row.member_count }}人</td>
+            <td>
+                <form method="post" action="/admin/segments/{{ row.segment.id }}/delete" class="segment-delete-form">
+                    <button type="submit" class="secondary-button danger">削除</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table></div>
+{% endif %}
+{% endblock %}

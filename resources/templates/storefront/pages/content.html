@@ -1,0 +1,19 @@
+{% extends "storefront/layouts/base.html" %}
+
+{% block title %}{{ header.shop.shop_name }} | {{ title }}{% endblock %}
+
+{% block homepart %}
+    <section class="info-page">
+        <h1>{{ title }}</h1>
+        {# The one deliberately unescaped block on this page: body_html
+           is rendered from the operator's Markdown by crate::markdown,
+           which escapes raw HTML by construction and restricts link
+           and image URLs to a scheme allowlist — refused at save and
+           neutralised again at render (CMS spec D2). Nothing else on
+           this page bypasses Askama's escaping. #}
+        {{ body_html|safe }}
+        {% if let Some(label) = updated_label %}
+        <p class="content-updated">最終更新日：{{ label }}</p>
+        {% endif %}
+    </section>
+{% endblock %}

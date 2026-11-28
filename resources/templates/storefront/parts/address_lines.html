@@ -1,0 +1,5 @@
+<p class="address-name">{{ address.display_name() }}{% if address.is_default %} <span class="badge state">デフォルト</span>{% endif %}</p>
+<p class="address-body">〒{{ address.postal_code }}<br>
+{{ address.street_line() }}<br>
+{{ address.recipient() }}<br>
+電話番号：{{ address.phone }}</p>
