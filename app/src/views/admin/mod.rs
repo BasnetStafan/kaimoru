@@ -6,6 +6,7 @@
 pub mod account_settings;
 pub mod admins;
 pub mod analytics;
+pub mod api_keys;
 pub mod audit;
 pub mod categories;
 pub mod content_pages;

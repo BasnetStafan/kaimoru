@@ -6,7 +6,9 @@
 //! error naming the parameter, never a silent fallback.
 
 use rmcp::{ErrorData as McpError, schemars::JsonSchema};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+
+use crate::services::api_cart_service::{ApiCart, ApiCartLine};
 
 /// Parameters for `search_products`.
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -35,6 +37,94 @@ pub(crate) struct SearchProductsParams {
 pub(crate) struct GetProductParams {
     /// The product id, from a search or list result.
     pub id: i64,
+}
+
+/// Parameters for the cart tools that address one cart.
+#[derive(Debug, Deserialize, JsonSchema)]
+pub(crate) struct CartIdParams {
+    /// The cart handle, from `create_cart`.
+    pub cart_id: String,
+}
+
+/// Parameters for `add_cart_item`.
+#[derive(Debug, Deserialize, JsonSchema)]
+pub(crate) struct AddCartItemParams {
+    /// The cart handle, from `create_cart`.
+    pub cart_id: String,
+    /// The product id, from a search or list result.
+    pub product_id: i64,
+    /// The combination to add; required when the product
+    /// has combinations, omitted for a plain product.
+    pub variant_id: Option<i64>,
+    /// Units to add (1 to 999999).
+    pub quantity: i32,
+}
+
+/// Parameters for `update_cart_item`.
+#[derive(Debug, Deserialize, JsonSchema)]
+pub(crate) struct UpdateCartItemParams {
+    /// The cart handle, from `create_cart`.
+    pub cart_id: String,
+    /// The line's variant id.
+    pub variant_id: i64,
+    /// The line's new quantity (at least 1; stock-capped
+    /// by the cart service).
+    pub quantity: i32,
+}
+
+/// Parameters for `remove_cart_item`.
+#[derive(Debug, Deserialize, JsonSchema)]
+pub(crate) struct RemoveCartItemParams {
+    /// The cart handle, from `create_cart`.
+    pub cart_id: String,
+    /// The line's variant id.
+    pub variant_id: i64,
+}
+
+/// One MCP cart as the cart tools return it: the API cart's
+/// lines and totals, plus the handle they belong to. Totals
+/// come from the store's one totals implementation — the
+/// same numbers the cart page shows.
+#[derive(Serialize, JsonSchema)]
+pub(crate) struct McpCart {
+    /// The cart handle.
+    pub cart_id: String,
+    /// The cart's lines, in cart order.
+    pub lines: Vec<ApiCartLine>,
+    /// Total units across all lines.
+    pub item_count: i64,
+    /// Sum of purchasable line totals, in yen.
+    pub subtotal_yen: i64,
+    /// Shipping fee in yen (free at the store's threshold).
+    pub shipping_yen: i64,
+    /// Grand total in yen: subtotal plus shipping.
+    pub total_yen: i64,
+}
+
+impl McpCart {
+    /// Wraps an API cart view under its handle.
+    pub(crate) fn new(cart_id: String, cart: ApiCart) -> Self {
+        Self {
+            cart_id,
+            lines: cart.lines,
+            item_count: cart.item_count,
+            subtotal_yen: cart.subtotal_yen,
+            shipping_yen: cart.shipping_yen,
+            total_yen: cart.total_yen,
+        }
+    }
+}
+
+/// The browser handoff the `get_checkout_link` tool returns:
+/// a person opens the URL and the cart becomes theirs.
+#[derive(Serialize, JsonSchema)]
+pub(crate) struct McpCheckoutLink {
+    /// The cart handle the link hands off.
+    pub cart_id: String,
+    /// The single-use claim URL to open in a browser.
+    pub checkout_url: String,
+    /// When the link stops working, as an RFC 3339 timestamp.
+    pub expires_at: String,
 }
 
 /// The sort keys the search tool accepts — the storefront

@@ -3,6 +3,7 @@
 
 pub mod admin;
 pub mod agent_approval_repository;
+pub mod api_key_repository;
 pub mod cart_reminder_repository;
 pub mod cart_repository;
 pub mod category_repository;
@@ -16,6 +17,7 @@ pub mod home_content_repository;
 pub mod inquiry_repository;
 pub mod low_stock_alert_repository;
 pub mod mail_repository;
+pub mod mcp_cart_repository;
 pub mod member_address_repository;
 pub mod menu_repository;
 pub mod notice_repository;

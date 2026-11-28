@@ -26,7 +26,7 @@
 
 ## ケース一覧
 
-<!-- MAX_UT_ID: 316 -->
+<!-- MAX_UT_ID: 319 -->
 <!-- INVENTORY:BEGIN -->
 
 ### app / api::mcp::tools
@@ -334,6 +334,13 @@
 | UT-154 | services::agent_run_service::tests::unrated_products_score_on_the_prior | rating_or_prior | 変換 | 未評価と件数0は3.5、実評価があれば実値が使われ、スコアが0.7になること | Pass |
 | UT-155 | services::agent_run_service::tests::variant_choice_defaults_to_most_stock_unless_a_need_names_a_label | バリアント選択 | 正常系 | 既定は在庫最多のバリアント（ID 12）、ニーズがラベルを指せばそのバリアント（ID 11）になること | Pass |
 
+### app / services::api_key_service
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-317 | services::api_key_service::tests::malformed_tokens_are_refused | parse_token | 異常系 | マーカーを持たないもの、シークレット部分を持たないもの、短いまたは16進数でないシークレット、空入力はいずれも拒否される（None）こと | 未実施 |
+| UT-318 | services::api_key_service::tests::minted_token_parses_back | parse_token | 正常系 | 発行したトークンが自身のプレフィックス（16進数12文字）とシークレット（16進数64文字）に分割して戻ること | 未実施 |
+
 ### app / services::cart_service
 
 | 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
@@ -389,6 +396,12 @@
 | UT-184 | services::marketing_mail_service::tests::substitute_replaces_both_variables | substitute | 変換 | 名前と解除 URL の両変数が置換されること | Pass |
 | UT-185 | services::marketing_mail_service::tests::trackable_hrefs_skips_unsubscribe_and_dedupes | trackable_hrefs | 変換 | 解除リンクを除き、重複を除いて対象 URL が抽出されること | Pass |
 | UT-186 | services::marketing_mail_service::tests::unterminated_product_block_stays_literal | expand_product_blocks | 異常系 | 未終了のブロックはリテラルのまま残り、解釈不能な ID のブロックは除去されること | Pass |
+
+### app / services::mcp_cart_service
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-319 | services::mcp_cart_service::tests::cart_handles_carry_the_prefix | カートハンドルの形式 | 境界値 | ハンドルのプレフィックスは mcp_ でランダムな16進数32文字、クレームトークンは16進数64文字であること | 未実施 |
 
 ### app / services::member_account_service
 

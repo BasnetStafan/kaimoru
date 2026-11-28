@@ -6,8 +6,8 @@
 
 use axum::{
     Form, Router,
-    extract::State,
-    response::{IntoResponse, Response},
+    extract::{Path, State},
+    response::{IntoResponse, Redirect, Response},
     routing::{get, post},
 };
 use serde::Deserialize;
@@ -16,6 +16,7 @@ use tower_sessions::Session;
 
 use super::{RenderHtml, header_for, render};
 use crate::services::cart_service::{self, AddOutcome, CartOwner};
+use crate::services::mcp_cart_service;
 use crate::services::product_service;
 use crate::views::storefront::cart::{
     CartBadgeView, CartMainFragment, CartMainView, CartToastView, CartView,
@@ -28,6 +29,7 @@ pub fn router() -> Router<PgPool> {
         .route("/cart/items", post(add_item))
         .route("/cart/items/update", post(update_item))
         .route("/cart/items/remove", post(remove_item))
+        .route("/cart/claim/{token}", get(claim_cart))
 }
 
 /// Form posted by every add-to-cart button. The detail page's
@@ -112,6 +114,43 @@ async fn main_fragment(
             &crate::services::holiday_service::upcoming(pool).await,
         ),
     })
+}
+
+/// GET /cart/claim/{token}: the MCP checkout handoff. The
+/// token is a single-use bearer claim minted by the
+/// `get_checkout_link` tool; redeeming it moves the MCP
+/// cart's lines onto this visitor's own cart. A GET by
+/// design (a person opens a link), so it sits outside the
+/// CSRF stack like every GET route; the claim itself is the
+/// credential, and every refusal — unknown, used, expired —
+/// lands on the cart page with the same notice.
+async fn claim_cart(
+    session: Session,
+    State(pool): State<PgPool>,
+    Path(token): Path<String>,
+) -> Response {
+    // A store failure is a 500, never the refusal copy: the
+    // refusal must only ever mean the claim itself failed.
+    let claimed = match mcp_cart_service::redeem_claim(&pool, &session, &token).await {
+        Ok(claimed) => claimed,
+        Err(e) => {
+            tracing::error!("cart claim failed: {e}");
+            return (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+            )
+                .into_response();
+        }
+    };
+    let message = if claimed {
+        "カートを引き継ぎました。"
+    } else {
+        "チェックアウトリンクの有効期限が切れているか、既に使用されています。"
+    };
+    let _ = session
+        .insert(crate::session::SESSION_CART_NOTICE, message)
+        .await;
+    Redirect::to("/cart").into_response()
 }
 
 /// Renders the add answer: the out-of-band confirmation toast

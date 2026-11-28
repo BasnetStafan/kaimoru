@@ -4,6 +4,7 @@
 //! totals and ownership as a person's, because it is the same
 //! cart: the one its owner later reviews in the browser.
 
+use schemars::JsonSchema;
 use serde::Serialize;
 use sqlx::PgPool;
 use tower_sessions::Session;
@@ -13,7 +14,7 @@ use crate::repositories::{product_repository, variant_repository};
 use crate::services::cart_service::{self, AddOutcome, CartOwner};
 
 /// One cart line as exposed to agents.
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 pub struct ApiCartLine {
     /// Variant id: the line's identity.
     pub variant_id: i64,
@@ -38,7 +39,7 @@ pub struct ApiCartLine {
 /// cart page's own rule: no payment method is chosen yet, so
 /// no cash-on-delivery fee is included, and a guest cart never
 /// carries a coupon discount.
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 pub struct ApiCart {
     /// The cart's lines, in cart order.
     pub lines: Vec<ApiCartLine>,
@@ -113,6 +114,14 @@ async fn view(pool: &PgPool, owner: &CartOwner) -> Result<ApiCart, AppError> {
     })
 }
 
+/// Renders one already-resolved owner's cart. The MCP cart
+/// tools resolve their owner from the cart handle instead of
+/// a session; everything below that resolution is this same
+/// view, so all three surfaces agree on the numbers.
+pub async fn view_for_owner(pool: &PgPool, owner: &CartOwner) -> Result<ApiCart, AppError> {
+    view(pool, owner).await
+}
+
 /// Ensures the caller's cart exists (creating the guest cart
 /// identity on first use) and returns it.
 pub async fn ensure_cart(pool: &PgPool, session: &Session) -> Result<ApiCart, AppError> {
@@ -139,6 +148,40 @@ pub async fn add_item(
     variant_id: Option<i64>,
     quantity: i32,
 ) -> Result<ApiCart, AddError> {
+    // The pre-checks run before the owner is resolved on
+    // purpose: resolving a guest owner mints a cart token,
+    // and a refused add must not mint one.
+    check_add(pool, product_id, variant_id, quantity).await?;
+    let owner = cart_service::owner_for(pool, session).await;
+    apply_add(pool, &owner, product_id, variant_id, quantity).await
+}
+
+/// Adds to an already-resolved owner's cart: the MCP cart
+/// tools resolve their owner from the cart handle, then run
+/// exactly this path — same public-catalog pre-checks, same
+/// stock rules, same read-back — as the session-shaped
+/// [`add_item`].
+pub async fn add_item_for_owner(
+    pool: &PgPool,
+    owner: &CartOwner,
+    product_id: i64,
+    variant_id: Option<i64>,
+    quantity: i32,
+) -> Result<ApiCart, AddError> {
+    check_add(pool, product_id, variant_id, quantity).await?;
+    apply_add(pool, owner, product_id, variant_id, quantity).await
+}
+
+/// The add path's public-catalog pre-checks, shared by both
+/// owner shapes: quantity range, the product is public, the
+/// combination (when the product has several) is chosen and
+/// belongs to the product.
+async fn check_add(
+    pool: &PgPool,
+    product_id: i64,
+    variant_id: Option<i64>,
+    quantity: i32,
+) -> Result<(), AddError> {
     if !(1..=999_999).contains(&quantity) {
         return Err(AddError::InvalidQuantity);
     }
@@ -156,9 +199,21 @@ pub async fn add_item(
             _ => return Err(AddError::VariantNotFound),
         }
     }
-    let owner = cart_service::owner_for(pool, session).await;
-    match cart_service::add_to_cart(pool, &owner, product_id, variant_id, quantity).await? {
-        AddOutcome::Added(_) | AddOutcome::Capped(_) => Ok(view(pool, &owner).await?),
+    Ok(())
+}
+
+/// Applies a pre-checked add through the cart service and
+/// reads the cart back, so a capped add shows the quantity
+/// that actually landed.
+async fn apply_add(
+    pool: &PgPool,
+    owner: &CartOwner,
+    product_id: i64,
+    variant_id: Option<i64>,
+    quantity: i32,
+) -> Result<ApiCart, AddError> {
+    match cart_service::add_to_cart(pool, owner, product_id, variant_id, quantity).await? {
+        AddOutcome::Added(_) | AddOutcome::Capped(_) => Ok(view(pool, owner).await?),
         AddOutcome::SoldOut => Err(AddError::SoldOut),
         // Unreachable after the pre-checks above; mapped to
         // the closest honest answer rather than a panic.

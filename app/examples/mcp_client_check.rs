@@ -5,6 +5,12 @@
 //! Run with the dev app up and `mcp_enabled = true`:
 //! `cargo run --example mcp_client_check`
 //! Exits non-zero at the first failed expectation.
+//!
+//! With `MCP_TEST_API_KEY` set to a cart:write key, the
+//! harness also runs the Phase 2 cart flow (create, add,
+//! read back, checkout link) on a second, authenticated
+//! connection. Unset, the cart flow is skipped and the
+//! Phase 1 behaviour is unchanged.
 
 use rmcp::{
     ClientHandler, RoleClient, ServiceExt,
@@ -13,7 +19,9 @@ use rmcp::{
         ReadResourceRequestParams,
     },
     service::RunningService,
-    transport::StreamableHttpClientTransport,
+    transport::{
+        StreamableHttpClientTransport, streamable_http_client::StreamableHttpClientTransportConfig,
+    },
 };
 
 /// A minimal client: default handlers, the store's tools do
@@ -135,6 +143,96 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     println!("resource read: {} content block(s)", read.contents.len());
     expect(!read.contents.is_empty(), "product resource reads");
+
+    // Phase 2 cart flow, only when a key is provided: a
+    // second connection carrying the bearer key, because the
+    // anonymous connection above must stay anonymous.
+    if let Ok(api_key) = std::env::var("MCP_TEST_API_KEY") {
+        // The config's auth value is the bare token: the
+        // transport sends it via reqwest's bearer_auth,
+        // which adds the "Bearer " scheme itself.
+        let config = StreamableHttpClientTransportConfig::with_uri("http://127.0.0.1:3000/mcp")
+            .auth_header(api_key);
+        let transport = StreamableHttpClientTransport::from_config(config);
+        let authed: RunningService<RoleClient, CheckClient> = CheckClient.serve(transport).await?;
+
+        let created = authed
+            .call_tool(CallToolRequestParams::new("create_cart"))
+            .await?;
+        let created_json = structured(&created);
+        let cart_id = created_json["cart_id"]
+            .as_str()
+            .expect("cart id is a string")
+            .to_string();
+        println!("cart: created {cart_id}");
+        expect(
+            cart_id.starts_with("mcp_"),
+            "cart id carries the mcp_ prefix",
+        );
+        expect(
+            created_json["lines"].as_array().is_some_and(Vec::is_empty),
+            "new cart is empty",
+        );
+
+        // Add the product fetched above, through its first
+        // variant when it has combinations.
+        let mut add_args =
+            serde_json::json!({"cart_id": cart_id, "product_id": first_id, "quantity": 2});
+        if let Some(variant_id) = product_json["variants"][0]["id"].as_i64() {
+            add_args["variant_id"] = serde_json::json!(variant_id);
+        }
+        let added = authed
+            .call_tool(
+                CallToolRequestParams::new("add_cart_item")
+                    .with_arguments(add_args.as_object().unwrap().clone()),
+            )
+            .await?;
+        let added_json = structured(&added);
+        println!(
+            "cart: {} item(s), total {} yen",
+            added_json["item_count"], added_json["total_yen"]
+        );
+        expect(
+            added_json["item_count"].as_i64() == Some(2),
+            "cart holds the added units",
+        );
+        expect(
+            added_json["total_yen"].as_i64().unwrap_or(0) > 0,
+            "cart total is positive",
+        );
+
+        let fetched = authed
+            .call_tool(
+                CallToolRequestParams::new("get_cart").with_arguments(
+                    serde_json::json!({"cart_id": cart_id})
+                        .as_object()
+                        .unwrap()
+                        .clone(),
+                ),
+            )
+            .await?;
+        let fetched_json = structured(&fetched);
+        expect(
+            fetched_json["total_yen"] == added_json["total_yen"],
+            "get_cart agrees with the add read-back",
+        );
+
+        let link = authed
+            .call_tool(
+                CallToolRequestParams::new("get_checkout_link").with_arguments(
+                    serde_json::json!({"cart_id": cart_id})
+                        .as_object()
+                        .unwrap()
+                        .clone(),
+                ),
+            )
+            .await?;
+        let link_json = structured(&link);
+        let url = link_json["checkout_url"].as_str().unwrap_or("");
+        println!("cart: checkout link {url}");
+        expect(url.contains("/cart/claim/"), "checkout link is a claim URL");
+        println!("MCP CLIENT CHECK (cart flow): ALL OK");
+    }
 
     println!("MCP CLIENT CHECK: ALL OK");
     Ok(())

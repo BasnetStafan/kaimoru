@@ -61,6 +61,7 @@
             <a href="/admin/settings/shop"{% if nav == "shop_settings" %} class="active" aria-current="page"{% endif %}>店舗設定</a>
             <a href="/admin/settings/tax"{% if nav == "tax_settings" %} class="active" aria-current="page"{% endif %}>消費税設定</a>
             <a href="/admin/settings/holidays"{% if nav == "holidays" %} class="active" aria-current="page"{% endif %}>休業日</a>
+            <a href="/admin/settings/api-keys"{% if nav == "api_keys" %} class="active" aria-current="page"{% endif %}>APIキー</a>
             {% endif %}
             {% if layout.is_owner %}
             <a href="/admin/admins"{% if nav == "admins" %} class="active" aria-current="page"{% endif %}>管理者管理</a>

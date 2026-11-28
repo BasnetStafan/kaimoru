@@ -323,6 +323,46 @@ pub async fn rekey_session_to_user(
         .map(|_| ())
 }
 
+/// Moves one session cart onto another session token — the
+/// session-shaped sibling of [`rekey_session_to_user`], used
+/// when an MCP cart is claimed by a guest visitor. Same
+/// three-step merge: overlapping variants sum their
+/// quantities (provenance AND-ed), source-only variants
+/// change owner, and the source token is left with nothing.
+pub async fn rekey_session_to_session(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    from_session_id: &str,
+    to_session_id: &str,
+) -> Result<(), sqlx::Error> {
+    // Overlapping variants: add the source quantity to the target line.
+    sqlx::query(
+        "UPDATE cart_items t SET quantity = t.quantity + s.quantity, updated_at = now(), \
+             added_by_agent = t.added_by_agent AND s.added_by_agent \
+         FROM cart_items s \
+         WHERE t.session_id = $2 AND s.session_id = $1 AND t.variant_id = s.variant_id",
+    )
+    .bind(from_session_id)
+    .bind(to_session_id)
+    .execute(&mut **tx)
+    .await?;
+    // Source-only variants: hand the rows to the target session.
+    sqlx::query(
+        "UPDATE cart_items SET session_id = $2, updated_at = now() \
+         WHERE session_id = $1 AND variant_id NOT IN \
+           (SELECT variant_id FROM cart_items WHERE session_id = $2)",
+    )
+    .bind(from_session_id)
+    .bind(to_session_id)
+    .execute(&mut **tx)
+    .await?;
+    // Anything left under the source was merged above; delete it.
+    sqlx::query("DELETE FROM cart_items WHERE session_id = $1")
+        .bind(from_session_id)
+        .execute(&mut **tx)
+        .await
+        .map(|_| ())
+}
+
 /// Deletes every cart row of one member (account
 /// withdrawal): the cart has no business meaning once
 /// the identity is gone (Account Deletion spec 3.4).

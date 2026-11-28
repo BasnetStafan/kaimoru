@@ -12,6 +12,7 @@
 pub mod account;
 pub mod admins;
 pub mod analytics;
+pub mod api_keys;
 pub mod audit;
 pub mod auth;
 pub mod categories;
@@ -82,6 +83,7 @@ pub fn router() -> Router<PgPool> {
         .merge(admins::router())
         .merge(account::router())
         .merge(totp::router())
+        .merge(api_keys::router())
         .merge(shop_settings::router())
         .merge(holidays::router())
         .merge(tax::router())

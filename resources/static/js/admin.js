@@ -23,6 +23,7 @@ document.addEventListener("submit", (event) => {
         [".admin-logout-form", "ログアウトしますか？"],
         [".review-delete-form", "レビューを削除しますか？"],
         [".segment-delete-form", "このセグメントを削除しますか？定義のみが削除され、会員データには影響しません"],
+        [".api-key-revoke-form", "このAPIキーを無効化しますか？このキーを使っているクライアントは接続できなくなります"],
         [".notice-delete-form", "このお知らせを削除しますか？"],
         [".category-delete-form", "このカテゴリーを削除しますか？"],
         [".tag-delete-form", "このタグを削除しますか？商品からも外れます"],

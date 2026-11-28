@@ -1,4 +1,4 @@
-# MCP server (Phase 1: read-only catalog)
+# MCP server (Phase 1: read-only catalog; Phase 2: carts)
 
 The store speaks the Model Context Protocol (MCP) so external
 AI clients — Claude, Cursor, VS Code, and other MCP hosts —
@@ -15,6 +15,12 @@ no order data, and no write of any kind on this surface. The
 handlers call the same catalog service as the agent API, so
 an AI client and a person browsing the store never see
 different facts.
+
+Phase 2 adds **cart tools behind bearer API keys**: a client
+with a `cart:write` key can build a cart and hand it to a
+person, who completes checkout in their own browser. The
+server still never places an order and never sees payment
+details.
 
 ## Enabling it
 
@@ -45,6 +51,82 @@ live business knobs stay in the database.)
   used to enumerate unpublished products.
 - Every tool declares an input and an output JSON Schema;
   results carry `structuredContent` matching the schema.
+
+## Phase 2: carts and API keys
+
+### API keys
+
+Keys are issued by an operator on the admin page
+**Settings → APIキー** (`/admin/settings/api-keys`, settings
+permission area). A key looks like
+`kmcp_<prefix>_<secret>`: the prefix (12 hex chars) is the
+public lookup key, the secret (64 hex chars) is shown
+**exactly once**, on the create response — only its Argon2id
+hash is stored, the same treatment as a password, so a lost
+key is revoked and reissued, never recovered. The list shows
+name, prefix, scope, issue and last-used times; revocation
+is immediate and permanent, and both issuing and revoking
+are written to the admin audit log.
+
+| Scope | Can use |
+| --- | --- |
+| `catalog:read` | The Phase 1 catalog tools (which are anonymous anyway — the scope exists for the key's own bookkeeping) |
+| `cart:write` | The catalog tools plus every cart tool below |
+
+Clients send the key as `Authorization: Bearer <token>` —
+the header only, never a query string. Every authentication
+failure (missing, malformed, unknown, revoked, wrong scope)
+returns the **same** error (`-32001`, "a valid API key with
+the cart:write scope is required"), so the endpoint cannot
+be used as an oracle for probing keys. Cart calls are
+rate-limited per key: **120 calls per 60 seconds**,
+in-memory (a restart resets the windows).
+
+### Cart tools
+
+| Tool | Arguments | Returns |
+| --- | --- | --- |
+| `create_cart` | — | A new empty cart and its `cart_id` handle |
+| `get_cart` | `cart_id` | The cart's lines and totals |
+| `add_cart_item` | `cart_id`, `product_id`, `variant_id?`, `quantity` | The cart read back after the add |
+| `update_cart_item` | `cart_id`, `variant_id`, `quantity` | The cart read back (quantity stock-capped; 0 is refused — use remove) |
+| `remove_cart_item` | `cart_id`, `variant_id` | The cart read back |
+| `get_checkout_link` | `cart_id` | A single-use browser handoff URL and its expiry |
+
+- A cart is **bound to the key that created it** and the
+  binding is checked on every call. A cart that does not
+  exist and a cart owned by another key answer identically
+  (`no cart with id … for this API key`) — no existence
+  oracle across keys.
+- The handle is also the cart's session key in the cart
+  service, so an MCP cart is mechanically a guest cart:
+  same lines table, same stock rules, same totals — the
+  numbers match the cart page and the agent API exactly.
+  Its lines are cleared by the same abandoned-guest-cart
+  sweep after `guest_cart_retention_days`; the small
+  binding row itself stays (it records which key created
+  the cart).
+- Adds run the agent API's own pre-checks: draft or
+  archived products answer exactly like missing ones, a
+  combination product without `variant_id` is refused,
+  and stock is re-validated on every call.
+
+### Checkout handoff
+
+`get_checkout_link` mints a **single-use claim URL**,
+`<public base>/cart/claim/<token>`, valid for **30
+minutes**. The raw token is never stored — only its
+HMAC-SHA-256 digest, keyed by the server secret, under the
+same discipline as the password-reset codes. Minting a new
+link invalidates the previous one. When a person opens the
+link, one transaction moves the cart's lines onto their own
+cart (merged into their member cart when logged in, or
+their guest cart otherwise, quantities summed on overlap)
+and marks the claim used; a second open, an expired link,
+and an unknown token all land on the cart page with the
+same notice. After the handoff the MCP cart is empty. The
+person then checks out and pays on the store site as
+usual — no order is ever placed through MCP.
 
 ## Resources
 
@@ -78,12 +160,14 @@ hosts even with the flag on.
 
 ## Security posture
 
-- Anonymous surface, public data only — the same data as
-  `GET /api/products`, with the same visibility predicate.
-- No credentials exist to leak: Phase 1 has no auth because
-  it needs none. Cart and account tools (later phases) will
-  require API keys and are separate tools, never a widening
-  of these.
+- The catalog surface is anonymous, public data only — the
+  same data as `GET /api/products`, with the same
+  visibility predicate.
+- Cart tools require a `cart:write` API key (above): hashed
+  at rest, shown once, revocable, with one indistinguishable
+  error for every auth failure and a per-key rate limit.
+  Read and write credentials are separate tools and scopes,
+  never a widening of the catalog tools.
 - Service failures surface as a generic protocol error; the
   detail is logged server-side only.
 - The surface sits under the maintenance gate and is logged
@@ -96,6 +180,15 @@ hosts even with the flag on.
   catalog, boundary validation, draft invisibility,
   resources, host allowlist. Needs the dev app running with
   `mcp_enabled = true`.
+- `scripts/tests/test_mcp_carts.sh` — the Phase 2 suite
+  (23 checks): keys minted through the real admin UI flow,
+  every auth refusal shape, the no-oracle ownership rule,
+  totals against REST ground truth, and the full claim
+  handoff (including second-use refusal) with a cookie jar.
+- `cargo run --example mcp_client_check` with
+  `MCP_TEST_API_KEY` set to a `cart:write` key also runs
+  the cart flow (create, add, read back, checkout link) as
+  a real rmcp client.
 - `scripts/tests/fixtures/mcp_tools_list.json` — the
   checked-in `tools/list` snapshot. A tool name, description
   or schema change fails the suite until the fixture is
@@ -107,8 +200,6 @@ hosts even with the flag on.
 
 ## Later phases (not built)
 
-Phase 2 adds cart tools behind per-client API keys, with
-checkout always handed back to the browser (no payment data
-ever crosses MCP). Phase 3 adds approval-gated draft orders
-on the existing agent-approval machinery. Both are separate
-decisions; the no-agent-orders rule stands until then.
+Phase 3 adds approval-gated draft orders on the existing
+agent-approval machinery. It is a separate decision; the
+no-agent-orders rule stands until then.
