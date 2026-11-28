@@ -155,7 +155,7 @@ R=$(call "$KEY_W" get_cart "{\"cart_id\":\"$CART\"}")
 
 echo "== anonymous surface unchanged =="
 R=$(curl -s -X POST "$MCP" -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}')
-[ "$(jqe "len(d['result']['tools'])" "$R")" = "10" ] && ok "tools/list answers anonymously with 10 tools" || ng "tools/list count"
+[ "$(jqe "len(d['result']['tools'])" "$R")" = "13" ] && ok "tools/list answers anonymously with 13 tools" || ng "tools/list count"
 
 echo "== cleanup =="
 db "DELETE FROM cart_items WHERE session_id IN (SELECT cart_id FROM mcp_carts WHERE api_key_id IN (SELECT id FROM api_keys WHERE name LIKE '$KEY_MARK%'))" > /dev/null

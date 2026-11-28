@@ -26,18 +26,21 @@
 
 ## ケース一覧
 
-<!-- MAX_UT_ID: 319 -->
+<!-- MAX_UT_ID: 324 -->
 <!-- INVENTORY:BEGIN -->
 
 ### app / api::mcp::tools
 
 | 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
 |---|---|---|---|---|---|
-| UT-307 | api::mcp::tools::tests::defaults_are_valid | api::mcp::tools | （未記入） | （未記入） | 未実施 |
-| UT-308 | api::mcp::tools::tests::inverted_price_range_is_refused | api::mcp::tools | （未記入） | （未記入） | 未実施 |
-| UT-309 | api::mcp::tools::tests::negative_price_is_refused | api::mcp::tools | （未記入） | （未記入） | 未実施 |
-| UT-310 | api::mcp::tools::tests::page_below_one_is_refused | api::mcp::tools | （未記入） | （未記入） | 未実施 |
-| UT-311 | api::mcp::tools::tests::unknown_sort_is_refused | api::mcp::tools | （未記入） | （未記入） | 未実施 |
+| UT-307 | api::mcp::tools::tests::defaults_are_valid | api::mcp::tools | （未記入） | （未記入） | Pass |
+| UT-320 | api::mcp::tools::tests::draft_refuses_bad_email_and_missing_name | validate_draft | 異常系 | 形式不正なメールアドレスは address.email を名指しして拒否され、空の姓は address.family_name を名指しして拒否されること | Pass |
+| UT-321 | api::mcp::tools::tests::draft_refuses_bad_postal_phone_and_empty_key | validate_draft | 異常系 | 短い郵便番号と短い電話番号は各フィールドを名指しして拒否され、空の冪等キーは拒否されること | Pass |
+| UT-308 | api::mcp::tools::tests::inverted_price_range_is_refused | api::mcp::tools | （未記入） | （未記入） | Pass |
+| UT-309 | api::mcp::tools::tests::negative_price_is_refused | api::mcp::tools | （未記入） | （未記入） | Pass |
+| UT-310 | api::mcp::tools::tests::page_below_one_is_refused | api::mcp::tools | （未記入） | （未記入） | Pass |
+| UT-311 | api::mcp::tools::tests::unknown_sort_is_refused | api::mcp::tools | （未記入） | （未記入） | Pass |
+| UT-322 | api::mcp::tools::tests::valid_draft_passes_and_trims | validate_draft | 正常系 | 完全な住所は通過し、前後の空白はトリムされ、空の建物名は空に畳まれること | Pass |
 
 ### app / api::stripe_webhook
 
@@ -244,11 +247,11 @@
 
 | 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
 |---|---|---|---|---|---|
-| UT-312 | services::admin::rfm_service::tests::distinct_population_spreads_across_bands | services::admin::rfm_service | （未記入） | （未記入） | 未実施 |
-| UT-313 | services::admin::rfm_service::tests::named_segments_first_match | services::admin::rfm_service | （未記入） | （未記入） | 未実施 |
-| UT-314 | services::admin::rfm_service::tests::segment_counts_cover_every_member_once | services::admin::rfm_service | （未記入） | （未記入） | 未実施 |
-| UT-315 | services::admin::rfm_service::tests::single_member_is_band_five_everywhere | services::admin::rfm_service | （未記入） | （未記入） | 未実施 |
-| UT-316 | services::admin::rfm_service::tests::ties_always_share_a_band | services::admin::rfm_service | （未記入） | （未記入） | 未実施 |
+| UT-312 | services::admin::rfm_service::tests::distinct_population_spreads_across_bands | services::admin::rfm_service | （未記入） | （未記入） | Pass |
+| UT-313 | services::admin::rfm_service::tests::named_segments_first_match | services::admin::rfm_service | （未記入） | （未記入） | Pass |
+| UT-314 | services::admin::rfm_service::tests::segment_counts_cover_every_member_once | services::admin::rfm_service | （未記入） | （未記入） | Pass |
+| UT-315 | services::admin::rfm_service::tests::single_member_is_band_five_everywhere | services::admin::rfm_service | （未記入） | （未記入） | Pass |
+| UT-316 | services::admin::rfm_service::tests::ties_always_share_a_band | services::admin::rfm_service | （未記入） | （未記入） | Pass |
 
 ### app / services::admin::shipping_csv_service
 
@@ -338,8 +341,8 @@
 
 | 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
 |---|---|---|---|---|---|
-| UT-317 | services::api_key_service::tests::malformed_tokens_are_refused | parse_token | 異常系 | マーカーを持たないもの、シークレット部分を持たないもの、短いまたは16進数でないシークレット、空入力はいずれも拒否される（None）こと | 未実施 |
-| UT-318 | services::api_key_service::tests::minted_token_parses_back | parse_token | 正常系 | 発行したトークンが自身のプレフィックス（16進数12文字）とシークレット（16進数64文字）に分割して戻ること | 未実施 |
+| UT-317 | services::api_key_service::tests::malformed_tokens_are_refused | parse_token | 異常系 | マーカーを持たないもの、シークレット部分を持たないもの、短いまたは16進数でないシークレット、空入力はいずれも拒否される（None）こと | Pass |
+| UT-318 | services::api_key_service::tests::minted_token_parses_back | parse_token | 正常系 | 発行したトークンが自身のプレフィックス（16進数12文字）とシークレット（16進数64文字）に分割して戻ること | Pass |
 
 ### app / services::cart_service
 
@@ -401,7 +404,14 @@
 
 | 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
 |---|---|---|---|---|---|
-| UT-319 | services::mcp_cart_service::tests::cart_handles_carry_the_prefix | カートハンドルの形式 | 境界値 | ハンドルのプレフィックスは mcp_ でランダムな16進数32文字、クレームトークンは16進数64文字であること | 未実施 |
+| UT-319 | services::mcp_cart_service::tests::cart_handles_carry_the_prefix | カートハンドルの形式 | 境界値 | ハンドルのプレフィックスは mcp_ でランダムな16進数32文字、クレームトークンは16進数64文字であること | Pass |
+
+### app / services::mcp_order_draft_service
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-323 | services::mcp_order_draft_service::tests::address_builds_a_guest_flow_with_the_method_chosen | DraftAddress::to_checkout_flow | 正常系 | 保存された住所が、その項目を持ち、選択した支払い方法が選択済みとマークされ、既定の配送時間帯を持つゲスト用 CheckoutFlow になること | Pass |
+| UT-324 | services::mcp_order_draft_service::tests::address_json_round_trips | DraftAddress serde | 正常系 | 住所が JSON の往復（下書きテーブルが保存する形式）を変更なく生き残ること | Pass |
 
 ### app / services::member_account_service
 

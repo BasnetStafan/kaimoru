@@ -20,8 +20,18 @@ use crate::util::hmac_util::hex_encode;
 pub const SCOPE_CATALOG_READ: &str = "catalog:read";
 /// The cart scope: catalog plus cart tools.
 pub const SCOPE_CART_WRITE: &str = "cart:write";
+/// The order-read scope: order draft and status reads.
+pub const SCOPE_ORDERS_READ: &str = "orders:read";
+/// The order-write scope: cart tools plus draft creation —
+/// one key works the whole order flow alone.
+pub const SCOPE_ORDERS_WRITE: &str = "orders:write";
 /// Every scope a key may be issued with, in display order.
-pub const SCOPES: [&str; 2] = [SCOPE_CATALOG_READ, SCOPE_CART_WRITE];
+pub const SCOPES: [&str; 4] = [
+    SCOPE_CATALOG_READ,
+    SCOPE_CART_WRITE,
+    SCOPE_ORDERS_READ,
+    SCOPE_ORDERS_WRITE,
+];
 
 /// The token's fixed leading marker.
 const TOKEN_MARKER: &str = "kmcp_";

@@ -36,12 +36,14 @@ const CLAIM_TOKEN_BYTES: usize = 32;
 /// How long a minted checkout link stays usable.
 pub const CLAIM_TTL_MINUTES: i64 = 30;
 
-/// Hashes a claim token for storage or lookup, exactly as
+/// Hashes a bearer <redacted> for storage or lookup, exactly as
 /// the code challenges hash their codes: HMAC-SHA-256 keyed
 /// by the server's verification secret, through the one
 /// shared helper, so a leaked table alone cannot be brute
-/// forced offline without the secret.
-fn hash_claim_token(token: &str) -> String {
+/// forced offline without the secret. One mechanism for
+/// every MCP bearer <redacted> the claim token here and the
+/// order draft's approval token both hash through it.
+pub(crate) fn hash_claim_token(token: &str) -> String {
     // Fail fast, as with the code challenges: without this
     // secret a leaked claim-hash table could be attacked
     // offline, so the app must not run without it. Startup

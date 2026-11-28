@@ -4,7 +4,7 @@
 
 {% block adminpart %}
 <h1 class="admin-h1">APIキー</h1>
-<p class="admin-note">外部のAIクライアント（MCP）がこのストアに接続するためのキーです。catalog:read はカタログの読み取り専用、cart:write はカートの作成・変更もできます。キーの秘密部分は発行時に一度だけ表示され、サーバーにはハッシュ化して保存されます。</p>
+<p class="admin-note">外部のAIクライアント（MCP）がこのストアに接続するためのキーです。catalog:read はカタログの読み取り専用、cart:write はカートの作成・変更、orders:read は注文の照会、orders:write はカート操作に加えて注文案（ドラフト）の作成もできます。注文の確定とお支払いは、どのキーでもお客様ご自身のブラウザで行われます。キーの秘密部分は発行時に一度だけ表示され、サーバーにはハッシュ化して保存されます。</p>
 
 {% if let Some(token) = created_token %}
 <p class="admin-note">新しいキーを発行しました。このキーは一度だけ表示されます。安全な場所に保管してください。</p>
@@ -19,7 +19,9 @@
     <label>スコープ
         <select name="scope">
             <option value="catalog:read"{% if form_scope == "catalog:read" %} selected{% endif %}>catalog:read（読み取り専用）</option>
-            <option value="cart:write"{% if form_scope != "catalog:read" %} selected{% endif %}>cart:write（カート操作可）</option>
+            <option value="cart:write"{% if form_scope == "cart:write" %} selected{% endif %}>cart:write（カート操作可）</option>
+            <option value="orders:read"{% if form_scope == "orders:read" %} selected{% endif %}>orders:read（注文照会）</option>
+            <option value="orders:write"{% if form_scope == "orders:write" %} selected{% endif %}>orders:write（注文作成可）</option>
         </select>
     </label>
     <button type="submit" class="primary-button">キーを発行</button>

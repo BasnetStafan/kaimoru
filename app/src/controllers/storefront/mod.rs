@@ -14,6 +14,7 @@ pub mod contact;
 pub mod favorites;
 pub mod home;
 pub mod login;
+pub mod mcp_draft;
 pub mod mypage;
 pub mod order_lookup;
 pub mod pages;
@@ -70,6 +71,7 @@ pub fn router() -> Router<PgPool> {
         .merge(cart::router())
         .merge(agent::router())
         .merge(checkout::router())
+        .merge(mcp_draft::router())
         .merge(payment_return::router())
         .merge(product::router())
         .merge(reviews::router())

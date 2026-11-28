@@ -1,4 +1,4 @@
-# MCP server (Phase 1: read-only catalog; Phase 2: carts)
+# MCP server (Phase 1: read-only catalog; Phase 2: carts; Phase 3: draft orders)
 
 The store speaks the Model Context Protocol (MCP) so external
 AI clients — Claude, Cursor, VS Code, and other MCP hosts —
@@ -16,11 +16,24 @@ handlers call the same catalog service as the agent API, so
 an AI client and a person browsing the store never see
 different facts.
 
-Phase 2 adds **cart tools behind bearer API keys**: a client
+Phase 2 adds **cart tools behind API keys**: a client
 with a `cart:write` key can build a cart and hand it to a
 person, who completes checkout in their own browser. The
-server still never places an order and never sees payment
+client never places an order and never sees payment
 details.
+
+Phase 3 adds **approval-gated draft orders**: a client
+with an `orders:write` key can freeze a cart, with a
+delivery address, into a draft and hand the person an
+approval URL. The person opens it, checks the frozen
+order, picks a payment method and pays in the browser —
+that click, and only that click, places the order,
+through the same settlement discipline as the in-store
+agent's approvals. Building Phase 3 in the development
+environment is **not** a go-live decision: the live
+store still runs with MCP disabled, and the
+no-agent-orders rule stands until a separate go-live
+decision lifts it.
 
 ## Enabling it
 
@@ -72,6 +85,8 @@ are written to the admin audit log.
 | --- | --- |
 | `catalog:read` | The Phase 1 catalog tools (which are anonymous anyway — the scope exists for the key's own bookkeeping) |
 | `cart:write` | The catalog tools plus every cart tool below |
+| `orders:read` | The catalog tools plus reading back this key's own drafts and the orders they placed (`get_order_draft`, `get_order_status`) |
+| `orders:write` | Everything `orders:read` and `cart:write` allow, plus freezing a cart into an order draft (`create_order_draft`) |
 
 Clients send the key as `Authorization: Bearer <token>` —
 the header only, never a query string. Every authentication
@@ -126,7 +141,100 @@ and marks the claim used; a second open, an expired link,
 and an unknown token all land on the cart page with the
 same notice. After the handoff the MCP cart is empty. The
 person then checks out and pays on the store site as
-usual — no order is ever placed through MCP.
+usual — the client itself never places the order.
+
+## Phase 3: order drafts
+
+### Order tools
+
+| Tool | Arguments | Returns |
+| --- | --- | --- |
+| `create_order_draft` | `cart_id`, `idempotency_key`, `address{email, family_name, given_name, postal_code, prefecture, city, address_line, building?, phone}` | The draft: id, status, approval URL (creating call only), expiry, frozen lines and totals |
+| `get_order_draft` | `draft_id` | The draft's status, frozen snapshot, and the placed order's id once consumed |
+| `get_order_status` | `order_id` | The order's fulfilment status, grand total, and shipment facts (carrier, tracking number, delivery time) once they exist |
+
+The scope model (J1) keeps keys **single-scope** while
+letting one `orders:write` key run the whole flow alone:
+the cart tools accept `cart:write` **or** `orders:write`;
+`create_order_draft` requires `orders:write` and a cart
+bound to the caller's own key; the two read tools accept
+`orders:read` or `orders:write`, again bound to the
+caller's key. A `cart:write` key can never draft and an
+`orders:read` key can never write. Each tool family has
+its own single no-oracle auth message, on the Phase 2
+terms. Draft creation is rate-limited separately:
+**10 drafts per key per hour**.
+
+`get_order_draft` (J2) exists because the plan's tool
+list alone left a gap: without it a client could never
+learn the `order_id` that `get_order_status` needs.
+Orders placed any other way — storefront, agent chat —
+are invisible to these tools: a status read resolves
+only through a draft row owned by the caller's key, and
+a miss answers the same `no order with id … for this
+API key` as another key's order.
+
+### Draft lifecycle
+
+`pending → consumed` (the person paid), `pending →
+expired` (the window closed), `pending → void` (the
+binding broke). A draft is created against a cart with
+at least one purchasable line; its **fingerprint** is
+the agent approval's own `fingerprint_for` over the
+lines and the cart totals — one fingerprint definition
+for every approval in the store — and its **snapshot**
+is the same approval snapshot shape, so the client and
+the approval page read identical figures. The
+payment-method-dependent part (the cash-on-delivery
+fee) is deliberately not in the frozen totals: it binds
+at pay time through `final_fingerprint`, exactly as in
+the agent settlement.
+
+The approval token is 32 random bytes, shown once in
+the approval URL; only its HMAC-SHA-256 digest is
+stored, the claim token's discipline. The window is
+the agent approvals' TTL (`agent_approval_ttl_minutes`,
+30 minutes in dev).
+
+**Idempotency.** `(api_key_id, idempotency_key)` is
+unique. Repeating a create with the same key returns
+the existing draft **as-is** — even void, expired or
+consumed — and never mints a second one. The approval
+URL is returned only by the creating call: the token
+is never stored, so a replay cannot reproduce it, and
+a client that loses the URL loses the draft (it can
+freeze a new one under a new idempotency key once the
+cart is rebuilt).
+
+**Void on change, two layers.** Any successful cart
+mutation (add, update, remove) eagerly voids the
+cart's pending drafts, so a stale draft reads `void`
+immediately. Behind that, the pay-time fingerprint
+re-check is the hard guarantee: the approval page
+recomputes the live fingerprint and refuses — marking
+the draft void — when it no longer matches, with the
+agent settlement's own refusal wording.
+
+### The approval page
+
+`GET /orders/draft/<token>` is a storefront page in the
+checkout's design language. Live and still bound, it
+shows the cart's lines, the draft's delivery address,
+the totals and the store's payment methods exactly as
+checkout offers them; a dead draft shows its state
+instead of a pay form. `POST /orders/draft/<token>/pay`
+mirrors the agent settlement's sequence step for step:
+verify (pending, in window, fingerprint) → bind the
+final state → place the guest order through
+`order_service::place_order` under the draft address's
+identity, recorded as agent-placed → consume the draft
+onto the order with a conditional update → follow
+checkout's own outcome (hosted methods redirect to the
+provider's page; cash on delivery lands on the
+order-complete page). Placement re-checks the bound
+fingerprint against its locked cart read, so drift
+between binding and placement refuses instead of
+placing under a stale approval.
 
 ## Resources
 
@@ -168,6 +276,13 @@ hosts even with the flag on.
   error for every auth failure and a per-key rate limit.
   Read and write credentials are separate tools and scopes,
   never a widening of the catalog tools.
+- Order tools sit behind `orders:read` / `orders:write`
+  keys with the same one-answer auth discipline, a separate
+  draft-creation rate limit, and key-bound reads: an order
+  is visible only to the key whose draft placed it. A draft
+  never places anything by itself — placement happens only
+  on the approval page, by the person, after the binding
+  re-verifies.
 - Service failures surface as a generic protocol error; the
   detail is logged server-side only.
 - The surface sits under the maintenance gate and is logged
@@ -185,10 +300,19 @@ hosts even with the flag on.
   every auth refusal shape, the no-oracle ownership rule,
   totals against REST ground truth, and the full claim
   handoff (including second-use refusal) with a cookie jar.
+- `scripts/tests/test_mcp_phase3.sh` — the Phase 3 suite
+  (27 checks): keys minted through the admin UI, every
+  scope refusal, the J1 flow on one `orders:write` key,
+  idempotent creation, the approval page and a COD
+  payment end to end, no-oracle reads across keys, the
+  void and expiry paths, and the hosted path's dev
+  outcome (provider redirect or payment error page).
 - `cargo run --example mcp_client_check` with
   `MCP_TEST_API_KEY` set to a `cart:write` key also runs
   the cart flow (create, add, read back, checkout link) as
-  a real rmcp client.
+  a real rmcp client; with an `orders:write` key it also
+  drafts the cart and reads the draft back (payment stays
+  the person's step, so the harness never pays).
 - `scripts/tests/fixtures/mcp_tools_list.json` — the
   checked-in `tools/list` snapshot. A tool name, description
   or schema change fails the suite until the fixture is
@@ -200,6 +324,5 @@ hosts even with the flag on.
 
 ## Later phases (not built)
 
-Phase 3 adds approval-gated draft orders on the existing
-agent-approval machinery. It is a separate decision; the
-no-agent-orders rule stands until then.
+Phase 4 is OAuth 2.1, if a real deployment ever demands
+it: the documented position is API keys only until then.

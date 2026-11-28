@@ -18,6 +18,7 @@ pub mod inquiry_repository;
 pub mod low_stock_alert_repository;
 pub mod mail_repository;
 pub mod mcp_cart_repository;
+pub mod mcp_order_draft_repository;
 pub mod member_address_repository;
 pub mod menu_repository;
 pub mod notice_repository;

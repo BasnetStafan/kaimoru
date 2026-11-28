@@ -231,6 +231,98 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let url = link_json["checkout_url"].as_str().unwrap_or("");
         println!("cart: checkout link {url}");
         expect(url.contains("/cart/claim/"), "checkout link is a claim URL");
+        // Phase 3: with an orders:write key, freeze the
+        // cart into a draft and read it back. Payment is
+        // the person's step and never happens here. A key
+        // without the scope is refused by design — that
+        // refusal is the expected answer, not a failure.
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let draft_args = serde_json::json!({
+            "cart_id": cart_id,
+            "idempotency_key": format!("mcp-client-check-{stamp}"),
+            "address": {
+                "email": "mcp-check@example.com",
+                "family_name": "確認",
+                "given_name": "太郎",
+                "postal_code": "160-0023",
+                "prefecture": "東京都",
+                "city": "新宿区",
+                "address_line": "西新宿1-1-1",
+                "phone": "09012345678"
+            }
+        });
+        // A refusal can arrive in either shape: a
+        // protocol-level error (the auth failures) or an
+        // is_error tool result. Both carry the message.
+        let drafted = authed
+            .call_tool(
+                CallToolRequestParams::new("create_order_draft")
+                    .with_arguments(draft_args.as_object().unwrap().clone()),
+            )
+            .await;
+        let refusal: Option<String> = match &drafted {
+            Err(error) => Some(error.to_string()),
+            Ok(result) if result.is_error == Some(true) => Some(
+                result
+                    .content
+                    .first()
+                    .and_then(|c| c.as_text().map(|t| t.text.clone()))
+                    .unwrap_or_default(),
+            ),
+            _ => None,
+        };
+        if let Some(text) = refusal {
+            expect(
+                text.contains("orders:write"),
+                "a key without the scope is refused with the orders message",
+            );
+            println!("orders: SKIPPED (key has no orders:write scope)");
+        } else {
+            let drafted = drafted.expect("a non-refused draft call succeeded");
+            let draft_json = structured(&drafted);
+            let draft_id = draft_json["draft_id"]
+                .as_i64()
+                .expect("draft id is a number");
+            println!("orders: drafted {draft_id}");
+            expect(
+                draft_json["status"].as_str() == Some("pending"),
+                "draft is pending",
+            );
+            expect(
+                draft_json["approval_url"]
+                    .as_str()
+                    .is_some_and(|u| u.contains("/orders/draft/")),
+                "draft carries its approval URL",
+            );
+            expect(
+                draft_json["total_yen"] == added_json["total_yen"],
+                "draft froze the cart total",
+            );
+            let read_back = authed
+                .call_tool(
+                    CallToolRequestParams::new("get_order_draft").with_arguments(
+                        serde_json::json!({"draft_id": draft_id})
+                            .as_object()
+                            .unwrap()
+                            .clone(),
+                    ),
+                )
+                .await?;
+            let read_json = structured(&read_back);
+            expect(
+                read_json["draft_id"].as_i64() == Some(draft_id),
+                "draft reads back under its id",
+            );
+            expect(
+                read_json["order_id"].is_null(),
+                "no order exists before the person approves",
+            );
+            println!("MCP CLIENT CHECK (orders flow): ALL OK");
+        }
+
         println!("MCP CLIENT CHECK (cart flow): ALL OK");
     }
 

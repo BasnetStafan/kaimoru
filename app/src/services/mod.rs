@@ -24,6 +24,7 @@ pub mod low_stock_alert_service;
 pub mod mail_subscription_service;
 pub mod marketing_mail_service;
 pub mod mcp_cart_service;
+pub mod mcp_order_draft_service;
 pub mod member_account_service;
 pub mod member_address_service;
 pub mod member_order_cancel_service;

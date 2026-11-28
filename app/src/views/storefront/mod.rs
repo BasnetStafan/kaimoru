@@ -14,6 +14,7 @@ pub mod favorites;
 pub mod header;
 pub mod home;
 pub mod login;
+pub mod mcp_draft;
 pub mod mypage;
 pub mod order_lookup;
 pub mod password_reset;

@@ -16,6 +16,14 @@
 //! and is checked on every call; checkout is never completed
 //! here — `get_checkout_link` mints a single-use claim URL
 //! and a person finishes in their own browser.
+//!
+//! Phase 3 adds order drafts behind the `orders:write`
+//! scope: a draft freezes a cart and its delivery address
+//! behind a single-use approval URL, and the person who
+//! opens it approves and pays in the browser — the client
+//! never places the order and never confirms a payment.
+//! `orders:read` (or the write scope) reads drafts back
+//! and the status of the orders they placed.
 
 mod tools;
 
@@ -39,15 +47,18 @@ use rmcp::{
 };
 
 use self::tools::{
-    AddCartItemParams, CartIdParams, GetProductParams, McpCart, McpCheckoutLink,
-    RemoveCartItemParams, SearchProductsParams, UpdateCartItemParams, validate_search,
+    AddCartItemParams, CartIdParams, CreateOrderDraftParams, DraftIdParams, GetProductParams,
+    McpCart, McpCheckoutLink, McpOrderDraft, McpOrderStatus, OrderIdParams, RemoveCartItemParams,
+    SearchProductsParams, UpdateCartItemParams, validate_draft, validate_search,
 };
 use crate::config::CONFIG;
+use crate::repositories::mcp_order_draft_repository;
 use crate::services::api_cart_service::{self, AddError};
 use crate::services::api_catalog_service::{ApiProduct, SearchPage, StoreInfo};
 use crate::services::api_key_service::{self, ApiKeyIdentity};
 use crate::services::cart_service::{self, CartOwner};
 use crate::services::mcp_cart_service;
+use crate::services::mcp_order_draft_service::{self, DraftError};
 use sqlx::PgPool;
 
 use crate::error::AppError;
@@ -69,33 +80,99 @@ impl StoreMcpHandler {
         Self { pool }
     }
 
-    /// Authenticates a cart-tool call: the bearer key from
+    /// Authenticates a key-tool call: the bearer token from
     /// the HTTP request's `Authorization` header (the
     /// transport carries the request parts in the context
     /// extensions — Axum middleware extensions do not reach
     /// here, so the header is read from the parts directly),
-    /// holding the `cart:write` scope, inside its rate
-    /// budget. Every failure is the same error.
-    async fn require_cart_key(
+    /// holding one of the accepted scopes. Every failure —
+    /// missing, malformed, unknown, revoked, wrong scope —
+    /// is the same error carrying the caller's message, so
+    /// the endpoint cannot be used as an oracle for probing
+    /// keys.
+    async fn authenticate_key(
         &self,
         context: &RequestContext<RoleServer>,
+        scopes: &[&str],
+        message: &'static str,
     ) -> Result<ApiKeyIdentity, McpError> {
+        let fail = || McpError::new(ErrorCode(AUTH_ERROR_CODE), message, None);
         let parts = context
             .extensions
             .get::<axum::http::request::Parts>()
-            .ok_or_else(auth_error)?;
+            .ok_or_else(fail)?;
         let token = parts
             .headers
             .get(axum::http::header::AUTHORIZATION)
             .and_then(|value| value.to_str().ok())
             .and_then(|header| header.strip_prefix("Bearer "))
-            .ok_or_else(auth_error)?;
+            .ok_or_else(fail)?;
         let identity = api_key_service::authenticate(&self.pool, token)
             .await
-            .map_err(|()| auth_error())?;
-        if identity.scope != api_key_service::SCOPE_CART_WRITE {
-            return Err(auth_error());
+            .map_err(|()| fail())?;
+        if !scopes.contains(&identity.scope.as_str()) {
+            return Err(fail());
         }
+        Ok(identity)
+    }
+
+    /// Authenticates a cart-tool call, inside the key's
+    /// cart-call rate budget. An `orders:write` key is
+    /// accepted alongside `cart:write`: keys are
+    /// single-scope, and the orders key must be able to
+    /// build the cart its draft binds without a second key.
+    async fn require_cart_key(
+        &self,
+        context: &RequestContext<RoleServer>,
+    ) -> Result<ApiKeyIdentity, McpError> {
+        let identity = self
+            .authenticate_key(
+                context,
+                &[
+                    api_key_service::SCOPE_CART_WRITE,
+                    api_key_service::SCOPE_ORDERS_WRITE,
+                ],
+                AUTH_ERROR_MESSAGE,
+            )
+            .await?;
+        check_cart_rate_limit(identity.id)?;
+        Ok(identity)
+    }
+
+    /// Authenticates a draft-creation call: the
+    /// `orders:write` scope only. The draft rate budget is
+    /// charged by the handler, after the parameters
+    /// validate, so a malformed call costs no budget.
+    async fn require_orders_write_key(
+        &self,
+        context: &RequestContext<RoleServer>,
+    ) -> Result<ApiKeyIdentity, McpError> {
+        self.authenticate_key(
+            context,
+            &[api_key_service::SCOPE_ORDERS_WRITE],
+            ORDERS_WRITE_AUTH_MESSAGE,
+        )
+        .await
+    }
+
+    /// Authenticates an order-read call (`get_order_draft`,
+    /// `get_order_status`): the `orders:read` scope, or the
+    /// write scope that created the draft, inside the
+    /// key's call rate budget.
+    async fn require_orders_read_key(
+        &self,
+        context: &RequestContext<RoleServer>,
+    ) -> Result<ApiKeyIdentity, McpError> {
+        let identity = self
+            .authenticate_key(
+                context,
+                &[
+                    api_key_service::SCOPE_ORDERS_READ,
+                    api_key_service::SCOPE_ORDERS_WRITE,
+                ],
+                ORDERS_READ_AUTH_MESSAGE,
+            )
+            .await?;
         check_cart_rate_limit(identity.id)?;
         Ok(identity)
     }
@@ -119,6 +196,18 @@ impl StoreMcpHandler {
                 None,
             )),
         }
+    }
+
+    /// Voids the cart's pending order drafts after a
+    /// successful mutation: the draft's binding is stale
+    /// from this moment, eagerly, so it reads `void` —
+    /// the pay-time fingerprint re-check remains the hard
+    /// guarantee behind this.
+    async fn void_drafts(&self, cart_id: &str) -> Result<(), McpError> {
+        mcp_order_draft_repository::void_pending_for_cart(&self.pool, cart_id)
+            .await
+            .map_err(|e| service_error(AppError::Db(e)))?;
+        Ok(())
     }
 
     /// Reads the caller's cart back after a write (or for a
@@ -211,10 +300,14 @@ const AUTH_ERROR_CODE: i32 = -32001;
 /// Error code for cart-tool rate limiting.
 const RATE_LIMIT_ERROR_CODE: i32 = -32000;
 
-/// Builds the shared authentication failure.
-fn auth_error() -> McpError {
-    McpError::new(ErrorCode(AUTH_ERROR_CODE), AUTH_ERROR_MESSAGE, None)
-}
+/// The one answer every draft-creation authentication
+/// failure gives, on the same no-oracle terms as the cart
+/// tools' answer.
+const ORDERS_WRITE_AUTH_MESSAGE: &str = "a valid API key with the orders:write scope is required";
+
+/// The one answer every order-read authentication failure
+/// gives.
+const ORDERS_READ_AUTH_MESSAGE: &str = "a valid API key with the orders:read scope is required";
 
 /// Per-key cart-call windows: key ID → (window start, calls
 /// in the window). In-memory by design — a restart resets
@@ -227,6 +320,8 @@ static CART_RATE_LIMIT: LazyLock<Mutex<HashMap<i64, (Instant, u32)>>> =
 /// refuses once the budget is spent. The lock is never held
 /// across an await; a poisoned lock recovers its contents
 /// rather than panicking (the counts are advisory state).
+/// Order reads charge the same budget: it is the key's
+/// general call window, the cart tools' name aside.
 fn check_cart_rate_limit(key_id: i64) -> Result<(), McpError> {
     let now = Instant::now();
     let mut windows = CART_RATE_LIMIT
@@ -247,6 +342,67 @@ fn check_cart_rate_limit(key_id: i64) -> Result<(), McpError> {
     Ok(())
 }
 
+/// Draft creations allowed per key inside one window: a
+/// draft freezes a cart for a person's decision, so ten
+/// an hour is generous for a real client and tight for
+/// abuse.
+const DRAFT_CALLS_PER_WINDOW: usize = 10;
+
+/// The rate-limit window for draft creation.
+const DRAFT_WINDOW: Duration = Duration::from_secs(3600);
+
+/// Recent draft-creation instants per key ID. In-memory
+/// like the cart windows: a restart forgets them, which
+/// only ever grants a fresh budget.
+static DRAFT_RATE_LIMIT: LazyLock<Mutex<HashMap<i64, Vec<Instant>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// Counts one draft creation against the key's hourly
+/// window and refuses once the budget is spent. Sliding
+/// window of instants, the approval limiter's pattern;
+/// the lock is never held across an await.
+fn check_draft_rate_limit(key_id: i64) -> Result<(), McpError> {
+    let now = Instant::now();
+    let mut attempts = DRAFT_RATE_LIMIT
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let times = attempts.entry(key_id).or_default();
+    times.retain(|t| now.duration_since(*t) < DRAFT_WINDOW);
+    if times.len() >= DRAFT_CALLS_PER_WINDOW {
+        return Err(McpError::new(
+            ErrorCode(RATE_LIMIT_ERROR_CODE),
+            RATE_LIMIT_MESSAGE,
+            None,
+        ));
+    }
+    times.push(now);
+    Ok(())
+}
+
+/// The public base a browser URL is built on: the store's
+/// configured public base when one exists, otherwise the
+/// address this very request arrived on (the development
+/// shape: a client tunnelled to loopback).
+fn public_base(context: &RequestContext<RoleServer>) -> Result<String, McpError> {
+    match CONFIG.public_base_url() {
+        Some(base) => Ok(base.trim_end_matches('/').to_string()),
+        None => {
+            let parts = context
+                .extensions
+                .get::<axum::http::request::Parts>()
+                .ok_or_else(internal_error)?;
+            let host = parts
+                .headers
+                .get(axum::http::header::HOST)
+                .and_then(|value| value.to_str().ok())
+                .map(str::to_string)
+                .or_else(|| parts.uri.authority().map(|a| a.to_string()))
+                .ok_or_else(internal_error)?;
+            Ok(format!("http://{host}"))
+        }
+    }
+}
+
 /// The published system pages, in the order a person meets
 /// them in the store footer.
 const SYSTEM_PAGE_SLUGS: [&str; 5] = ["guide", "faq", "terms", "privacy", "legal"];
@@ -262,7 +418,7 @@ impl ServerHandler for StoreMcpHandler {
         )
         .with_server_info(Implementation::new("kaimoru", env!("CARGO_PKG_VERSION")))
         .with_instructions(
-            "Kaimoru is a Japanese e-commerce store. This server exposes its public catalog: search and read products, list categories, and read store information and published pages. Prices are integer Japanese yen, tax included. With an API key (cart:write scope) it also builds carts; checkout always finishes in the customer's own browser via the link from get_checkout_link. The server never places orders and never takes payment details.",
+            "Kaimoru is a Japanese e-commerce store. This server exposes its public catalog: search and read products, list categories, and read store information and published pages. Prices are integer Japanese yen, tax included. With an API key (cart:write scope) it also builds carts; checkout finishes in the customer's own browser via the link from get_checkout_link, or — with an orders:write key — as an order draft from create_order_draft that the customer approves and pays for in the browser. An MCP client never places an order itself and never takes payment details: the person approving in the browser places every order.",
         )
     }
 
@@ -508,6 +664,7 @@ impl StoreMcpHandler {
         )
         .await
         .map_err(|error| add_error(error, params.product_id, params.variant_id))?;
+        self.void_drafts(&params.cart_id).await?;
         self.cart_view(&params.cart_id, &owner).await
     }
 
@@ -532,6 +689,7 @@ impl StoreMcpHandler {
         cart_service::update_quantity(&self.pool, &owner, params.variant_id, params.quantity)
             .await
             .map_err(service_error)?;
+        self.void_drafts(&params.cart_id).await?;
         self.cart_view(&params.cart_id, &owner).await
     }
 
@@ -550,6 +708,7 @@ impl StoreMcpHandler {
         cart_service::remove_line(&self.pool, &owner, params.variant_id)
             .await
             .map_err(service_error)?;
+        self.void_drafts(&params.cart_id).await?;
         self.cart_view(&params.cart_id, &owner).await
     }
 
@@ -574,33 +733,142 @@ impl StoreMcpHandler {
         let (token, expires_at) = mcp_cart_service::mint_claim(&self.pool, &params.cart_id)
             .await
             .map_err(service_error)?;
-        // The link's base is the store's configured public
-        // base when one exists; otherwise the address this
-        // very request arrived on (the development shape:
-        // a client tunnelled to loopback).
-        let base = match CONFIG.public_base_url() {
-            Some(base) => base.trim_end_matches('/').to_string(),
-            None => {
-                let parts = context
-                    .extensions
-                    .get::<axum::http::request::Parts>()
-                    .ok_or_else(internal_error)?;
-                let host = parts
-                    .headers
-                    .get(axum::http::header::HOST)
-                    .and_then(|value| value.to_str().ok())
-                    .map(str::to_string)
-                    .or_else(|| parts.uri.authority().map(|a| a.to_string()))
-                    .ok_or_else(internal_error)?;
-                format!("http://{host}")
-            }
-        };
+        let base = public_base(&context)?;
         Ok(Json(McpCheckoutLink {
             cart_id: params.cart_id,
             checkout_url: format!("{base}/cart/claim/{token}"),
             expires_at: expires_at.to_rfc3339(),
         }))
     }
+
+    /// Freezes a cart into an order draft for human approval.
+    #[tool(
+        description = "Freeze one of your carts, with a delivery address, into an order draft and get its approval URL. Requires an API key with the orders:write scope. A person opens the URL, checks the frozen lines, address and totals, picks a payment method and pays in the browser — this tool never places the order itself, and any later change to the cart voids the draft. Repeating the call with the same idempotency_key returns the same draft, but the approval URL is shown only on the first, creating call.",
+        output_schema = rmcp::handler::server::common::schema_for_output::<McpOrderDraft>()
+    )]
+    async fn create_order_draft(
+        &self,
+        context: RequestContext<RoleServer>,
+        Parameters(params): Parameters<CreateOrderDraftParams>,
+    ) -> Result<Json<McpOrderDraft>, McpError> {
+        let identity = self.require_orders_write_key(&context).await?;
+        let valid = validate_draft(&params)?;
+        check_draft_rate_limit(identity.id)?;
+        let (row, token) = mcp_order_draft_service::create_draft(
+            &self.pool,
+            identity.id,
+            &params.cart_id,
+            &valid.idempotency_key,
+            &valid.address,
+        )
+        .await
+        .map_err(|error| match error {
+            DraftError::CartNotOwned => McpError::invalid_params(
+                format!("no cart with id {} for this API key", params.cart_id),
+                None,
+            ),
+            DraftError::EmptyCart => {
+                McpError::invalid_params("the cart has no purchasable lines", None)
+            }
+            DraftError::Internal(app_error) => service_error(app_error),
+        })?;
+        // The approval URL exists only on the creating
+        // call: the token is never stored, so a replayed
+        // create returns the draft without it.
+        let approval_url = match token {
+            Some(token) => {
+                let base = public_base(&context)?;
+                Some(format!("{base}/orders/draft/{token}"))
+            }
+            None => None,
+        };
+        draft_answer(&row, approval_url)
+    }
+
+    /// Reads one of the caller's order drafts.
+    #[tool(
+        description = "Read one of your order drafts by id: its status (pending, consumed, expired or void), the frozen lines and totals from its snapshot, and the placed order's id once the draft is consumed. Requires an orders:read or orders:write key.",
+        output_schema = rmcp::handler::server::common::schema_for_output::<McpOrderDraft>()
+    )]
+    async fn get_order_draft(
+        &self,
+        context: RequestContext<RoleServer>,
+        Parameters(params): Parameters<DraftIdParams>,
+    ) -> Result<Json<McpOrderDraft>, McpError> {
+        let identity = self.require_orders_read_key(&context).await?;
+        if params.draft_id < 1 {
+            return Err(McpError::invalid_params(
+                "draft_id must be a positive draft id",
+                None,
+            ));
+        }
+        let row = mcp_order_draft_service::get_draft(&self.pool, identity.id, params.draft_id)
+            .await
+            .map_err(service_error)?;
+        match row {
+            Some(row) => draft_answer(&row, None),
+            None => Err(McpError::invalid_params(
+                format!("no draft with id {} for this API key", params.draft_id),
+                None,
+            )),
+        }
+    }
+
+    /// Reads the status of an order a draft placed.
+    #[tool(
+        description = "Read the status of an order one of your drafts placed: fulfilment status, grand total, and the shipment facts (carrier, tracking number, delivery time) once they exist. Orders placed any other way are not visible here. Requires an orders:read or orders:write key.",
+        output_schema = rmcp::handler::server::common::schema_for_output::<McpOrderStatus>()
+    )]
+    async fn get_order_status(
+        &self,
+        context: RequestContext<RoleServer>,
+        Parameters(params): Parameters<OrderIdParams>,
+    ) -> Result<Json<McpOrderStatus>, McpError> {
+        let identity = self.require_orders_read_key(&context).await?;
+        if params.order_id < 1 {
+            return Err(McpError::invalid_params(
+                "order_id must be a positive order id",
+                None,
+            ));
+        }
+        let status =
+            mcp_order_draft_service::order_status(&self.pool, identity.id, params.order_id)
+                .await
+                .map_err(service_error)?;
+        match status {
+            Some(status) => Ok(Json(McpOrderStatus {
+                order_id: status.order_id,
+                status: status.status,
+                total_yen: status.total_yen,
+                created_at: status.created_at.to_rfc3339(),
+                delivered_at: status.delivered_at.map(|at| at.to_rfc3339()),
+                carrier: status.carrier,
+                tracking_number: status.tracking_number,
+            })),
+            None => Err(McpError::invalid_params(
+                format!("no order with id {} for this API key", params.order_id),
+                None,
+            )),
+        }
+    }
+}
+
+/// Shapes a stored draft into its tool answer, from the
+/// snapshot it froze. A snapshot that no longer parses is
+/// a store failure, never a partial answer.
+fn draft_answer(
+    row: &mcp_order_draft_repository::McpOrderDraftRow,
+    approval_url: Option<String>,
+) -> Result<Json<McpOrderDraft>, McpError> {
+    let snapshot = mcp_order_draft_service::snapshot_of(row).ok_or_else(internal_error)?;
+    Ok(Json(McpOrderDraft::new(
+        row.id,
+        row.status.clone(),
+        row.order_id,
+        approval_url,
+        row.expires_at.to_rfc3339(),
+        &snapshot,
+    )))
 }
 
 /// Serialises a value as a JSON resource body.
