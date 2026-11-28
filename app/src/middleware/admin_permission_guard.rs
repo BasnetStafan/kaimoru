@@ -148,7 +148,7 @@ pub async fn require_permission(State(pool): State<PgPool>, req: Request, next: 
 #[cfg(test)]
 mod tests {
     use super::{Gate, gate_for};
-    use crate::models::{AREA_MAIL, AREA_SETTINGS};
+    use crate::models::{AREA_CONTENT, AREA_MAIL, AREA_SETTINGS};
 
     #[test]
     fn dashboard_and_account_paths_are_any_admin() {
@@ -172,6 +172,10 @@ mod tests {
         assert_eq!(gate_for("/admin/mail"), Gate::Area(AREA_MAIL));
         assert_eq!(gate_for("/admin/mail/templates"), Gate::Area(AREA_MAIL));
         assert_eq!(gate_for("/admin/settings/shop"), Gate::Area(AREA_SETTINGS));
+        // The pages hub and everything under it is the
+        // content area's (CMS_SPEC §9).
+        assert_eq!(gate_for("/admin/content"), Gate::Area(AREA_CONTENT));
+        assert_eq!(gate_for("/admin/content/pages"), Gate::Area(AREA_CONTENT));
     }
 
     #[test]

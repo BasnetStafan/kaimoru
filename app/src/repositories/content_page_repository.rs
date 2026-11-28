@@ -14,25 +14,41 @@ pub const REVISION_CAP: i64 = 50;
 
 /// The page column set, bound once so every read agrees about
 /// the shape.
-const PAGE_COLUMNS: &str =
-    "id, slug, kind, title, body_md, format, meta_description, status, created_at, updated_at";
+const PAGE_COLUMNS: &str = "id, slug, kind, title, body_md, format, meta_description, status, \
+    layout, in_sitemap, created_at, updated_at";
 
-/// Returns every page for the admin list, system pages first
+/// Returns pages for the admin list, system pages first
 /// (in seed order), then custom pages in creation order, each
 /// with the name of the admin who recorded its newest revision
-/// when one exists.
-pub async fn list_all(pool: &PgPool) -> Result<Vec<ContentPageSummary>, AppError> {
+/// when one exists. `layout` narrows the list to one page
+/// type (the admin hub's tabs, CMS_SPEC §9); `None` lists
+/// every page, the pre-hub behaviour.
+pub async fn list_all(
+    pool: &PgPool,
+    layout: Option<&str>,
+) -> Result<Vec<ContentPageSummary>, AppError> {
     sqlx::query_as::<_, ContentPageSummary>(&format!(
         "SELECT {PAGE_COLUMNS}, \
                 (SELECT a.display_name FROM content_revisions r \
                  JOIN admins a ON a.id = r.edited_by \
                  WHERE r.page_id = p.id ORDER BY r.id DESC LIMIT 1) AS last_editor_name \
          FROM content_pages p \
+         WHERE ($1::text IS NULL OR p.layout = $1) \
          ORDER BY (kind = 'custom'), id"
     ))
+    .bind(layout)
     .fetch_all(pool)
     .await
     .map_err(|e| AppError::db("list content pages", e))
+}
+
+/// Counts pages of one layout (the admin hub's type cards).
+pub async fn count_by_layout(pool: &PgPool, layout: &str) -> Result<i64, AppError> {
+    sqlx::query_scalar("SELECT COUNT(*) FROM content_pages WHERE layout = $1")
+        .bind(layout)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| AppError::db("count content pages", e))
 }
 
 /// Returns one page by ID, or `None` when it does not exist.
@@ -64,10 +80,14 @@ pub async fn find_by_id_for_update(
     .map_err(|e| AppError::db("find content page for update", e))
 }
 
-/// Returns one page by slug, whatever its status.
+/// Returns one standard-layout page by slug, whatever its
+/// status. Slugs are unique per layout (CMS_SPEC §9), so an
+/// unscoped slug lookup could name two pages; this reader
+/// serves the standard namespace, and landing pages have
+/// their own finder below.
 pub async fn find_by_slug(pool: &PgPool, slug: &str) -> Result<Option<ContentPage>, AppError> {
     sqlx::query_as::<_, ContentPage>(&format!(
-        "SELECT {PAGE_COLUMNS} FROM content_pages WHERE slug = $1"
+        "SELECT {PAGE_COLUMNS} FROM content_pages WHERE slug = $1 AND layout = 'standard'"
     ))
     .bind(slug)
     .fetch_optional(pool)
@@ -84,7 +104,8 @@ pub async fn find_published_by_slug(
     slug: &str,
 ) -> Result<Option<ContentPage>, AppError> {
     sqlx::query_as::<_, ContentPage>(&format!(
-        "SELECT {PAGE_COLUMNS} FROM content_pages WHERE slug = $1 AND status = 'published'"
+        "SELECT {PAGE_COLUMNS} FROM content_pages \
+         WHERE slug = $1 AND status = 'published' AND layout = 'standard'"
     ))
     .bind(slug)
     .fetch_optional(pool)
@@ -102,12 +123,31 @@ pub async fn find_published_custom_by_slug(
 ) -> Result<Option<ContentPage>, AppError> {
     sqlx::query_as::<_, ContentPage>(&format!(
         "SELECT {PAGE_COLUMNS} FROM content_pages \
-         WHERE slug = $1 AND status = 'published' AND kind = 'custom'"
+         WHERE slug = $1 AND status = 'published' AND kind = 'custom' AND layout = 'standard'"
     ))
     .bind(slug)
     .fetch_optional(pool)
     .await
     .map_err(|e| AppError::db("find published custom content page", e))
+}
+
+/// Returns the published landing page for a slug, or `None`
+/// when the slug is unknown, a draft — or a standard page:
+/// `/lp/{slug}` serves landing pages only (CMS_SPEC §9),
+/// and the identical `None` keeps their 404s
+/// indistinguishable.
+pub async fn find_published_landing_by_slug(
+    pool: &PgPool,
+    slug: &str,
+) -> Result<Option<ContentPage>, AppError> {
+    sqlx::query_as::<_, ContentPage>(&format!(
+        "SELECT {PAGE_COLUMNS} FROM content_pages \
+         WHERE slug = $1 AND status = 'published' AND layout = 'landing'"
+    ))
+    .bind(slug)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| AppError::db("find published landing page", e))
 }
 
 /// Slugs and update stamps of every published custom page,
@@ -119,20 +159,43 @@ pub async fn list_published_custom(
 ) -> Result<Vec<(String, chrono::DateTime<chrono::Utc>)>, AppError> {
     sqlx::query_as::<_, (String, chrono::DateTime<chrono::Utc>)>(
         "SELECT slug, updated_at FROM content_pages \
-         WHERE status = 'published' AND kind = 'custom' ORDER BY slug ASC",
+         WHERE status = 'published' AND kind = 'custom' AND layout = 'standard' \
+         ORDER BY slug ASC",
     )
     .fetch_all(pool)
     .await
     .map_err(|e| AppError::db("list published custom pages", e))
 }
 
-/// Whether any page already owns this slug.
-pub async fn slug_taken(pool: &PgPool, slug: &str) -> Result<bool, AppError> {
-    let row: Option<(i64,)> = sqlx::query_as("SELECT id FROM content_pages WHERE slug = $1")
-        .bind(slug)
-        .fetch_optional(pool)
-        .await
-        .map_err(|e| AppError::db("check content page slug", e))?;
+/// Slugs, layouts and update stamps of every published
+/// custom page the sitemap may list (CMS_SPEC §9): the
+/// page's `in_sitemap` switch is on. Standard pages ride
+/// the default (listed); landing pages appear only when
+/// their operator opted in.
+pub async fn list_published_in_sitemap(
+    pool: &PgPool,
+) -> Result<Vec<(String, String, chrono::DateTime<chrono::Utc>)>, AppError> {
+    sqlx::query_as::<_, (String, String, chrono::DateTime<chrono::Utc>)>(
+        "SELECT slug, layout, updated_at FROM content_pages \
+         WHERE status = 'published' AND kind = 'custom' AND in_sitemap \
+         ORDER BY layout ASC, slug ASC",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::db("list sitemap content pages", e))
+}
+
+/// Whether any page of this layout already owns this slug:
+/// uniqueness is per layout (CMS_SPEC §9), so a landing
+/// page and a standard page may share one slug string.
+pub async fn slug_taken(pool: &PgPool, slug: &str, layout: &str) -> Result<bool, AppError> {
+    let row: Option<(i64,)> =
+        sqlx::query_as("SELECT id FROM content_pages WHERE slug = $1 AND layout = $2")
+            .bind(slug)
+            .bind(layout)
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| AppError::db("check content page slug", e))?;
     Ok(row.is_some())
 }
 
@@ -143,8 +206,9 @@ pub async fn insert(
     page: &NewContentPage<'_>,
 ) -> Result<i64, AppError> {
     let row: (i64,) = sqlx::query_as(
-        "INSERT INTO content_pages (slug, kind, title, body_md, format, meta_description, status) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+        "INSERT INTO content_pages \
+         (slug, kind, title, body_md, format, meta_description, status, layout, in_sitemap) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id",
     )
     .bind(page.slug)
     .bind(page.kind)
@@ -153,6 +217,8 @@ pub async fn insert(
     .bind(page.format)
     .bind(page.meta_description)
     .bind(page.status)
+    .bind(page.layout)
+    .bind(page.in_sitemap)
     .fetch_one(&mut **tx)
     .await
     .map_err(|e| AppError::db("insert content page", e))?;
@@ -178,7 +244,10 @@ pub async fn updated_at_for_update(
 
 /// Stores a page's editable fields inside the caller's
 /// transaction, stamping `updated_at`. The slug is not a
-/// parameter: it never changes after creation.
+/// parameter: it never changes after creation. Neither is
+/// the layout (CMS_SPEC §9): a page's type is fixed at
+/// creation, so no save can silently move a page between
+/// the `/pages/` and `/lp/` namespaces.
 #[allow(clippy::too_many_arguments)]
 pub async fn update(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
@@ -188,11 +257,13 @@ pub async fn update(
     format: &str,
     meta_description: &str,
     status: &str,
+    in_sitemap: bool,
     admin_id: i64,
 ) -> Result<(), AppError> {
     sqlx::query(
         "UPDATE content_pages SET title = $1, body_md = $2, format = $3, \
-                meta_description = $4, status = $5, updated_at = now(), updated_by = $7 \
+                meta_description = $4, status = $5, updated_at = now(), updated_by = $7, \
+                in_sitemap = $8 \
          WHERE id = $6",
     )
     .bind(title)
@@ -202,6 +273,7 @@ pub async fn update(
     .bind(status)
     .bind(id)
     .bind(admin_id)
+    .bind(in_sitemap)
     .execute(&mut **tx)
     .await
     .map_err(|e| AppError::db("update content page", e))?;

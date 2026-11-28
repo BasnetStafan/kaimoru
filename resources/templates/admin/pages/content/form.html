@@ -3,7 +3,7 @@
 {% block title %}{{ heading }}{% endblock %}
 
 {% block adminpart %}
-<p class="admin-back"><a href="/admin/content/pages">← ページ一覧に戻る</a></p>
+<p class="admin-back"><a href="/admin/content/pages{% if page_layout == "landing" %}?layout=landing{% endif %}">← ページ一覧に戻る</a></p>
 <h1 class="admin-h1">{{ heading }}</h1>
 
 <p class="admin-note">本文の形式は Markdown と HTML から選べます。Markdown では HTMLタグは使えません（入力しても文字として表示されます）。HTML では、スクリプトなどの危険なタグや属性は保存時に自動で取り除かれます。リンクは https:、http:、mailto:、または「/」で始まるパスが使えます。保存するたびに、置き換わる内容は「版」として残り、あとから戻せます。</p>
@@ -13,12 +13,24 @@
 
 <form method="post" action="{{ action }}" class="admin-form" data-unsaved-guard>
 <input type="hidden" name="form_ticket" value="{{ form_ticket }}">
+<input type="hidden" name="layout" value="{{ page_layout }}">
     <section class="admin-form-section">
         <h2 class="admin-form-section-title">基本情報</h2>
+        <label>種別
+            <input type="text" value="{% if page_layout == "landing" %}ランディングページ{% else if is_system %}固定ページ{% else %}通常ページ{% endif %}" disabled>
+            <span class="admin-field-help">ページの種別は登録時に決まります。あとから変更はできません（店舗での表示のされ方とURLの置き場所が変わるため）。</span>
+            {% if let Some(message) = layout_error %}
+            <span class="field-error">{{ message }}</span>
+            {% endif %}
+        </label>
         {% if slug_editable %}
         <label>スラッグ <span class="badge-required">必須</span>
             <input type="text" name="slug" value="{{ values.slug }}" maxlength="60" placeholder="例：size-guide" aria-required="true">
+            {% if page_layout == "landing" %}
+            <span class="admin-field-help">URL「/lp/スラッグ」の一部になります。半角英小文字・数字・ハイフン、3〜60文字。登録後は変更できません。</span>
+            {% else %}
             <span class="admin-field-help">URL「/pages/スラッグ」の一部になります。半角英小文字・数字・ハイフン、3〜60文字。登録後は変更できません。</span>
+            {% endif %}
             {% if let Some(message) = slug_error %}
             <span class="field-error">{{ message }}</span>
             {% endif %}
@@ -46,6 +58,15 @@
             <span class="field-error">{{ message }}</span>
             {% endif %}
         </label>
+        {% if !is_system %}
+        <label class="admin-check"><input type="checkbox" name="in_sitemap" value="true"{% if values.in_sitemap %} checked{% endif %}> サイトマップに含める
+            {% if page_layout == "landing" %}
+            <span class="admin-field-help">検索エンジン向けのサイトマップ（/sitemap.xml）にこのページを含めます。ランディングページは広告の受け皿として使うことが多いため、通常はオフのままにしてください（検索結果で商品ページと競合しやすくなります）。</span>
+            {% else %}
+            <span class="admin-field-help">検索エンジン向けのサイトマップ（/sitemap.xml）にこのページを含めます。</span>
+            {% endif %}
+        </label>
+        {% endif %}
     </section>
 
     <section class="admin-form-section">
@@ -66,6 +87,9 @@
             {% else %}
             <span class="admin-field-help">見出しは「## 」、箇条書きは「- 」、リンクは「[文字](URL)」と書きます。</span>
             {% endif %}
+            {% if page_layout == "landing" %}
+            <span class="admin-field-help">本文に <code>[[product:商品ID]]</code> と書くと、その商品のカード（画像・税込価格・「カートに入れる」ボタン）がページ内に表示されます（例：<code>[[product:12]]</code>）。<code>[[category:カテゴリID]]</code> では、そのカテゴリの商品カード一覧を表示します（例：<code>[[category:3]]</code>）。IDは商品一覧・カテゴリ一覧で確認できます。1つのページに複数書くこともできます。下書き・非公開の商品や無効なカテゴリは、何も表示されません。</span>
+            {% endif %}
             {% if let Some(message) = body_error %}
             <span class="field-error">{{ message }}</span>
             {% endif %}
@@ -83,7 +107,7 @@
         <p class="admin-unsaved-note" data-unsaved-note hidden>未保存の変更があります</p>
         <button type="submit" class="primary-button">保存する</button>
         <button type="button" class="secondary-button" data-preview="/admin/content/pages/preview">プレビュー</button>
-        <a class="secondary-button" href="/admin/content/pages">キャンセル</a>
+        <a class="secondary-button" href="/admin/content/pages{% if page_layout == "landing" %}?layout=landing{% endif %}">キャンセル</a>
     </div>
 </form>
 

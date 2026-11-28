@@ -353,6 +353,12 @@ pub async fn list_posts(
     Ok((rows, total))
 }
 
+/// Counts every post, whatever its state (the admin
+/// pages hub's type card, CMS_SPEC §9).
+pub async fn count_posts(pool: &PgPool) -> Result<i64, AppError> {
+    post_repository::count_admin(pool, None).await
+}
+
 /// Returns one post for the editor, or `NotFound`.
 ///
 /// # Errors

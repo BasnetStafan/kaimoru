@@ -6,6 +6,10 @@
 //! source, rendered by [`crate::util::markdown`], or HTML the admin
 //! wrote directly — sanitised by [`crate::util::html_sanitize`]
 //! before it was stored, so stored HTML is always safe.
+//!
+//! A page also carries a type (CMS_SPEC §9): the `layout`
+//! column separates standard pages from landing pages —
+//! the same words machinery under two storefront shapes.
 
 use chrono::{DateTime, Utc};
 
@@ -34,6 +38,14 @@ pub struct ContentPage {
     pub meta_description: String,
     /// `draft` or `published`; drafts 404 on the storefront.
     pub status: String,
+    /// Page type (CMS_SPEC §9): `standard` (the historic
+    /// full-chrome page) or `landing` (minimal chrome at
+    /// `/lp/{slug}`). Set at creation; never changes.
+    pub layout: String,
+    /// Whether the sitemap may list this page. Standard
+    /// pages default to listed; a landing page is listed
+    /// only when its operator opts in.
+    pub in_sitemap: bool,
     /// Creation instant.
     pub created_at: DateTime<Utc>,
     /// Last save instant.
@@ -47,6 +59,12 @@ impl ContentPage {
         self.kind == "system"
     }
 
+    /// Whether this page is a landing page (CMS_SPEC §9):
+    /// minimal chrome, served under `/lp/`.
+    pub fn is_landing(&self) -> bool {
+        self.layout == "landing"
+    }
+
     /// Whether the storefront serves this page.
     pub fn is_published(&self) -> bool {
         self.status == "published"
@@ -58,10 +76,15 @@ impl ContentPage {
     }
 
     /// The storefront path: system pages keep their historic
-    /// routes, custom pages live under `/pages/`.
+    /// routes, landing pages live under `/lp/`, and the
+    /// remaining custom pages under `/pages/`. Slugs are
+    /// unique per layout, so the two custom namespaces may
+    /// share one slug string without colliding.
     pub fn url_path(&self) -> String {
         if self.is_system() {
             format!("/{}", self.slug)
+        } else if self.is_landing() {
+            format!("/lp/{}", self.slug)
         } else {
             format!("/pages/{}", self.slug)
         }
@@ -73,6 +96,17 @@ impl ContentPage {
             "固定ページ"
         } else {
             "自由ページ"
+        }
+    }
+
+    /// The page type's Japanese badge for the admin lists
+    /// (CMS_SPEC §9): a landing page says so whatever its
+    /// kind; every other page keeps its kind label.
+    pub fn type_label(&self) -> &'static str {
+        if self.is_landing() {
+            "ランディングページ"
+        } else {
+            self.kind_label()
         }
     }
 
@@ -119,6 +153,10 @@ pub struct NewContentPage<'a> {
     pub meta_description: &'a str,
     /// `draft` or `published`.
     pub status: &'a str,
+    /// Page type: `standard` or `landing` (CMS_SPEC §9).
+    pub layout: &'a str,
+    /// Whether the sitemap may list the page.
+    pub in_sitemap: bool,
 }
 
 /// A content page plus the name of the admin who last saved it
@@ -174,4 +212,51 @@ pub struct ContentRevisionSummary {
     pub revision: ContentRevision,
     /// Display name of the admin who recorded the snapshot.
     pub editor_name: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A bare page with the routing-relevant fields set by
+    /// each test.
+    fn page(kind: &str, layout: &str, slug: &str) -> ContentPage {
+        ContentPage {
+            id: 1,
+            slug: slug.to_string(),
+            kind: kind.to_string(),
+            title: "題".to_string(),
+            body_md: String::new(),
+            format: "markdown".to_string(),
+            meta_description: String::new(),
+            status: "published".to_string(),
+            layout: layout.to_string(),
+            in_sitemap: true,
+            created_at: DateTime::from_timestamp(0, 0).expect("epoch"),
+            updated_at: DateTime::from_timestamp(0, 0).expect("epoch"),
+        }
+    }
+
+    #[test]
+    fn url_path_routes_each_type_to_its_namespace() {
+        assert_eq!(page("system", "standard", "guide").url_path(), "/guide");
+        assert_eq!(
+            page("custom", "standard", "about").url_path(),
+            "/pages/about"
+        );
+        assert_eq!(
+            page("custom", "landing", "spring-sale").url_path(),
+            "/lp/spring-sale"
+        );
+    }
+
+    #[test]
+    fn type_label_names_landing_pages_and_keeps_kind_labels() {
+        assert_eq!(
+            page("custom", "landing", "x").type_label(),
+            "ランディングページ"
+        );
+        assert_eq!(page("system", "standard", "x").type_label(), "固定ページ");
+        assert_eq!(page("custom", "standard", "x").type_label(), "自由ページ");
+    }
 }

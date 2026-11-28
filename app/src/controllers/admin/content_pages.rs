@@ -1,8 +1,11 @@
-//! Content pages (CMS spec C-2).
+//! Content pages (CMS spec C-2) and the pages hub
+//! (CMS_SPEC §9).
 //!
 //! The operator's editor for the shop's long-form pages:
 //! list, create, edit, preview, revision history and delete.
-//! The rules live in
+//! The hub at `/admin/content` is the one home for the
+//! three page types — blog posts, landing pages, standard
+//! pages — with type-first creation. The rules live in
 //! `crate::services::admin::content_page_service` — validation,
 //! the snapshot-on-save revision discipline, the delete
 //! guards and the audited writes. Handlers here own HTTP
@@ -16,7 +19,7 @@
 
 use axum::{
     Form, Router,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{HeaderValue, header},
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
@@ -32,13 +35,14 @@ use crate::session::CurrentAdmin;
 use crate::validation::{FieldError, field_error};
 use crate::views::admin::content_pages::{
     ContentFormChrome, ContentPageFormView, ContentPageListView, ContentPageRow,
-    ContentRevisionListView, ContentRevisionRow,
+    ContentRevisionListView, ContentRevisionRow, PagesHubView,
 };
-use crate::views::storefront::content_page::ContentView;
+use crate::views::storefront::content_page::{ContentView, LandingView};
 
 /// Routes for the content pages surface.
 pub fn router() -> Router<PgPool> {
     Router::new()
+        .route("/admin/content", get(hub))
         .route("/admin/content/pages", get(list).post(create))
         .route("/admin/content/pages/new", get(new_page))
         .route("/admin/content/pages/preview", post(preview))
@@ -55,6 +59,12 @@ pub fn router() -> Router<PgPool> {
 /// choice, and every pre-v2 submission means Markdown.
 fn default_page_format() -> String {
     "markdown".to_string()
+}
+
+/// The page type of a form that carries none: standard —
+/// the only type that existed before the hub (CMS_SPEC §9).
+fn default_page_layout() -> String {
+    "standard".to_string()
 }
 
 /// The page form body: every field a string, exactly as typed
@@ -77,6 +87,16 @@ pub struct ContentPageForm {
     meta_description: String,
     /// Status: `draft` or `published`.
     status: String,
+    /// Page type: `standard` or `landing`. Read at creation
+    /// only; on updates it is ignored entirely, so a crafted
+    /// layout field changes nothing (the type is fixed at
+    /// creation, CMS_SPEC §9).
+    #[serde(default = "default_page_layout")]
+    layout: String,
+    /// Sitemap switch: present (with any value) when the
+    /// form's checkbox is on, absent when it is off.
+    #[serde(default)]
+    in_sitemap: Option<String>,
     /// The one-time form ticket minted when this form was
     /// rendered (see `form_ticket_service`); empty when a
     /// client posts without rendering the form, which the
@@ -96,6 +116,8 @@ impl From<ContentPageForm> for ContentPageInput {
             format: form.format,
             meta_description: form.meta_description,
             status: form.status,
+            layout: form.layout,
+            in_sitemap: form.in_sitemap.is_some(),
         }
     }
 }
@@ -110,15 +132,73 @@ pub struct PreviewForm {
     /// Format the unsaved body is written in.
     #[serde(default = "default_page_format")]
     format: String,
+    /// Page type being edited: a landing page previews in
+    /// the landing layout with its embeds expanded, exactly
+    /// as publishing will serve it.
+    #[serde(default)]
+    layout: String,
 }
 
-/// GET /admin/content/pages: every page, system first.
-pub async fn list(
+/// The pages list's query: the hub tab's type filter.
+#[derive(Deserialize, Default)]
+pub struct PageListQuery {
+    /// `landing` or `standard`; anything else (or nothing)
+    /// lists every page — the pre-hub list's behaviour.
+    layout: Option<String>,
+}
+
+/// The create form's query: the hub's type preset.
+#[derive(Deserialize, Default)]
+pub struct NewPageQuery {
+    /// `landing` presets the landing editor; anything else
+    /// is the standard page editor.
+    layout: Option<String>,
+}
+
+/// GET /admin/content: the pages hub (CMS_SPEC §9) — the
+/// three page types with their counts and type-first
+/// create entries.
+pub async fn hub(
     State(pool): State<PgPool>,
     CurrentAdmin(admin): CurrentAdmin,
     session: Session,
 ) -> Response {
-    match content_page_service::list_pages(&pool).await {
+    let blog_count = match crate::services::admin::post_service::count_posts(&pool).await {
+        Ok(n) => n,
+        Err(e) => return db_error("pages hub", e),
+    };
+    let landing_count = match content_page_service::count_pages(&pool, "landing").await {
+        Ok(n) => n,
+        Err(e) => return db_error("pages hub", e),
+    };
+    let standard_count = match content_page_service::count_pages(&pool, "standard").await {
+        Ok(n) => n,
+        Err(e) => return db_error("pages hub", e),
+    };
+    render(PagesHubView {
+        layout: layout_for(&pool, &admin, &session).await,
+        nav: "pages",
+        blog_count,
+        landing_count,
+        standard_count,
+    })
+}
+
+/// GET /admin/content/pages: pages, system first; the
+/// `layout` query narrows to one page type (the hub's
+/// landing / standard tabs).
+pub async fn list(
+    State(pool): State<PgPool>,
+    CurrentAdmin(admin): CurrentAdmin,
+    session: Session,
+    Query(query): Query<PageListQuery>,
+) -> Response {
+    let layout_filter = match query.layout.as_deref() {
+        Some("landing") => Some("landing"),
+        Some("standard") => Some("standard"),
+        _ => None,
+    };
+    match content_page_service::list_pages(&pool, layout_filter).await {
         Ok(summaries) => {
             let rows = summaries
                 .iter()
@@ -126,7 +206,7 @@ pub async fn list(
                     edit_url: format!("/admin/content/pages/{}", s.page.id),
                     title: s.page.title.clone(),
                     url_path: s.page.url_path(),
-                    kind_label: s.page.kind_label(),
+                    type_label: s.page.type_label(),
                     status_label: s.page.status_label(),
                     published: s.page.is_published(),
                     updated_label: s.page.updated_date_label(),
@@ -137,6 +217,7 @@ pub async fn list(
             render(ContentPageListView {
                 layout: layout_for(&pool, &admin, &session).await,
                 nav: "content",
+                active_tab: layout_filter.unwrap_or(""),
                 rows,
             })
         }
@@ -144,23 +225,41 @@ pub async fn list(
     }
 }
 
-/// GET /admin/content/pages/new: the blank editor.
+/// GET /admin/content/pages/new: the blank editor. The
+/// `layout` query presets the page type from the hub's
+/// type-first create flow (CMS_SPEC §9): a landing page
+/// starts with the sitemap switch off, a standard page
+/// with it on.
 pub async fn new_page(
     State(pool): State<PgPool>,
     CurrentAdmin(admin): CurrentAdmin,
     session: Session,
+    Query(query): Query<NewPageQuery>,
 ) -> Response {
+    let landing = query.layout.as_deref() == Some("landing");
+    let values = ContentPageInput {
+        layout: if landing { "landing" } else { "standard" }.to_string(),
+        in_sitemap: !landing,
+        status: "draft".to_string(),
+        format: "markdown".to_string(),
+        ..ContentPageInput::default()
+    };
     let view = ContentPageFormView::new(
         layout_for(&pool, &admin, &session).await,
         ContentFormChrome {
-            heading: "ページの登録".to_string(),
+            heading: if landing {
+                "ランディングページの登録".to_string()
+            } else {
+                "ページの登録".to_string()
+            },
             action: "/admin/content/pages".to_string(),
+            page_layout: values.layout.clone(),
             slug_editable: true,
             is_system: false,
             revisions_url: None,
             delete_url: None,
         },
-        ContentPageInput::default(),
+        values,
     );
     render(view)
 }
@@ -280,17 +379,34 @@ pub async fn preview(
     // The preview renders exactly what publishing would serve:
     // an HTML body goes through the same sanitiser the save
     // path applies, so the two can never diverge.
-    let body_html = if form.format == "html" {
+    let rendered = if form.format == "html" {
         crate::util::html_sanitize::sanitize_html(&form.body_md)
     } else {
         crate::util::markdown::render_markdown(&form.body_md)
     };
-    let mut response = crate::controllers::storefront::render(ContentView {
-        header,
-        title: form.title,
-        body_html,
-        updated_label: None,
-    });
+    // A landing page previews in its own layout with its
+    // embeds expanded — the real render, like the blog's
+    // preview (CMS_SPEC §9). Its meta description is the
+    // shop default here: the preview form carries no meta
+    // field, and the published page falls back the same way
+    // when its own is empty.
+    let mut response = if form.layout == "landing" {
+        let marked = crate::util::shortcode::mark_embeds(&rendered);
+        let body_html = crate::services::blog_service::expand_embeds(&pool, &marked).await;
+        crate::controllers::storefront::render(LandingView {
+            meta_description: header.shop.meta_description().to_string(),
+            header,
+            title: form.title,
+            body_html,
+        })
+    } else {
+        crate::controllers::storefront::render(ContentView {
+            header,
+            title: form.title,
+            body_html: rendered,
+            updated_label: None,
+        })
+    };
     response
         .headers_mut()
         .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
@@ -404,12 +520,15 @@ async fn form_view_for(
     let mut view = ContentPageFormView::new(
         layout_for(pool, admin, session).await,
         ContentFormChrome {
-            heading: if page.is_system() {
+            heading: if page.is_landing() {
+                "ランディングページの編集".to_string()
+            } else if page.is_system() {
                 "固定ページの編集".to_string()
             } else {
                 "ページの編集".to_string()
             },
             action: format!("/admin/content/pages/{}", page.id),
+            page_layout: page.layout.clone(),
             slug_editable: false,
             is_system: page.is_system(),
             revisions_url: Some(format!("/admin/content/pages/{}/revisions", page.id)),
@@ -443,19 +562,28 @@ async fn form_with_errors(
             Ok(page) => form_view_for(pool, admin, session, &page, Some(input)).await,
             Err(_) => return record_not_found(pool, admin, session).await,
         },
-        None => ContentPageFormView::new(
-            layout_for(pool, admin, session).await,
-            ContentFormChrome {
-                heading: "ページの登録".to_string(),
-                action: "/admin/content/pages".to_string(),
-                slug_editable: true,
-                is_system: false,
-                revisions_url: None,
-                delete_url: None,
-            },
-            input,
-        ),
+        None => {
+            let landing = input.layout == "landing";
+            ContentPageFormView::new(
+                layout_for(pool, admin, session).await,
+                ContentFormChrome {
+                    heading: if landing {
+                        "ランディングページの登録".to_string()
+                    } else {
+                        "ページの登録".to_string()
+                    },
+                    action: "/admin/content/pages".to_string(),
+                    page_layout: input.layout.clone(),
+                    slug_editable: true,
+                    is_system: false,
+                    revisions_url: None,
+                    delete_url: None,
+                },
+                input,
+            )
+        }
     };
+    view.layout_error = field_error(errors, "layout");
     view.slug_error = field_error(errors, "slug");
     view.title_error = field_error(errors, "title");
     view.body_error = field_error(errors, "body_md");

@@ -6,7 +6,11 @@
 //! draft or unknown slug answers the styled 404,
 //! indistinguishably. System pages resolve only at the short
 //! URLs above: under `/pages/` they answer the same 404, so
-//! no page ever has two URLs. Only `/withdrawn` stays a
+//! no page ever has two URLs. Landing pages (CMS_SPEC §9)
+//! live apart at `/lp/{slug}` in their minimal-chrome
+//! layout; a standard page's slug there answers the same
+//! 404, and a landing page's slug under `/pages/` does too
+//! — the namespaces never cross. Only `/withdrawn` stays a
 //! static template: it is the farewell page of the withdrawal
 //! flow, not shop content.
 
@@ -24,7 +28,7 @@ use super::{header_for, render};
 use crate::error::AppError;
 use crate::models::ContentPage;
 use crate::services::content_page_service;
-use crate::views::storefront::content_page::ContentView;
+use crate::views::storefront::content_page::{ContentView, LandingView};
 use crate::views::storefront::errors::PageNotFoundView;
 use crate::views::storefront::withdrawn::WithdrawnView;
 
@@ -38,6 +42,7 @@ pub fn router() -> Router<PgPool> {
         .route("/legal", get(legal_page))
         .route("/faq", get(faq_page))
         .route("/pages/{slug}", get(custom_page))
+        .route("/lp/{slug}", get(landing_page))
         .route("/withdrawn", get(withdrawn_page))
 }
 
@@ -76,6 +81,44 @@ async fn custom_page(
     Path(slug): Path<String>,
 ) -> Response {
     custom_content_response(&pool, &session, &slug).await
+}
+
+/// GET /lp/{slug}: a landing page — published landing
+/// pages only, rendered in the minimal-chrome layout with
+/// its embed shortcodes expanded. A draft, an unknown slug
+/// and a standard page's slug all answer the styled 404,
+/// indistinguishably.
+async fn landing_page(
+    session: Session,
+    State(pool): State<PgPool>,
+    Path(slug): Path<String>,
+) -> Response {
+    let header = header_for(&pool, &session, false).await;
+    match content_page_service::published_landing_page(&pool, &slug).await {
+        Ok(Some(page)) => {
+            // The meta description's fallback: the page's
+            // own, else the shop default the header carries.
+            let meta_description = if page.meta_description.trim().is_empty() {
+                header.shop.meta_description().to_string()
+            } else {
+                page.meta_description.clone()
+            };
+            render(LandingView {
+                header,
+                title: page.title.clone(),
+                body_html: content_page_service::render_landing_body(&pool, &page).await,
+                meta_description,
+            })
+        }
+        Ok(None) => {
+            let view = PageNotFoundView { header };
+            (StatusCode::NOT_FOUND, render(view)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("landing page load failed: {e}");
+            (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error").into_response()
+        }
+    }
 }
 
 /// The system pages' tail: load the published page by slug.

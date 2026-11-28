@@ -26,7 +26,7 @@
 
 ## ケース一覧
 
-<!-- MAX_UT_ID: 359 -->
+<!-- MAX_UT_ID: 365 -->
 <!-- INVENTORY:BEGIN -->
 
 ### app / api::mcp::tools
@@ -116,6 +116,13 @@
 | 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
 |---|---|---|---|---|---|
 | UT-034 | models::carrier::tests::tracking_url_only_for_deep_linkable_carriers | tracking_url | 変換・異常系 | sagawa は追跡 URL を生成し、other と未知キャリアは None になること | Pass |
+
+### app / models::content_page
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-360 | models::content_page::tests::type_label_names_landing_pages_and_keeps_kind_labels | models::content_page | 変換 | type_label：ランディングページは kind によらず「ランディングページ」と名付けられ、標準のカスタムページは「カスタムページ」、システムページは「固定ページ」のラベルを保つこと | Pass |
+| UT-361 | models::content_page::tests::url_path_routes_each_type_to_its_namespace | models::content_page | 変換 | url_path：ランディングページは /lp/{slug} に、システムページは従来の固定パス（/guide、/legal）に、カスタムの標準ページは /pages/{slug} に解決されること | Pass |
 
 ### app / models::delivery
 
@@ -215,6 +222,14 @@
 | UT-074 | pricing::tests::groups_thousands | format_with_symbol（金額表示） | 変換 | ¥2,980、¥1,234,567、¥500、¥0 と桁区切りされること | Pass |
 | UT-075 | pricing::tests::keeps_the_minus_sign | format_with_symbol | 変換 | 負額が ¥-1,500 と符号を保持すること | Pass |
 | UT-076 | pricing::tests::yen_word_symbol_follows_the_amount | format_with_symbol | 変換 | 記号「円」は金額の後ろに付き「500円」になること | Pass |
+
+### app / services::admin::content_page_service
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-362 | services::admin::content_page_service::tests::create_accepts_both_layouts_and_carries_the_sitemap_switch | services::admin::content_page_service | 正常系 | 作成時の validate_page は layout の standard と landing の両方を受理し、in_sitemap をそのまま引き継ぐこと（新しい LP の false は false のまま、true は true のまま） | Pass |
+| UT-363 | services::admin::content_page_service::tests::create_refuses_an_unknown_layout | services::admin::content_page_service | 異常系 | 作成時の validate_page は未知の layout を、layout に対するちょうど1件のフィールドエラー（ページの種別が不正です。）で失敗させ、他のエラーを出さないこと | Pass |
+| UT-364 | services::admin::content_page_service::tests::update_never_validates_layout_because_it_never_writes_it | services::admin::content_page_service | 境界値 | 更新経路の validate_page は layout を決して検証しないこと（更新では決して書き込まれないため）：未知の layout 値でも layout エラーなしに通過すること | Pass |
 
 ### app / services::admin::home_content_service
 
@@ -564,6 +579,7 @@
 | 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
 |---|---|---|---|---|---|
 | UT-302 | services::sitemap_service::tests::escapes_all_five_xml_specials | services::sitemap_service | （未記入） | （未記入） | 未実施 |
+| UT-365 | services::sitemap_service::tests::page_path_uses_each_types_namespace | services::sitemap_service | 変換 | サイトマップの page_path：layout が landing の slug は /lp/{slug} に、standard は /pages/{slug} に対応付けられること | Pass |
 | UT-303 | services::sitemap_service::tests::render_escapes_specials_in_locations | services::sitemap_service | （未記入） | （未記入） | 未実施 |
 | UT-304 | services::sitemap_service::tests::render_omits_lastmod_when_absent | services::sitemap_service | （未記入） | （未記入） | 未実施 |
 | UT-305 | services::sitemap_service::tests::render_trims_base_slash_and_formats_lastmod | services::sitemap_service | （未記入） | （未記入） | 未実施 |

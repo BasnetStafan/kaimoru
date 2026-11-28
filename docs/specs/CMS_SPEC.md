@@ -204,3 +204,103 @@ Deliberate non-features:
   shortcodes with examples; IDs come from the product
   and category lists.
 
+## 9. Page types and landing pages (added 2026-11-28)
+
+The owner's reshape of the CMS admin: blog posts, landing
+pages and standard pages are **types of page** in one
+admin area, not three features. Storage stays per type —
+a post's fields (category, excerpt, cover, feed) and a
+page's fields (menu placement, system kinds) barely
+overlap — but the operator meets one concept: pages,
+with types.
+
+### The three types
+
+- **ブログ記事 (blog post)** — the `posts` table of §1–5:
+  dated, categorised, in the blog index and the feed.
+  Edited at `/admin/posts`.
+- **通常ページ (standard page)** — `content_pages` with
+  `layout = 'standard'`: the system pages at their
+  historic routes and custom pages under `/pages/{slug}`,
+  in the full site chrome. Edited at
+  `/admin/content/pages`.
+- **ランディングページ (landing page)** — `content_pages`
+  with `layout = 'landing'`: a campaign page at
+  `/lp/{slug}` in a dedicated minimal-chrome layout.
+
+### The hub
+
+`/admin/content` is the pages hub: the three types with
+their counts, a type tab bar (ブログ記事 /
+ランディングページ / 通常ページ） that rides on each
+type's list, and type-first creation — the create action
+asks the type first and opens that type's editor (the
+post form; the page form with the landing preset; the
+page form standard). The sidebar's コンテンツ group has
+one ページ entry for the hub; ブログカテゴリ and
+メニュー設定 keep their own entries. Every pre-existing
+list URL keeps working: the content list takes a
+`layout` filter (`?layout=landing` / `?layout=standard`;
+anything else lists everything, the pre-hub behaviour).
+
+### Landing page rules
+
+- **Data**: migration 20261101000051 adds
+  `layout TEXT NOT NULL DEFAULT 'standard'` (CHECK in
+  `standard` / `landing`) and
+  `in_sitemap BOOLEAN NOT NULL DEFAULT TRUE` to
+  `content_pages`. Existing rows become standard pages
+  with unchanged sitemap behaviour.
+- **Type is fixed at creation.** The editor carries the
+  type as a hidden field (so create and preview know it)
+  and shows it as a read-only badge; the update path
+  never writes the layout column, so no save — crafted
+  or honest — can move a page between the `/pages/` and
+  `/lp/` namespaces. Converting a page's type is a copy:
+  create a page of the new type with the same words and
+  retire the old one.
+- **Slugs are unique per layout** (the migration swaps
+  the slug UNIQUE constraint for UNIQUE (slug, layout)):
+  `/pages/{slug}` and `/lp/{slug}` are different
+  namespaces, so a standard page and a landing page may
+  share one slug string and each serves on its own
+  route. The reserved-slug list applies to both types.
+- **Storefront**: `GET /lp/{slug}` serves a published
+  landing page only. Draft, unknown and standard-layout
+  slugs answer the identical styled 404 (no oracle), and
+  a landing slug under `/pages/` 404s the same way. The
+  minimal chrome is the shop logo (home), the cart link,
+  and a legal footer （特定商取引法 / プライバシーポリシー /
+  利用規約 + copyright) — no category nav, no search box,
+  no global menu. Meta description comes from the page's
+  own field, falling back to the shop default.
+- **Embeds**: landing bodies expand the §8 shortcodes
+  through the blog's exact machinery — cached body,
+  token marking, per-request `expand_embeds` — so a
+  landing page sells with the same cards and the same
+  CSRF posture as a post. Standard content pages still
+  never expand: their tokens stay literal text. The
+  admin preview of a landing page renders in the landing
+  layout with embeds expanded, like the blog preview.
+- **Sitemap**: a custom content page is listed only when
+  published AND `in_sitemap` is on (system pages keep
+  their fixed sitemap entries, as before). Standard pages ride
+  the default (on — unchanged behaviour); a new landing
+  page starts OFF and its operator opts in on the edit
+  form, because campaign pages are usually ad-landing
+  surfaces that should not compete with the catalogue in
+  search results. Landing entries are listed under
+  `/lp/{slug}`.
+- **Menus**: the menu editor takes free-text label + URL
+  rows and offers no page choices, so there is nothing
+  to filter — a landing page can only enter a menu if an
+  operator deliberately types its URL, which is their
+  explicit choice, not the editor offering it.
+
+Verification: `scripts/tests/test_landing_pages.sh`
+(57 checks: hub + type-first creation, the LP's minimal
+chrome, embed add-to-cart, draft/no-oracle 404s, the
+shared-slug namespaces, standard pages' literal
+shortcodes, the sitemap opt-in, the tab filters, the
+menu editor) with the blog suite (61) and MCP suite
+(26) as regressions.

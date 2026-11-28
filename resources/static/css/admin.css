@@ -2560,3 +2560,9 @@ button.danger,
     box-shadow: var(--focus-ring);
     outline: none;
 }
+
+/* The pages hub's action cells: links stay on one line
+   instead of wrapping mid-word. */
+.hub-actions a {
+  white-space: nowrap;
+}

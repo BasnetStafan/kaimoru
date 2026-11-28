@@ -3372,3 +3372,29 @@ body.lightbox-open {
 .settlement-address-form {
     margin-top: 12px;
 }
+
+/* Landing pages (CMS_SPEC §9): the minimal chrome's own
+   rules — the header keeps the standard bar's shape (its
+   inner row already spreads logo and nav apart); the
+   footer is a single centred legal row, and the article
+   column runs a little wider than the info pages'
+   measure, as a campaign page's cards want the room. */
+.lp-footer {
+    margin-top: 3rem;
+    padding: 1.5rem 1rem 2rem;
+    border-top: 1px solid var(--border, #ddd);
+    text-align: center;
+}
+
+.lp-footer-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+}
+
+.landing-page {
+    max-width: 880px;
+    margin: 0 auto;
+}

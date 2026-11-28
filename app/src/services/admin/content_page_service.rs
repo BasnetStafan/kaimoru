@@ -70,7 +70,9 @@ const RESERVED_SLUGS: &[&str] = &[
 
 /// The raw content page form as submitted: every value a
 /// string, exactly as typed. `slug` is read at creation only;
-/// the update path never looks at it.
+/// the update path never looks at it. `layout` is likewise
+/// creation-only (CMS_SPEC §9): the update path never writes
+/// it, so no save can move a page between namespaces.
 #[derive(Clone, Default)]
 pub struct ContentPageInput {
     /// Slug as typed (creation only).
@@ -86,6 +88,12 @@ pub struct ContentPageInput {
     pub meta_description: String,
     /// Status as typed: `draft` or `published`.
     pub status: String,
+    /// Page type as preset by the create flow: `standard`
+    /// or `landing` (creation only).
+    pub layout: String,
+    /// Whether the sitemap may list the page (the form's
+    /// checkbox).
+    pub in_sitemap: bool,
 }
 
 impl From<&ContentPage> for ContentPageInput {
@@ -98,6 +106,8 @@ impl From<&ContentPage> for ContentPageInput {
             format: page.format.clone(),
             meta_description: page.meta_description.clone(),
             status: page.status.clone(),
+            layout: page.layout.clone(),
+            in_sitemap: page.in_sitemap,
         }
     }
 }
@@ -120,6 +130,10 @@ pub struct ValidatedPage {
     pub meta_description: String,
     /// `draft` or `published`.
     pub status: String,
+    /// Page type (creation only): `standard` or `landing`.
+    pub layout: String,
+    /// Whether the sitemap may list the page.
+    pub in_sitemap: bool,
 }
 
 /// Whether a slug satisfies the page rule: 3–60
@@ -157,9 +171,14 @@ pub fn validate_page(
         format: input.format.trim().to_string(),
         meta_description: input.meta_description.trim().to_string(),
         status: input.status.trim().to_string(),
+        layout: input.layout.trim().to_string(),
+        in_sitemap: input.in_sitemap,
     };
     let mut errors = Vec::new();
     if creating {
+        if page.layout != "standard" && page.layout != "landing" {
+            errors.push(FieldError::new("layout", "ページの種別が不正です。"));
+        }
         if !is_valid_page_slug(&page.slug) {
             errors.push(FieldError::new(
                 "slug",
@@ -226,9 +245,18 @@ pub fn validate_page(
     }
 }
 
-/// Returns every page for the admin list.
-pub async fn list_pages(pool: &PgPool) -> Result<Vec<ContentPageSummary>, AppError> {
-    content_page_repository::list_all(pool).await
+/// Returns pages for the admin list; `layout` narrows to
+/// one page type (the hub's tabs, CMS_SPEC §9).
+pub async fn list_pages(
+    pool: &PgPool,
+    layout: Option<&str>,
+) -> Result<Vec<ContentPageSummary>, AppError> {
+    content_page_repository::list_all(pool, layout).await
+}
+
+/// Counts pages of one layout (the hub's type cards).
+pub async fn count_pages(pool: &PgPool, layout: &str) -> Result<i64, AppError> {
+    content_page_repository::count_by_layout(pool, layout).await
 }
 
 /// Returns one page for the editor, or `NotFound`.
@@ -254,7 +282,7 @@ pub async fn create_page(
     admin_id: i64,
     page: &ValidatedPage,
 ) -> Result<i64, AppError> {
-    if content_page_repository::slug_taken(pool, &page.slug).await? {
+    if content_page_repository::slug_taken(pool, &page.slug, &page.layout).await? {
         return Err(AppError::Validation(vec![FieldError::new(
             "slug",
             "そのスラッグは既に使われています。",
@@ -271,6 +299,8 @@ pub async fn create_page(
             format: &page.format,
             meta_description: &page.meta_description,
             status: &page.status,
+            layout: &page.layout,
+            in_sitemap: page.in_sitemap,
         },
     )
     .await?;
@@ -307,6 +337,7 @@ pub async fn update_page(
         && current.format == page.format
         && current.meta_description == page.meta_description
         && current.status == page.status
+        && current.in_sitemap == page.in_sitemap
     {
         return Ok(());
     }
@@ -321,6 +352,9 @@ pub async fn update_page(
     crate::services::form_ticket_service::ensure_fresh(stamp, expected)?;
     content_page_repository::insert_revision(&mut tx, &current, admin_id).await?;
     content_page_repository::prune_revisions(&mut tx, id).await?;
+    // The layout is deliberately not a parameter of the
+    // update: the stored page keeps its creation-time type
+    // (CMS_SPEC §9), whatever the form carried.
     content_page_repository::update(
         &mut tx,
         id,
@@ -329,6 +363,7 @@ pub async fn update_page(
         &page.format,
         &page.meta_description,
         &page.status,
+        page.in_sitemap,
         admin_id,
     )
     .await?;
@@ -378,6 +413,7 @@ pub async fn restore_revision(
         &revision.format,
         &revision.meta_description,
         &status,
+        current.in_sitemap,
         admin_id,
     )
     .await?;
@@ -429,4 +465,48 @@ pub async fn delete_page(pool: &PgPool, admin_id: i64, id: i64) -> Result<(), Ap
     tx.commit().await.map_err(|e| AppError::db("commit", e))?;
     tracing::info!(admin_id, page_id = id, "content.page.delete: page deleted");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A minimally valid create input of one layout.
+    fn input(layout: &str) -> ContentPageInput {
+        ContentPageInput {
+            slug: "spring-sale".to_string(),
+            title: "春のセール".to_string(),
+            body_md: "本文".to_string(),
+            format: "markdown".to_string(),
+            meta_description: String::new(),
+            status: "draft".to_string(),
+            layout: layout.to_string(),
+            in_sitemap: false,
+        }
+    }
+
+    #[test]
+    fn create_accepts_both_layouts_and_carries_the_sitemap_switch() {
+        for layout in ["standard", "landing"] {
+            let page = validate_page(&input(layout), true).expect("valid page");
+            assert_eq!(page.layout, layout);
+            assert!(!page.in_sitemap);
+        }
+    }
+
+    #[test]
+    fn create_refuses_an_unknown_layout() {
+        let errors = validate_page(&input("weird"), true).expect_err("must refuse");
+        assert!(errors.iter().any(|e| e.field == "layout"));
+    }
+
+    #[test]
+    fn update_never_validates_layout_because_it_never_writes_it() {
+        // The update path ignores the layout entirely (the
+        // stored page keeps its creation-time type), so a
+        // form value — even a crafted one — is not an error
+        // and is never stored.
+        let page = validate_page(&input("weird"), false).expect("update ignores layout");
+        assert_eq!(page.layout, "weird");
+    }
 }

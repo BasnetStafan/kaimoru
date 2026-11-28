@@ -52,16 +52,30 @@ const DISALLOWED_PREFIXES: [&str; 9] = [
     "/search?",
 ];
 
+/// The sitemap path of one published custom page
+/// (CMS_SPEC §9): landing pages live under `/lp/`, the
+/// rest under `/pages/`. Pure, so the namespace rule is
+/// unit-testable without a database.
+fn page_path(slug: &str, layout: &str) -> String {
+    if layout == "landing" {
+        format!("/lp/{slug}")
+    } else {
+        format!("/pages/{slug}")
+    }
+}
+
 /// Builds the sitemap document for `base_url`: the fixed
 /// pages, every public product inside its publish window,
-/// every published custom page, and the blog — its index,
-/// every live post and every category archive holding a
-/// live post.
+/// every published custom page whose `in_sitemap` switch
+/// is on (standard pages by default; landing pages only
+/// when their operator opted in, CMS_SPEC §9), and the
+/// blog — its index, every live post and every category
+/// archive holding a live post.
 pub async fn sitemap_xml(pool: &PgPool, base_url: &str) -> Result<String, AppError> {
     let products = product_repository::sitemap_products(pool)
         .await
         .map_err(|e| AppError::db("sitemap products", e))?;
-    let pages = content_page_repository::list_published_custom(pool).await?;
+    let pages = content_page_repository::list_published_in_sitemap(pool).await?;
     let posts = post_repository::list_live_for_sitemap(pool).await?;
     let blog_categories = post_category_repository::list_with_live_posts(pool).await?;
 
@@ -76,10 +90,14 @@ pub async fn sitemap_xml(pool: &PgPool, base_url: &str) -> Result<String, AppErr
         path: format!("/products/{id}"),
         lastmod: Some(updated_at),
     }));
-    entries.extend(pages.into_iter().map(|(slug, updated_at)| SitemapEntry {
-        path: format!("/pages/{slug}"),
-        lastmod: Some(updated_at),
-    }));
+    entries.extend(
+        pages
+            .into_iter()
+            .map(|(slug, layout, updated_at)| SitemapEntry {
+                path: page_path(&slug, &layout),
+                lastmod: Some(updated_at),
+            }),
+    );
     entries.push(SitemapEntry {
         path: "/blog".to_string(),
         lastmod: None,
@@ -141,6 +159,12 @@ mod tests {
     /// A fixed stamp: 2025-01-01 00:00:00 UTC.
     fn stamp() -> DateTime<Utc> {
         DateTime::from_timestamp(1_735_689_600, 0).expect("valid timestamp")
+    }
+
+    #[test]
+    fn page_path_uses_each_types_namespace() {
+        assert_eq!(page_path("spring-sale", "landing"), "/lp/spring-sale");
+        assert_eq!(page_path("about", "standard"), "/pages/about");
     }
 
     #[test]
