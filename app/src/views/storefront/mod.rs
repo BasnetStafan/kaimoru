@@ -5,6 +5,7 @@ pub mod addresses;
 pub mod agent;
 pub mod agent_settlement;
 pub mod blog;
+pub mod blog_embed;
 pub mod cart;
 pub mod category_index;
 pub mod checkout;

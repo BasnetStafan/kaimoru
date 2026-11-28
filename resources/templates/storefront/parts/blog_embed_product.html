@@ -1,0 +1,29 @@
+{# One product embed's card (CMS_SPEC §8): the catalog card's
+   shape — image, badges, name, tax-inclusive price line, tax
+   note — with the catalog card's own purchasability outcomes:
+   a direct add form (htmx, token-less like every storefront
+   form; the CSRF middleware injects the session token), a
+   detail link for variant products, a disabled button when
+   sold out. #}
+<article class="product-card blog-embed-card">
+    <a href="/products/{{ card.product.id }}"><img src="{{ card.product.thumb_image_path() }}" data-fallback-src="{{ card.product.image_path }}" alt="{{ card.product.card_image_alt() }}" loading="lazy" decoding="async"></a>
+    <div class="badges">
+        {% if card.product.track_stock && !card.product.allow_backorder && card.product.stock == 0 %}<span class="badge state">売り切れ</span>{% else if card.product.is_preorder %}<span class="badge state">予約受付中</span>{% else if card.product.allow_backorder && card.product.stock == 0 %}<span class="badge state">入荷次第発送</span>{% else if card.product.track_stock && card.product.stock <= card.product.low_stock_threshold() %}<span class="badge state">残りわずか</span>{% else if card.product.sale_active() %}<span class="badge promo">{{ card.product.sale_percent_off() }}%OFF</span>{% else if card.product.discount_percent > 0 %}<span class="badge promo">{{ card.product.discount_percent }}%OFF</span>{% else if card.product.is_new %}<span class="badge promo">NEW</span>{% endif %}
+    </div>
+    <h3><a href="/products/{{ card.product.id }}">{{ card.product.name }}</a></h3>
+    <p class="price">{% if card.product.sale_active() %}<span class="regular-price">{{ card.product.formatted_regular_price() }}</span> {% endif %}{{ card.product.formatted_price() }}(税込)</p>
+    {% if let Some(note) = card.product.tax_class_note() %}<p class="card-tax-note">{{ note }}</p>{% endif %}
+    <div class="card-cart">
+        {% if card.action_is_sold_out() %}
+            <button type="button" class="add-cart-button" disabled>売り切れ</button>
+        {% else if card.action_is_detail() %}
+            <a href="/products/{{ card.product.id }}" class="add-cart-button">詳細を見る</a>
+        {% else %}
+            <form hx-post="/cart/items" hx-swap="none">
+                <input type="hidden" name="product_id" value="{{ card.product.id }}">
+                <input type="hidden" name="quantity" value="1">
+                <button type="submit" class="add-cart-button">カートに入れる</button>
+            </form>
+        {% endif %}
+    </div>
+</article>

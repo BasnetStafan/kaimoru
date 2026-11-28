@@ -51,7 +51,11 @@ cleanup() {
   # by the time this trap runs the suite has usually
   # deleted the posts itself, so the row is gone.
   local cover="$COVER_PATH"
-  db "DELETE FROM posts WHERE slug IN ('$POST_SLUG', '$SCHED_SLUG')" >/dev/null
+  db "DELETE FROM posts WHERE slug IN ('$POST_SLUG', '$SCHED_SLUG', '$EMBED_SLUG')" >/dev/null
+  db "DELETE FROM cart_items WHERE variant_id IN (SELECT id FROM product_variants WHERE product_id IN (SELECT id FROM products WHERE name LIKE 'CMSB埋込%'))" >/dev/null
+  db "DELETE FROM product_variants WHERE product_id IN (SELECT id FROM products WHERE name LIKE 'CMSB埋込%')" >/dev/null
+  db "DELETE FROM products WHERE name LIKE 'CMSB埋込%'" >/dev/null
+  db "DELETE FROM categories WHERE slug = '$PCAT_SLUG'" >/dev/null
   db "DELETE FROM post_categories WHERE slug = '$CAT_SLUG'" >/dev/null
   if [ -n "$cover" ]; then
     # The upload machinery also writes _medium/_thumb
@@ -182,6 +186,107 @@ curl -s -b "$JA" -c "$JA" -o /dev/null -X POST "$BASE$RESTORE_URL" -H "x-csrf-to
 fetch "$JG" "$BASE/blog/$POST_SLUG" /tmp/cmsb_page.html
 check_includes "restore brings the first body back" /tmp/cmsb_page.html "$MARK1"
 check_excludes "restore removes the edited body" /tmp/cmsb_page.html "$MARK2"
+
+# --- shoppable embeds (CMS_SPEC §8) ----------------------
+# Fixture catalogue, seeded by SQL in the suites' usual way
+# and removed by the trap: a product category holding two
+# simple products, plus a variant product, a sold-out
+# product and a draft outside it.
+PCAT_NAME="CMSB埋込カテゴリ$SUF"
+PCAT_SLUG="cmsb-pcat-$SUF"
+P_SIMPLE="CMSB埋込シンプル$SUF"
+P_SIMPLE2="CMSB埋込シンプル弐$SUF"
+P_VARIANT="CMSB埋込バリアント$SUF"
+P_SOLDOUT="CMSB埋込売り切れ$SUF"
+P_DRAFT="CMSB埋込下書き$SUF"
+db "INSERT INTO categories (name, slug, is_active) VALUES ('$PCAT_NAME', '$PCAT_SLUG', true)" >/dev/null
+PCAT_ID=$(db "SELECT id FROM categories WHERE slug = '$PCAT_SLUG'")
+db "INSERT INTO products (name, price_yen, category, category_id, image_path, status) VALUES ('$P_SIMPLE', 1980, '$PCAT_NAME', $PCAT_ID, '', 'public')" >/dev/null
+PID_SIMPLE=$(db "SELECT id FROM products WHERE name = '$P_SIMPLE'")
+db "INSERT INTO product_variants (product_id, option_signature, stock) VALUES ($PID_SIMPLE, '', 5)" >/dev/null
+db "INSERT INTO products (name, price_yen, category, category_id, image_path, status) VALUES ('$P_SIMPLE2', 550, '$PCAT_NAME', $PCAT_ID, '', 'public')" >/dev/null
+PID_SIMPLE2=$(db "SELECT id FROM products WHERE name = '$P_SIMPLE2'")
+db "INSERT INTO product_variants (product_id, option_signature, stock) VALUES ($PID_SIMPLE2, '', 3)" >/dev/null
+db "INSERT INTO products (name, price_yen, category, image_path, status) VALUES ('$P_VARIANT', 3200, '', '', 'public')" >/dev/null
+PID_VARIANT=$(db "SELECT id FROM products WHERE name = '$P_VARIANT'")
+db "INSERT INTO product_variants (product_id, option_signature, stock) VALUES ($PID_VARIANT, 'S-赤', 2), ($PID_VARIANT, 'M-青', 2)" >/dev/null
+db "INSERT INTO products (name, price_yen, category, image_path, status) VALUES ('$P_SOLDOUT', 800, '', '', 'public')" >/dev/null
+PID_SOLDOUT=$(db "SELECT id FROM products WHERE name = '$P_SOLDOUT'")
+db "INSERT INTO product_variants (product_id, option_signature, stock) VALUES ($PID_SOLDOUT, '', 0)" >/dev/null
+db "INSERT INTO products (name, price_yen, category, image_path, status) VALUES ('$P_DRAFT', 700, '', '', 'draft')" >/dev/null
+PID_DRAFT=$(db "SELECT id FROM products WHERE name = '$P_DRAFT'")
+db "INSERT INTO product_variants (product_id, option_signature, stock) VALUES ($PID_DRAFT, '', 5)" >/dev/null
+
+# The reinforcement case: ONE post mentioning THREE
+# distinct products plus ONE category, every card live.
+EMBED_SLUG="cmsb-embed-$SUF"
+EMBED_TITLE="CMSB埋込記事$SUF"
+EMBED_BODY="埋め込みテスト本文です。
+
+[[product:$PID_SIMPLE]]
+
+[[product:$PID_VARIANT]]
+
+[[product:$PID_SOLDOUT]]
+
+[[category:$PCAT_ID]]
+
+下書き [[product:$PID_DRAFT]] は表示されません。
+
+書き方メモ [[product:abc]] はそのまま残ります。"
+OUT=$(create_post "$EMBED_SLUG" "$EMBED_TITLE" "$EMBED_BODY" published "2020-01-01T10:00" "$CAT_ID")
+case "$OUT" in "303 "*) ok "multi-embed: post with 3 product embeds + 1 category embed created";; *) ng "multi-embed: post create ($OUT)";; esac
+
+JG2=/tmp/cmsb_guest2.txt; rm -f "$JG2"; curl -s -c "$JG2" $BASE/ -o /dev/null
+fetch "$JG2" "$BASE/blog/$EMBED_SLUG" /tmp/cmsb_embed.html
+check_eq "multi-embed: post page is 200" "$CODE" "200"
+check_includes "multi-embed: simple product card renders" /tmp/cmsb_embed.html "$P_SIMPLE"
+check_includes "multi-embed: card shows the tax-inclusive price" /tmp/cmsb_embed.html "￥1,980"
+check_includes "multi-embed: price carries the tax-included suffix" /tmp/cmsb_embed.html "(税込)"
+check_includes "multi-embed: variant product card renders" /tmp/cmsb_embed.html "$P_VARIANT"
+check_includes "multi-embed: variant product links to its detail page" /tmp/cmsb_embed.html "詳細を見る"
+check_includes "multi-embed: sold-out product card renders" /tmp/cmsb_embed.html "$P_SOLDOUT"
+check_includes "multi-embed: sold-out shows the disabled button" /tmp/cmsb_embed.html "disabled>売り切れ<"
+check_includes "multi-embed: category showcase renders its second product" /tmp/cmsb_embed.html "$P_SIMPLE2"
+check_includes "multi-embed: category name links to the category page" /tmp/cmsb_embed.html "/search?category="
+check_excludes "multi-embed: draft product renders nothing" /tmp/cmsb_embed.html "$P_DRAFT"
+check_excludes "multi-embed: no embed placeholder is left behind" /tmp/cmsb_embed.html "blog-embed:"
+check_includes "multi-embed: malformed token stays literal" /tmp/cmsb_embed.html "[[product:abc]]"
+FORMS=$(grep -o 'hx-post="/cart/items"' /tmp/cmsb_embed.html | wc -l)
+check_eq "multi-embed: add forms = simple x2 (embed + grid) + simple2, none for variant/sold-out" "$FORMS" "3"
+
+# Two different products, each added from this same page.
+T2=$(csrf /tmp/cmsb_embed.html)
+CODE=$(curl -s -b "$JG2" -c "$JG2" -o /dev/null -w "%{http_code}" -X POST $BASE/cart/items --data-urlencode "product_id=$PID_SIMPLE" --data-urlencode "quantity=1" --data-urlencode "$CT=$T2")
+check_eq "multi-embed: first product added from the post page" "$CODE" "200"
+CODE=$(curl -s -b "$JG2" -c "$JG2" -o /dev/null -w "%{http_code}" -X POST $BASE/cart/items --data-urlencode "product_id=$PID_SIMPLE2" --data-urlencode "quantity=1" --data-urlencode "$CT=$T2")
+check_eq "multi-embed: second, different product added from the same post page" "$CODE" "200"
+fetch "$JG2" "$BASE/cart" /tmp/cmsb_cart.html
+check_includes "multi-embed: cart holds the first product" /tmp/cmsb_cart.html "$P_SIMPLE"
+check_includes "multi-embed: cart holds the second product" /tmp/cmsb_cart.html "$P_SIMPLE2"
+
+# CSRF isolation: the cached body is shared, the token is
+# not — a second session gets its own token on the same
+# page, never the first session's, and its token works.
+JG3=/tmp/cmsb_guest3.txt; rm -f "$JG3"; curl -s -c "$JG3" $BASE/ -o /dev/null
+fetch "$JG3" "$BASE/blog/$EMBED_SLUG" /tmp/cmsb_embed3.html
+T3=$(csrf /tmp/cmsb_embed3.html)
+if [ -n "$T2" ] && [ -n "$T3" ] && [ "$T2" != "$T3" ]; then ok "csrf isolation: two sessions hold different tokens on the same post page"; else ng "csrf isolation: token comparison failed"; fi
+check_excludes "csrf isolation: session B's page never carries session A's token" /tmp/cmsb_embed3.html "$T2"
+CODE=$(curl -s -b "$JG3" -c "$JG3" -o /dev/null -w "%{http_code}" -X POST $BASE/cart/items --data-urlencode "product_id=$PID_SIMPLE" --data-urlencode "quantity=1" --data-urlencode "$CT=$T3")
+check_eq "csrf isolation: session B adds with its own token" "$CODE" "200"
+
+# The feed describes the post; it never carries tokens.
+fetch "$JG2" "$BASE/blog/feed.xml" /tmp/cmsb_feed.html
+check_includes "feed lists the multi-embed post" /tmp/cmsb_feed.html "$EMBED_TITLE"
+check_excludes "feed carries no shortcode tokens" /tmp/cmsb_feed.html "[[product:"
+
+# The admin preview is the real render: embeds expand.
+curl -s -b "$JA" $BASE/admin/posts/new -o /tmp/cmsb_postform.html
+C=$(csrf /tmp/cmsb_postform.html)
+curl -s -b "$JA" -o /tmp/cmsb_preview.html -X POST $BASE/admin/posts/preview --data-urlencode "title=プレビュー確認" --data-urlencode "body_md=確認 [[product:$PID_SIMPLE]] です" --data-urlencode "format=markdown" --data-urlencode "$CT=$C"
+check_includes "admin preview expands the embed to a card" /tmp/cmsb_preview.html "$P_SIMPLE"
+check_includes "admin preview card carries the add form" /tmp/cmsb_preview.html 'hx-post="/cart/items"'
 
 # --- category delete: the post stands, uncategorised ----
 curl -s -b "$JA" $BASE/admin/posts -o /tmp/cmsb_list.html

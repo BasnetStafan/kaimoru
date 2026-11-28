@@ -105,6 +105,7 @@
             {% else %}
             <span class="admin-field-help">見出しは「## 」、箇条書きは「- 」、リンクは「[文字](URL)」と書きます。</span>
             {% endif %}
+            <span class="admin-field-help">本文に <code>[[product:商品ID]]</code> と書くと、その商品のカード（画像・税込価格・「カートに入れる」ボタン）が記事内に表示されます（例：<code>[[product:12]]</code>）。<code>[[category:カテゴリID]]</code> では、そのカテゴリの商品カード一覧を表示します（例：<code>[[category:3]]</code>）。IDは商品一覧・カテゴリ一覧で確認できます。1つの記事に複数書くこともできます。下書き・非公開の商品や無効なカテゴリは、何も表示されません。</span>
             {% if let Some(message) = body_error %}
             <span class="field-error">{{ message }}</span>
             {% endif %}

@@ -189,6 +189,26 @@ pub async fn find(pool: &PgPool, id: i64) -> Result<Option<ProductCategory>, App
     .map_err(|e| AppError::db("find category", e))
 }
 
+/// The active categories among `ids`, in one query: the
+/// blog embed expansion's category load. Inactive and
+/// unknown ids are simply absent — an embed naming one
+/// renders nothing, and the two are never distinguished.
+pub async fn find_active_by_ids(
+    pool: &PgPool,
+    ids: &[i64],
+) -> Result<Vec<ProductCategory>, AppError> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    sqlx::query_as::<_, ProductCategory>(&format!(
+        "SELECT {CATEGORY_COLUMNS} FROM categories WHERE id = ANY($1) AND is_active"
+    ))
+    .bind(ids)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::db("find categories by ids", e))
+}
+
 /// Returns one category by its exact display name.
 pub async fn find_by_name(pool: &PgPool, name: &str) -> Result<Option<ProductCategory>, AppError> {
     sqlx::query_as::<_, ProductCategory>(&format!(

@@ -1,0 +1,13 @@
+{# One category embed's showcase (CMS_SPEC §8): the category
+   name and the see-all link both point at the storefront
+   category page — the search filter the category index uses —
+   whose product set this grid previews (capped by the
+   service). Adds stay per product: there is deliberately no
+   add-the-whole-category button. #}
+<section class="blog-embed-category">
+    <h3 class="blog-embed-category-title"><a href="/search?category={{ name|urlencode }}">{{ name }}</a></h3>
+    <div class="product-grid blog-embed-grid">
+        {% for card in cards %}{% include "storefront/parts/blog_embed_product.html" %}{% endfor %}
+    </div>
+    <p class="blog-embed-category-more"><a href="/search?category={{ name|urlencode }}">{{ name }}の商品一覧を見る</a></p>
+</section>

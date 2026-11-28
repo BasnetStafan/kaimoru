@@ -172,7 +172,7 @@ async fn post_page(
                     .as_ref()
                     .map(|slug| format!("/blog/category/{slug}")),
                 cover_image_path: view.post.cover_medium_path(),
-                body_html: blog_service::render_body(&view.post),
+                body_html: blog_service::render_body_expanded(&pool, &view.post).await,
                 meta_description,
             })
         }

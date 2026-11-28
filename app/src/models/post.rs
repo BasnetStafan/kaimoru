@@ -141,13 +141,16 @@ impl Post {
 
     /// The summary cards and the feed show: the stored
     /// excerpt when the operator wrote one, else one derived
-    /// from the body text.
+    /// from the body text. Embed shortcodes are stripped
+    /// either way (see `strip_shortcode_tokens`): a token
+    /// is a rendering instruction, not words, and must never
+    /// leak into a text surface.
     pub fn excerpt_or_derived(&self) -> String {
         let stored = self.excerpt.trim();
         if !stored.is_empty() {
-            return stored.to_string();
+            return strip_shortcode_tokens(stored);
         }
-        derive_excerpt(&self.body_md, &self.format)
+        strip_shortcode_tokens(&derive_excerpt(&self.body_md, &self.format))
     }
 
     /// The card-sized derivative of the cover image, when
@@ -302,6 +305,20 @@ pub struct PostRevisionSummary {
     pub revision: PostRevision,
     /// Display name of the admin who recorded the snapshot.
     pub editor_name: String,
+}
+
+/// Removes well-formed embed shortcodes from excerpt
+/// text. When a removal leaves doubled spaces behind, the
+/// text is re-collapsed; untouched text passes through
+/// exactly as written, so an operator's stored excerpt
+/// keeps its own spacing.
+fn strip_shortcode_tokens(text: &str) -> String {
+    let stripped = crate::util::shortcode::strip_shortcodes(text);
+    if stripped == text {
+        text.to_string()
+    } else {
+        collapse_whitespace(&stripped)
+    }
 }
 
 /// How many characters a derived excerpt keeps before the
@@ -510,6 +527,20 @@ mod tests {
         // stored body is sanitised at save, so a script never
         // reaches derivation in production.
         assert_eq!(derive_excerpt(body, "html"), "見出し 本文 & 補足 x");
+    }
+
+    #[test]
+    fn excerpt_strips_embed_shortcodes() {
+        let mut p = post("published", Some(now()));
+        p.body_md = "おすすめ [[product:5]] と [[category:2]] です".to_string();
+        assert_eq!(p.excerpt_or_derived(), "おすすめ と です");
+        p.excerpt = "要約 [[product:5]] 付き".to_string();
+        assert_eq!(p.excerpt_or_derived(), "要約 付き");
+        // A malformed token is the author's literal words:
+        // it stays, in the excerpt as in the body.
+        p.excerpt = String::new();
+        p.body_md = "書き方 [[product:abc]] の説明".to_string();
+        assert_eq!(p.excerpt_or_derived(), "書き方 [[product:abc]] の説明");
     }
 
     #[test]

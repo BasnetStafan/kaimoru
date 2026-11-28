@@ -26,7 +26,7 @@
 
 ## ケース一覧
 
-<!-- MAX_UT_ID: 345 -->
+<!-- MAX_UT_ID: 359 -->
 <!-- INVENTORY:BEGIN -->
 
 ### app / api::mcp::tools
@@ -169,6 +169,7 @@
 |---|---|---|---|---|---|
 | UT-330 | models::post::tests::excerpt_derives_from_html_text | models::post | （未記入） | タグ付きの HTML 本文（保存済み抜粋なし） | タグが除去され、残りのテキストが返される |
 | UT-331 | models::post::tests::excerpt_derives_from_markdown_text | models::post | （未記入） | 見出し・リンク・強調マーカー付きの Markdown 本文（保存済み抜粋なし） | マーカーが除去され、読めるテキストが返される |
+| UT-346 | models::post::tests::excerpt_strips_embed_shortcodes | models::post | 埋め込みショートコードがある場合の抜粋導出と保存済み抜粋 | 整形済みの商品／カテゴリトークンを含む本文と保存済み抜粋（対照として不正なトークンも含む） | 整形済みトークンは両方の経路から除去され（空白は再圧縮される）、不正なトークンはリテラルテキストとして残る |
 | UT-332 | models::post::tests::excerpt_truncates_with_ellipsis | models::post | （未記入） | 120 文字を超える本文テキスト | ちょうど 120 文字＋省略記号になる |
 | UT-333 | models::post::tests::liveness_needs_published_and_arrived_date | models::post | （未記入） | 下書き／公開＋未来日／公開＋日付なし／公開＋過去日 | 最後のものだけが公開中になる |
 | UT-334 | models::post::tests::state_labels_follow_the_derived_state | models::post | （未記入） | 各派生状態の記事が1件ずつ | ラベルは 下書き / 予約中 / 公開中 |
@@ -376,6 +377,7 @@
 |---|---|---|---|---|---|
 | UT-340 | services::blog_service::tests::feed_escapes_operator_text | services::blog_service | （未記入） | &、<、> を含む記事タイトルと抜粋 | フィードはエスケープされた実体を持ち、生のマークアップは決して含まない |
 | UT-341 | services::blog_service::tests::feed_renders_channel_and_items_with_absolute_links | services::blog_service | （未記入） | 公開中の記事1件とベース URL | チャンネルのタイトル／リンクと、アイテムの絶対リンク・guid・RFC 822 の pubDate を持つ RSS 2.0 |
+| UT-347 | services::blog_service::tests::render_body_marks_embeds_and_caches_no_form | services::blog_service | レンダリングキャッシュの埋め込み契約（CMS_SPEC §8） | 商品ショートコードとカテゴリショートコードを1つずつ含む Markdown 記事 | レンダリング済み（キャッシュ済み）HTML は両トークンのプレースホルダコメントを持ち、生のトークンテキスト・フォームマークアップ・CSRF 形式のフィールドを含まず、2回目の読み取りでは同一のキャッシュ文字列が返される |
 | UT-342 | services::blog_service::tests::rfc822_label_is_gmt_english | services::blog_service | （未記入） | 既知の UTC の瞬間（2026-11-28 12:00 UTC） | "Sat, 28 Nov 2026 12:00:00 GMT" |
 
 ### app / services::cart_service
@@ -672,6 +674,18 @@
 | UT-290 | util::markdown::tests::headings_lists_and_links_render | Markdown レンダリング | 変換 | 見出し、リスト、リンクが HTML 化されること | Pass |
 | UT-291 | util::markdown::tests::raw_html_renders_as_text | Markdown レンダリング | 検証・サニタイズ | 生 HTML はエスケープされ、スクリプトとして実行されないこと | Pass |
 
+### app / util::shortcode
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-348 | util::shortcode::tests::malformed_tokens_stay_literal | util::shortcode | ショートコード文法の厳密性 | 空の数字、英字、内側の空白、閉じ括弧が1つだけ、複数形の種別ワード、オーバーフローする数値、非 ASCII の種別ワードといったすべての不正な形状は、mark_embeds と strip_shortcodes を変更されずリテラルテキストとして通過すること | Pass |
+| UT-349 | util::shortcode::tests::marks_duplicates_and_adjacent_tokens | util::shortcode | 重複・隣接トークンのマーキング | 同じ商品トークンを2つ連続させ、テキストの後に別の商品トークンを置いた場合、各出現がその場でそれぞれのプレースホルダコメントになること | Pass |
+| UT-350 | util::shortcode::tests::marks_product_and_category_tokens | util::shortcode | 両種別トークンのマーキング | 日本語テキストの間に商品トークンとカテゴリトークンを1つずつ含む HTML テキストで、両トークンがプレースホルダコメントになり、周囲のテキストは変更されないこと | Pass |
+| UT-351 | util::shortcode::tests::plain_text_passes_through_unchanged | util::shortcode | トークンを含まないテキストは書き換えられない | 括弧と URL を含むがショートコードを含まない HTML 段落では、mark_embeds は入力をそのまま返し、embed_refs は何も見つけないこと | Pass |
+| UT-352 | util::shortcode::tests::refs_are_distinct_in_first_appearance_order | util::shortcode | 展開の買い物リスト（初出順・重複なし） | カテゴリトークンと商品トークンを繰り返し含むマーキング済み HTML で、embed_refs は各種別・ID の組を初出順に1回だけ返すこと | Pass |
+| UT-353 | util::shortcode::tests::strip_placeholders_removes_every_occurrence | util::shortcode | プレースホルダの除去（展開の失敗時の姿勢） | 同じプレースホルダを2回含むマーキング済み HTML で、すべての出現が除去され、周囲のテキストは変更されないこと | Pass |
+| UT-354 | util::shortcode::tests::strip_removes_wellformed_tokens_only | util::shortcode | 抜粋の除去は整形済みトークンのみが対象 | 整形済みの商品トークンと不正なトークンを1つずつ含むテキストで、整形済みトークンは除去され、不正なトークンはリテラルとして残ること | Pass |
+
 ### app / util::xml
 
 | 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
@@ -689,6 +703,16 @@
 | UT-295 | validation::tests::phone_accepts_ten_or_eleven_digits | phone_digits | 変換・境界値 | ハイフンを除去して10桁と11桁を受理し、英字混入と短すぎる番号は None になること | Pass |
 | UT-296 | validation::tests::postal_code_accepts_hyphens_only_as_separators | postal_code_digits | 変換・異常系 | 7桁と3-4ハイフン形式を受理し、英字、空白、桁不足、空は None になること | Pass |
 | UT-297 | validation::tests::slug_shape_is_the_url_safe_subset | is_valid_slug | 検証・境界値 | 小文字英数とハイフンが可、空、大文字、両端ハイフン、日本語、空白、51字は不可であること | Pass |
+
+### app / views::storefront::blog_embed
+
+| 試験ID | テスト名（フルパス） | 対象（関数・対象） | 試験観点 | 期待結果 | 結果 |
+|---|---|---|---|---|---|
+| UT-355 | views::storefront::blog_embed::tests::backorderable_zero_stock_still_adds | views::storefront::blog_embed | 埋め込みの購入可否（バックオーダー可能な在庫切れ） | 在庫 0 でバックオーダーが許可された在庫管理対象の商品では、アクションは Add になること（カタログカードが「入荷次第発送」として販売する） | Pass |
+| UT-356 | views::storefront::blog_embed::tests::simple_in_stock_product_adds_directly | views::storefront::blog_embed | 埋め込みの購入可否（単純なケース） | 在庫のある単一バリエーションの在庫管理対象商品では、アクションは Add（直接カートに入れるフォーム）になること | Pass |
+| UT-357 | views::storefront::blog_embed::tests::sold_out_beats_variants | views::storefront::blog_embed | 埋め込みの購入可否（売り切れの優先） | 在庫 0・在庫管理対象・バックオーダー不可の複数バリエーション商品では、アクションは Detail ではなく SoldOut になること（カタログカード自体の優先順位） | Pass |
+| UT-358 | views::storefront::blog_embed::tests::untracked_zero_stock_still_adds | views::storefront::blog_embed | 埋め込みの購入可否（在庫管理対象外） | 在庫管理がオフで在庫 0 の商品では、アクションは Add になること（在庫管理対象外の商品が売り切れと読まれることは決してない） | Pass |
+| UT-359 | views::storefront::blog_embed::tests::variant_product_links_to_detail | views::storefront::blog_embed | 埋め込みの購入可否（バリエーションは顧客の代わりに選ばない） | 在庫のある複数バリエーション商品では、アクションは Detail（商品ページへのリンク、直接追加なし）になること | Pass |
 
 ### configuration / config
 

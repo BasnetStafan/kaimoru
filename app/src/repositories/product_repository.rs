@@ -191,6 +191,32 @@ pub async fn catalog_products(pool: &PgPool, ids: &[i64]) -> Result<Vec<Product>
     Ok(rows.into_iter().map(Product::from).collect())
 }
 
+/// Every public product in any of the named categories, as
+/// card data, in one query: the blog embed expansion's
+/// showcase load. Categories are matched by the name
+/// snapshot — the same predicate the storefront category
+/// page (the search filter) uses, so an embed previews
+/// exactly the set its "see all" link lands on. Ordered by
+/// id, the catalog order; the caller caps each category's
+/// share.
+pub async fn catalog_products_for_categories(
+    pool: &PgPool,
+    names: &[String],
+) -> Result<Vec<Product>, sqlx::Error> {
+    if names.is_empty() {
+        return Ok(Vec::new());
+    }
+    let rows: Vec<CardRow> = sqlx::query_as(&format!(
+        "SELECT {CARD_COLUMNS}, {STOCK_AND_VARIANTS}, {MAIN_IMAGE_ALT}, {TAX_CLASS_EXPR} \
+         FROM products WHERE category = ANY($1) AND status = 'public' AND {WINDOW} \
+         ORDER BY products.id ASC"
+    ))
+    .bind(names)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows.into_iter().map(Product::from).collect())
+}
+
 /// The long descriptions of several products at once, keyed
 /// by product id — the shopping agent's candidate assembly
 /// resolves the whole pool's descriptions in one query,

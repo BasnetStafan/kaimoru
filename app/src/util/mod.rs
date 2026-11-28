@@ -4,7 +4,8 @@
 //! their own: the static-asset fingerprint, CSV transfer,
 //! HMAC helpers, HTML sanitising, upload image paths,
 //! script-safe JSON, LIKE-pattern escaping, log plumbing,
-//! Markdown rendering, pagination, and the rate-limit knobs.
+//! Markdown rendering, pagination, the rate-limit knobs,
+//! and the blog embed shortcodes.
 //! The crate-wide vocabulary ([`crate::error`], [`crate::pricing`],
 //! [`crate::session`], [`crate::messages`]) deliberately stays
 //! at the crate root instead of moving here.
@@ -20,4 +21,5 @@ pub mod logging;
 pub mod markdown;
 pub mod pagination;
 pub mod rate_limit_knobs;
+pub mod shortcode;
 pub mod xml;

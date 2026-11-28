@@ -125,3 +125,82 @@ no new image pipeline.
   cover product-scoped voices.
 - D4: optional cover image via the existing upload
   machinery.
+
+## 8. Shoppable embeds (added 2026-11-28)
+
+A post body may carry shortcodes that the app expands into
+live catalogue cards at render time:
+
+- `[[product:<id>]]` — one product card: image, the
+  catalog card's badge chain, name, its tax-inclusive
+  price line (sale strike-through, （税込）, the tax-class
+  note), and a purchase control that mirrors the catalog
+  card's purchasability exactly. A simple purchasable
+  product gets the add-to-cart form (htmx POST to the
+  existing `/cart/items`, quantity 1); a multi-variant
+  product links to its detail page instead （詳細を見る） —
+  an embed never chooses a combination for the customer;
+  a sold-out product shows the disabled 売り切れ button.
+- `[[category:<id>]]` — a showcase: the category name
+  linking to the storefront category page, a grid of that
+  category's public products (the same set the category
+  page lists — the name-snapshot predicate — in catalog
+  order, capped at 8) with the same per-product cards,
+  and a 商品一覧を見る link to the full category page.
+
+Semantics and invariants:
+
+- Blog posts only. Standard content pages never expand
+  shortcodes; landing pages — the one content-page type
+  built to sell — do (see §9).
+- Both body formats: the token is plain text, so it works
+  in Markdown and HTML posts alike. Expansion happens on
+  the rendered HTML, after Markdown rendering / the
+  stored (already sanitised) HTML — authors still cannot
+  write markup through a token, and the sanitizer story
+  is unchanged.
+- Grammar: `[[`, `product` or `category`, `:`, one or
+  more ASCII digits, `]]`. Anything else (empty digits,
+  letters, spaces, an overflowing number) is not a token
+  and stays literal text.
+- A well-formed token naming a missing, deleted or
+  non-public product — or a missing/inactive category, or
+  a category with no public products — renders NOTHING:
+  the token disappears with no placeholder and no error,
+  so a page never leaks that a draft exists.
+- Duplicate embeds each render; several distinct products
+  in one post each get their own working add control.
+- Rendering is two-phase, which is what keeps it CSRF-
+  and cache-safe. `render_body` rewrites tokens into
+  inert placeholder comments BEFORE the HTML enters the
+  render cache, so the cache holds no product data (a
+  price or stock change never waits on a post edit) and
+  no form. Per request, `expand_embeds` loads every
+  referenced product and category in one batched query
+  per kind (no N+1) and splices in the server-rendered
+  cards. The cards' forms carry no token — like every
+  storefront form, they rely on the CSRF middleware
+  injecting the requesting session's token on the way
+  out — so the same cached body serves every session
+  correctly.
+- Text surfaces never see tokens: excerpts (stored and
+  derived) strip well-formed shortcodes, so cards and the
+  RSS feed stay token-free; the feed describes the post,
+  it does not sell from it.
+- The admin preview is the real render: embeds in the
+  unsaved body expand exactly as the published page will
+  show them.
+- A catalogue read failure degrades to the article
+  without its cards (placeholders stripped, error
+  logged), never to an error page.
+
+Deliberate non-features:
+
+- No "add the whole category to the cart" button:
+  one-click bundle adds are a dark pattern, and stock
+  edge cases (some lines capped, some sold out) would
+  make the outcome unpredictable. Adds stay per product.
+- No admin picker: the post form documents both
+  shortcodes with examples; IDs come from the product
+  and category lists.
+

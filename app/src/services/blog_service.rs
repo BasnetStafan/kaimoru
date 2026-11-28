@@ -9,6 +9,13 @@
 //! what makes their 404s indistinguishable. Bodies render
 //! through the content pages' cache, keyed on the post's
 //! own id space — see [`render_body`].
+//!
+//! Embed shortcodes (`[[product:…]]`, `[[category:…]]`,
+//! CMS_SPEC §8) ride that cache as inert placeholder
+//! comments: the cached HTML holds no product data and no
+//! form, and [`expand_embeds`] splices the per-request
+//! cards in afterwards — see its own docs for why the
+//! split is the CSRF-safe shape.
 
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
@@ -16,11 +23,19 @@ use std::sync::{LazyLock, Mutex};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 
+use askama::Template;
+
 use crate::error::AppError;
-use crate::models::{Post, PostCategory, PostView};
-use crate::repositories::{post_category_repository, post_repository};
+use crate::models::{Post, PostCategory, PostView, Product, ProductCategory};
+use crate::repositories::{
+    category_repository, post_category_repository, post_repository, product_repository,
+};
 use crate::util::markdown;
+use crate::util::shortcode::{self, EmbedKind};
 use crate::util::xml::escape_xml;
+use crate::views::storefront::blog_embed::{
+    BlogEmbedCard, BlogEmbedCategoryView, BlogEmbedProductView,
+};
 
 /// How many posts the RSS feed carries: the newest
 /// articles, not the archive.
@@ -74,6 +89,14 @@ static RENDER_CACHE: LazyLock<Mutex<HashMap<i64, RenderEntry>>> =
 /// through [`crate::util::markdown`]; an HTML body is
 /// served as stored — the save path sanitised it, and that
 /// invariant is what makes serving it unescaped safe.
+///
+/// Embed shortcodes come back as placeholder comments
+/// ([`crate::util::shortcode::mark_embeds`]): the cached
+/// HTML deliberately holds no product data, so a price or
+/// stock change never waits on a post edit, and no form —
+/// so nothing session-shaped can ever enter the cache.
+/// Serving surfaces expand the placeholders per request
+/// with [`expand_embeds`] (or [`render_body_expanded`]).
 pub fn render_body(post: &Post) -> String {
     if let Ok(cache) = RENDER_CACHE.lock()
         && let Some((rendered_from, html)) = cache.get(&post.id)
@@ -81,15 +104,146 @@ pub fn render_body(post: &Post) -> String {
     {
         return html.clone();
     }
-    let html = if post.is_html() {
+    let rendered = if post.is_html() {
         post.body_md.clone()
     } else {
         markdown::render_markdown(&post.body_md)
     };
+    let html = shortcode::mark_embeds(&rendered);
     if let Ok(mut cache) = RENDER_CACHE.lock() {
         cache.insert(post.id, (post.updated_at, html.clone()));
     }
     html
+}
+
+/// How many products one category embed showcases: a
+/// preview of the category page, not the page itself.
+pub const CATEGORY_EMBED_LIMIT: usize = 8;
+
+/// Splices the embed cards into a marked body (see
+/// [`render_body`]), loading every referenced catalogue in
+/// one batched query per kind. A product or category that
+/// is missing or not public expands to nothing — the
+/// placeholder simply goes away, so a body can never leak
+/// that a draft exists. The cards' add-to-cart forms carry
+/// no token, exactly like the catalog cards': the CSRF
+/// middleware injects the requesting session's token into
+/// every form on the way out, which is what makes sharing
+/// this markup across sessions safe.
+///
+/// A catalogue read failure costs the cards, never the
+/// article: the error is logged and the body is served
+/// with its placeholders stripped.
+pub async fn expand_embeds(pool: &PgPool, marked_html: &str) -> String {
+    let refs = shortcode::embed_refs(marked_html);
+    if refs.is_empty() {
+        return marked_html.to_string();
+    }
+    let product_ids: Vec<i64> = refs
+        .iter()
+        .filter(|r| r.kind == EmbedKind::Product)
+        .map(|r| r.id)
+        .collect();
+    let category_ids: Vec<i64> = refs
+        .iter()
+        .filter(|r| r.kind == EmbedKind::Category)
+        .map(|r| r.id)
+        .collect();
+    let products: HashMap<i64, Product> = if product_ids.is_empty() {
+        HashMap::new()
+    } else {
+        match product_repository::catalog_products(pool, &product_ids).await {
+            Ok(rows) => rows.into_iter().map(|p| (p.id, p)).collect(),
+            Err(e) => {
+                tracing::error!("blog embed product load failed: {e}");
+                return shortcode::strip_placeholders(marked_html);
+            }
+        }
+    };
+    let categories: HashMap<i64, ProductCategory> =
+        match category_repository::find_active_by_ids(pool, &category_ids).await {
+            Ok(rows) => rows.into_iter().map(|c| (c.id, c)).collect(),
+            Err(e) => {
+                tracing::error!("blog embed category load failed: {e}");
+                return shortcode::strip_placeholders(marked_html);
+            }
+        };
+    // The showcases' products ride one more batched query,
+    // keyed by category name — the category page's own
+    // predicate — and capped per category in id order.
+    let mut showcases: HashMap<String, Vec<BlogEmbedCard>> = HashMap::new();
+    if !categories.is_empty() {
+        let names: Vec<String> = categories.values().map(|c| c.name.clone()).collect();
+        match product_repository::catalog_products_for_categories(pool, &names).await {
+            Ok(rows) => {
+                for product in rows {
+                    let cards = showcases.entry(product.category.clone()).or_default();
+                    if cards.len() < CATEGORY_EMBED_LIMIT {
+                        cards.push(BlogEmbedCard::new(product));
+                    }
+                }
+            }
+            Err(e) => {
+                tracing::error!("blog embed showcase load failed: {e}");
+                return shortcode::strip_placeholders(marked_html);
+            }
+        }
+    }
+    let mut out = marked_html.to_string();
+    for embed in &refs {
+        let replacement = match embed.kind {
+            EmbedKind::Product => products
+                .get(&embed.id)
+                .map(render_product_card)
+                .unwrap_or_default(),
+            EmbedKind::Category => categories
+                .get(&embed.id)
+                .and_then(|category| showcases.remove(&category.name))
+                .filter(|cards| !cards.is_empty())
+                .map(|cards| render_category_showcase(&categories[&embed.id], cards))
+                .unwrap_or_default(),
+        };
+        out = out.replace(&shortcode::placeholder(embed.kind, embed.id), &replacement);
+    }
+    out
+}
+
+/// Renders a post's body and expands its embeds in one
+/// call: the post page's and the admin preview's read.
+pub async fn render_body_expanded(pool: &PgPool, post: &Post) -> String {
+    expand_embeds(pool, &render_body(post)).await
+}
+
+/// Renders one product embed's card; a render failure
+/// (never expected — the template is static) degrades to
+/// no card, like a missing product.
+fn render_product_card(product: &Product) -> String {
+    let view = BlogEmbedProductView {
+        card: BlogEmbedCard::new(product.clone()),
+    };
+    match view.render() {
+        Ok(html) => html,
+        Err(e) => {
+            tracing::error!("blog embed card render failed: {e}");
+            String::new()
+        }
+    }
+}
+
+/// Renders one category embed's showcase from its capped
+/// cards; same failure posture as [`render_product_card`].
+fn render_category_showcase(category: &ProductCategory, cards: Vec<BlogEmbedCard>) -> String {
+    let view = BlogEmbedCategoryView {
+        name: category.name.clone(),
+        cards,
+    };
+    match view.render() {
+        Ok(html) => html,
+        Err(e) => {
+            tracing::error!("blog embed showcase render failed: {e}");
+            String::new()
+        }
+    }
 }
 
 /// Builds the RSS 2.0 feed document for `base_url` from
@@ -198,6 +352,42 @@ mod tests {
             category_slug: None,
             author_name: "店長".to_string(),
         }
+    }
+
+    /// A post whose body carries embeds, in its own id
+    /// space so the shared render cache cannot collide
+    /// with another test's entry.
+    fn embed_post() -> Post {
+        Post {
+            id: 987_001,
+            slug: "embeds".to_string(),
+            title: "埋め込み".to_string(),
+            body_md: "おすすめ [[product:5]] と [[category:2]] です".to_string(),
+            format: "markdown".to_string(),
+            excerpt: String::new(),
+            meta_description: String::new(),
+            cover_image_path: None,
+            category_id: None,
+            author_admin_id: 1,
+            status: "published".to_string(),
+            published_at: Some(stamp()),
+            created_at: stamp(),
+            updated_at: stamp(),
+        }
+    }
+
+    #[test]
+    fn render_body_marks_embeds_and_caches_no_form() {
+        let html = render_body(&embed_post());
+        assert!(html.contains("<!--blog-embed:product:5-->"));
+        assert!(html.contains("<!--blog-embed:category:2-->"));
+        assert!(!html.contains("[[product:5]]"));
+        // The cached markup is session-free by construction:
+        // no form, no token-shaped field can ever be in it.
+        assert!(!html.contains("<form"));
+        assert!(!html.contains("csrf"));
+        // A second read is the cache hit: identical output.
+        assert_eq!(render_body(&embed_post()), html);
     }
 
     #[test]

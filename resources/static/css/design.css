@@ -1264,6 +1264,31 @@ body.lightbox-open {
     margin-top: 2.5rem;
 }
 
+/* Blog embeds (CMS_SPEC §8): a product embed sits in the
+   article column at catalog-card width; a category embed is
+   a headed grid section. */
+.blog-embed-card {
+    max-width: 320px;
+    margin: 1.5rem 0;
+}
+
+.blog-embed-category {
+    margin: 2rem 0;
+}
+
+.blog-embed-category-title {
+    font-size: 1.15rem;
+    margin: 0 0 0.8rem;
+}
+
+.blog-embed-grid {
+    margin: 0;
+}
+
+.blog-embed-category-more {
+    margin: 0.8rem 0 0;
+}
+
 .info-page h2 {
     font-size: 18px;
     margin: 22px 0 8px;

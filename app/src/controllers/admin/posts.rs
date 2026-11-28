@@ -465,11 +465,16 @@ pub async fn preview(
     Form(form): Form<PreviewForm>,
 ) -> Response {
     let header = crate::controllers::storefront::header_for(&pool, &session, false).await;
-    let body_html = if form.format == "html" {
+    let rendered = if form.format == "html" {
         crate::util::html_sanitize::sanitize_html(&form.body_md)
     } else {
         crate::util::markdown::render_markdown(&form.body_md)
     };
+    // The preview is the real render: embed shortcodes in
+    // the unsaved body expand to their cards, exactly as
+    // the published page will show them.
+    let marked = crate::util::shortcode::mark_embeds(&rendered);
+    let body_html = crate::services::blog_service::expand_embeds(&pool, &marked).await;
     let cover = {
         let path = form.cover_image_path.trim();
         if path.is_empty() {
